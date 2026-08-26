@@ -10,13 +10,25 @@
 
 | # | งาน | ฝั่ง | Status |
 |---|-----|------|--------|
-| 0.1 | สร้าง local repo + `.abapgit.xml` + โครง `src/` + `docs/` + `README` + `CLAUDE.md` | Claude | ✅ |
-| 0.2 | Push skeleton ขึ้น GitHub | Claude | ✅ |
-| 0.3 | ผูก abapGit repo กับ package `ZARI002` บน tenant | ผู้ใช้ | ⬜ |
-| 0.4 | abapGit push `ZTAR_I002_PYMT`, `ZTAR_I002_ITEM`, `ZD_STATUS`, `ZE_STATUS` + `package.devc.xml` ตัวจริงกลับมา | ผู้ใช้ | ⬜ |
-| 0.5 | Claude ตรวจว่าไฟล์ที่ได้มาตรงกับที่ออกแบบ แล้วอัปเดต `03_object_list.md` | Claude | ⬜ |
+| 0.1 | สร้าง local repo + `docs/` + `README` + `CLAUDE.md` | Claude | ✅ |
+| 0.2 | Push ขึ้น GitHub | Claude | ✅ |
+| 0.3 | ผูก abapGit repo กับ package `ZARI002` บน tenant | ผู้ใช้ | ✅ |
+| 0.4 | เอา `.abapgit.xml` + `src/` ที่เขียนมือออกจาก repo เพื่อให้ SAP serialize เองเป็น baseline | Claude | ✅ |
+| 0.5 | abapGit push `ZTAR_I002_PYMT`, `ZTAR_I002_ITEM`, `ZD_STATUS`, `ZE_STATUS` + `.abapgit.xml` + `package.devc.xml` ตัวจริงขึ้นมา | ผู้ใช้ | ⬜ |
+| 0.6 | Claude ตรวจว่าไฟล์ที่ได้มาตรงกับที่ออกแบบ อัปเดต `03_object_list.md` + path ใน `README` | Claude | ⬜ |
 
 **Exit criteria**: pull/push ระหว่าง GitHub ↔ tenant ผ่านทั้ง 2 ทาง และเห็น table/domain/data element เป็นไฟล์ใน repo
+
+### ⚠️ Gotcha ที่เจอจริงตอน link (2026-08-27)
+
+การ link ผ่าน ADT ขึ้น **`POST /sap/bc/adt/abapgit/repos` failed: HTTP/1.1 500 Internal Server Error**
+ที่หน้า *Folder Logic selection* — แต่ **กด ignore ผ่านไปแล้ว link สำเร็จจริง** ใช้งานได้ปกติ
+
+สาเหตุยังไม่ได้สืบถึงราก (ต้องดู short dump ทาง ADT Feed Reader → ABAP Runtime Errors)
+ถ้า RICEFW ถัดไปเจออีก ให้ลองผ่านไปก่อนแล้วเช็คว่า link ติดจริงไหม อย่าเพิ่งรื้อ config
+
+บทเรียนอีกข้อ: **อย่าเขียน `.abapgit.xml` / `package.devc.xml` เองล่วงหน้า** — ปล่อยให้ tenant
+serialize ขึ้นมา แล้วค่อยเอาเอกสารวางทับ จะไม่มีปัญหา folder logic ไม่ตรงกัน
 
 ---
 

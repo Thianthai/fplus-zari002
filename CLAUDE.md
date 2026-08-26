@@ -62,13 +62,13 @@
 | สิ่งที่ทำ | ใคร commit/push |
 |---|---|
 | **ABAP object ทุกชนิด** (class, interface, CDS, bdef, DDIC, service def/binding) | **ผู้ใช้** |
-| **เอกสาร** (`docs/`, `README.md`, `CLAUDE.md`, `.abapgit.xml`) | **Claude** |
+| **เอกสาร** (`docs/`, `README.md`, `CLAUDE.md`) | **Claude** |
 
 - Claude **ห้ามสร้างไฟล์ ABAP ลง repo** (`src/**/*.abap`, `*.ddls.asddls`, `*.asbdef` ฯลฯ)
   → ส่งเป็น **code block ใน chat** ให้ผู้ใช้ copy ไปสร้างใน ADT แล้ว push ผ่าน abapGit เอง
   เหตุผล: source of truth ของ ABAP object คือ tenant และ abapGit reformat code เอง
   ถ้าเขียนลง repo ทั้งสองฝั่งจะชนกัน
-- ยกเว้น `package.devc.xml` ที่เป็น skeleton — คงไว้ตามเดิม
+- `.abapgit.xml` และ `package.devc.xml` เป็นของที่ **SAP serialize เอง** — ห้าม Claude เขียนหรือแก้มือ
 - Claude คอยเช็ค `git log` / `git status` ว่าผู้ใช้ push object อะไรขึ้นมาแล้วบ้าง
   แล้วอัปเดต status ใน `docs/03_object_list.md` ให้ตรง
 - Push เอกสารขึ้น GitHub ได้เลยเมื่อผู้ใช้สั่ง ไม่ต้อง confirm ซ้ำ

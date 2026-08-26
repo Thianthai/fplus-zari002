@@ -34,18 +34,20 @@ Salesforce ──HTTPS/OData V4──▶ ZAPI_ZARI002_O4 ──▶ ZTAR_I002_PYM
 
 ```
 fplus-zari002/
-├── .abapgit.xml                  # abapGit config: STARTING_FOLDER=/src/, FOLDER_LOGIC=PREFIX
 ├── .gitignore
 ├── README.md
 ├── CLAUDE.md                     # กฎ/บริบทสำหรับ AI assistant ใน project นี้
-├── docs/                         # เอกสาร design (ไม่ถูก sync เข้า SAP)
-│   ├── 01_architecture.md        # สถาปัตยกรรม + design decision + เหตุผล
-│   ├── 02_implementation_phases.md
-│   ├── 03_object_list.md         # รายชื่อ repository object ทั้งหมด + status
-│   └── 04_field_mapping.md       # API field ↔ table field + mandatory + validation
-└── src/                          # ← abapGit sync เฉพาะโฟลเดอร์นี้ (package ZARI002)
-    └── package.devc.xml
+└── docs/                         # เอกสาร design (ไม่ถูก sync เข้า SAP)
+    ├── 01_architecture.md        # สถาปัตยกรรม + design decision + เหตุผล
+    ├── 02_implementation_phases.md
+    ├── 03_object_list.md         # รายชื่อ repository object ทั้งหมด + status
+    └── 04_field_mapping.md       # API field ↔ table field + mandatory + validation
 ```
+
+⏳ **`.abapgit.xml` และ `src/` ยังไม่มีโดยตั้งใจ** — ปล่อยให้ abapGit ฝั่ง tenant
+serialize ขึ้นมาเองใน push แรก จะได้ config + metadata XML ที่ SAP เขียนเองแบบเป๊ะ ๆ
+เป็น baseline (ดู §Sync workflow ข้อ 1) · `STARTING_FOLDER` / `FOLDER_LOGIC` ตัวจริง
+และ path ของแต่ละไฟล์ จะอัปเดตลงเอกสารหลังจาก push แรกเข้ามาแล้ว
 
 ## Sync workflow
 
@@ -57,10 +59,14 @@ fplus-zari002/
 
 **หลักการ:**
 
-1. **ABAP object ทั้งหมด** ผู้ใช้สร้างใน ADT แล้ว abapGit push ขึ้นมาเอง —
+1. **Object ที่สร้างใหม่ครั้งแรก** ให้สร้างใน ADT ก่อน แล้ว abapGit push กลับมา
+   เพื่อให้ได้ metadata XML ที่ SAP serialize เองเป็น baseline — รวมถึง `.abapgit.xml`
+   และ `package.devc.xml` ที่ห้ามเขียนมือ (Public Cloud ต้องผูก software component
+   และ package type ให้ถูก)
+2. **ABAP object ทั้งหมด** ผู้ใช้สร้างใน ADT แล้ว abapGit push ขึ้นมาเอง —
    Claude ส่ง code ให้ทาง chat ไม่เขียนไฟล์ ABAP ลง repo (ดู `CLAUDE.md` §Git)
-2. **เอกสารทั้งหมด** Claude เป็นคนดูแลและ push
-3. Claude ตามอ่าน `git log` เพื่ออัปเดต status ใน `docs/03_object_list.md` ให้ตรงกับของจริงบน tenant
+3. **เอกสารทั้งหมด** Claude เป็นคนดูแลและ push
+4. Claude ตามอ่าน `git log` เพื่ออัปเดต status ใน `docs/03_object_list.md` ให้ตรงกับของจริงบน tenant
 
 ## Design decisions (ยืนยันแล้ว 2026-08-27)
 
@@ -89,4 +95,4 @@ Domain / data element ที่ใช้ร่วมข้าม RICEFW: `ZD_STA
 
 ## Status
 
-Phase 0 — repository skeleton ✅ · รอผู้ใช้ push table + domain/data element ตัวจริงขึ้นมา แล้วเข้า Phase 1
+Phase 0 — เอกสาร design ✅ · abapGit link ✅ · รอ push แรกจาก tenant (`.abapgit.xml` + `src/` + table/domain/data element) แล้วเข้า Phase 1

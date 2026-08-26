@@ -8,12 +8,15 @@
 
 ## Package
 
-ทุก object ลง package **`ZARI002`** ตัวเดียว ไม่มี sub-package
-abapGit ผูกที่ `ZARI002` (เป็น starting package ของ `FOLDER_LOGIC = PREFIX`)
+ทุก object ลง package **`ZARI002`** ตัวเดียว ไม่มี sub-package · abapGit ผูกที่ `ZARI002` แล้ว
 
 | Package | Folder | Description | Status |
 |---------|--------|-------------|--------|
-| `ZARI002` | `src/` | ZARI002 Incoming Payments (API) | 🟨 |
+| `ZARI002` | `src/` (รอยืนยัน) | ZARI002 Incoming Payments (API) | 🟨 |
+
+⏳ **path ในคอลัมน์ "ไฟล์" ทั้งเอกสารนี้ยังเป็นค่าประมาณ** — `STARTING_FOLDER` และ
+`FOLDER_LOGIC` ตัวจริงจะรู้หลัง push แรกจาก tenant (`.abapgit.xml` ที่ SAP เขียนเอง)
+ถ้า folder logic ออกมาเป็น `FULL` path จะกลายเป็น `src/zari002/...` ทั้งหมด — Claude จะแก้ให้ตอนนั้น
 
 ## DDIC
 
