@@ -1,0 +1,81 @@
+# ZARI002 — Incoming Payments (API)
+
+## Project constraints (ยึดถือตลอด project)
+
+1. **Platform**: SAP S/4HANA Cloud **Public Edition** — Developer Extensibility (tier 3-cloud-only)
+2. **ABAP Language Version**: **ABAP for Cloud Development** เท่านั้น ไม่มี fallback เป็น Standard ABAP
+3. ใช้ได้เฉพาะ object ที่อยู่ใน **Released APIs (C1 contract)** เท่านั้น — ตรวจสอบทุกครั้งก่อนใช้
+   ผ่าน ADT "Released Objects" หรือ view `I_APIStateForCLOUDDevelopment`
+4. **ห้าม** ใช้ classic ABAP: `CALL FUNCTION` BAPI แบบตรง, `SELECT` จาก table SAP โดยตรง,
+   `WRITE`, dynpro, SAPGUI report — ใช้ released CDS view + released ABAP API + EML แทน
+5. Sync ผ่าน **abapGit** เท่านั้น
+6. ทุก object ลง package **`ZARI002`** ตัวเดียว (ไม่มี sub-package)
+
+## Naming convention
+
+ใช้กฎกลางใน `~/.claude/CLAUDE.md` ทุกข้อ **แต่เปลี่ยน prefix จาก `Y*` เป็น `Z*` ทั้งหมด**
+โดย `<APP>` ของ project นี้ = **`ZARI002`** (RICEFW ID เต็ม รวมตัว `Z` นำหน้า)
+
+| ชนิด | Pattern | ตัวอย่างจริงใน project |
+|------|---------|------------------------|
+| Package | `Z<APP>` | `ZARI002` |
+| Root view entity | `ZR_<APP>` | `ZR_ZARI002` |
+| Interface view (child) | `ZI_<APP>_<ENT>` | `ZI_ZARI002_ITEM` |
+| Projection view | `ZC_<APP>[_<ENT>]` | `ZC_ZARI002`, `ZC_ZARI002_ITEM` |
+| Behavior definition | = ชื่อ view | `ZR_ZARI002`, `ZC_ZARI002` |
+| Behavior pool | `ZBP_R_<APP>` | `ZBP_R_ZARI002` |
+| Local handler / saver | `lhc_<Entity>` / `lsc_<Entity>` | `lhc_Payment`, `lhc_Item` |
+| Service definition (Web API) | `ZAPI_<APP>` | `ZAPI_ZARI002` |
+| Service binding (OData V4) | `ZAPI_<APP>_O4` | `ZAPI_ZARI002_O4` |
+| Global class | `ZCL_<APP>_<PURPOSE>` | `ZCL_ZARI002_VALIDATOR` |
+| Global interface | `ZIF_<APP>_<PURPOSE>` | `ZIF_ZARI002_MD_CHECK` |
+| Exception class | `ZCX_<APP>_<...>` | `ZCX_ZARI002_ERROR` |
+| Message class | `Z<APP>` | `ZARI002` |
+
+### ข้อยกเว้นที่ตกลงไว้ (2026-08-27)
+
+- **Database table** ใช้ชื่อที่ผู้ใช้ออกแบบไว้แล้ว ไม่เปลี่ยน: `ZTAR_I002_PYMT`, `ZTAR_I002_ITEM`
+- **Domain / Data element ที่ตั้งใจให้ reuse ข้าม RICEFW** ไม่ใส่ RICEFW ID ในชื่อ:
+  `ZD_STATUS`, `ZE_STATUS` — RICEFW อื่นเอาไปใช้ต่อได้โดยไม่ติดชื่อ RICEFW ต้นทาง
+
+### Variable / parameter prefix
+
+ตามกฎกลางเดิมทุกข้อ — `gv_/lv_/gs_/ls_/gt_/lt_/go_/lo_/<fs_>/<lfs_>` และ
+`iv_/is_/it_/io_`, `ev_/es_/et_/eo_`, `cv_/cs_/ct_`, `rv_/rs_/rt_/ro_`
+
+### ชื่อภายใน BDEF
+
+- CDS element alias = **CamelCase** · field ใน DDIC table = snake_case — ห้ามปน
+- Determination: `set*` / `calculate*` · Validation: `validate*` · Association: `_<Entity>`
+
+## Coding rules
+
+- ทุก class ต้องมี ABAP Unit test (`*.clas.testclasses.abap`) — logic class ต้อง test ได้โดยไม่ต้องต่อ SAP จริง
+  (แยกการอ่าน master data ออกเป็น `ZIF_ZARI002_MD_CHECK` + test double)
+- ทุก method มี ABAP Doc comment สั้น ๆ อธิบาย purpose
+- Error ทั้งหมดรวมศูนย์ที่ message class `ZARI002` + exception `ZCX_ZARI002_ERROR`
+- ไม่ใช้ `COMMIT WORK` ตรง ๆ ใน RAP — ใช้ `COMMIT ENTITIES` เท่านั้น
+- BDEF เป็น `managed;` + `strict ( 2 );` เสมอ
+
+## Git — การแบ่งงาน
+
+| สิ่งที่ทำ | ใคร commit/push |
+|---|---|
+| **ABAP object ทุกชนิด** (class, interface, CDS, bdef, DDIC, service def/binding) | **ผู้ใช้** |
+| **เอกสาร** (`docs/`, `README.md`, `CLAUDE.md`, `.abapgit.xml`) | **Claude** |
+
+- Claude **ห้ามสร้างไฟล์ ABAP ลง repo** (`src/**/*.abap`, `*.ddls.asddls`, `*.asbdef` ฯลฯ)
+  → ส่งเป็น **code block ใน chat** ให้ผู้ใช้ copy ไปสร้างใน ADT แล้ว push ผ่าน abapGit เอง
+  เหตุผล: source of truth ของ ABAP object คือ tenant และ abapGit reformat code เอง
+  ถ้าเขียนลง repo ทั้งสองฝั่งจะชนกัน
+- ยกเว้น `package.devc.xml` ที่เป็น skeleton — คงไว้ตามเดิม
+- Claude คอยเช็ค `git log` / `git status` ว่าผู้ใช้ push object อะไรขึ้นมาแล้วบ้าง
+  แล้วอัปเดต status ใน `docs/03_object_list.md` ให้ตรง
+- Push เอกสารขึ้น GitHub ได้เลยเมื่อผู้ใช้สั่ง ไม่ต้อง confirm ซ้ำ
+- Remote: https://github.com/Thianthai/fplus-zari002.git
+
+## Related RICEFW
+
+**ZARE002** — RAP UI ที่จะมาอ่านข้อมูลจาก `ZTAR_I002_PYMT` / `ZTAR_I002_ITEM` ไป post FI จริง
+เป็นงานคนละรหัส ทำหลังจบ ZARI002 · ZARI002 เขียน `status = 'N'` เท่านั้น
+ค่า `S` / `W` / `E` และ `error_message` เป็นของ ZARE002
