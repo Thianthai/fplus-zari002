@@ -56,6 +56,9 @@
 - Error ทั้งหมดรวมศูนย์ที่ message class `ZARI002` + exception `ZCX_ZARI002_ERROR`
 - ไม่ใช้ `COMMIT WORK` ตรง ๆ ใน RAP — ใช้ `COMMIT ENTITIES` เท่านั้น
 - BDEF เป็น `managed;` + `strict ( 2 );` เสมอ
+- **Comment ใน BDEF (`.asbdef`) ใช้ `//` ไม่ใช่ `"`** — `"` เป็นของ ABAP ใช้ใน `.asbdef` ไม่ได้
+- **`total etag` ประกาศได้เฉพาะ BO ที่มี draft** — BO แบบ API ไม่มี draft ให้ใช้ `lock master`
+  เปล่า ๆ + `etag master <LocalLastChangedAt>` เท่านั้น
 
 ## Git — การแบ่งงาน
 

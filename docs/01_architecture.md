@@ -61,15 +61,16 @@ Table ทั้ง 2 ตัวออกแบบไว้ก่อนหน้�
 เป็น pattern มาตรฐานของ RAP ห้ามไป "แก้ให้เท่ากัน" ความหมายของ 2 field ต่างกัน:
 
 - `local_last_changed_at` (`abp_locinst_lastchange_tstmpl`) = **instance ตัวนี้ตัวเดียว** ถูกแก้เมื่อไหร่ → ใช้เป็น `etag master`
-- `last_changed_at` (`abp_lastchange_tstmpl`) = instance นี้ **หรือลูกตัวใดก็ได้ในสายพันธุ์** ถูกแก้เมื่อไหร่ → ใช้เป็น `total etag` ที่ผูกกับ `lock master`
+- `last_changed_at` (`abp_lastchange_tstmpl`) = instance นี้ **หรือลูกตัวใดก็ได้ในสายพันธุ์** ถูกแก้เมื่อไหร่ → ตั้งใจไว้ให้เป็น `total etag`
 
-Root จึงต้องมีทั้งคู่เพราะเป็นทั้ง etag master และ lock master ที่ถือ total etag
-ส่วน child เป็น `lock dependent by _Payment` ไม่ได้ถือ total etag จึงต้องการแค่ตัวแรก
+⚠️ **แต่ `total etag` ประกาศได้เฉพาะ BO ที่มี draft** (พิสูจน์ตอน activate BDEF 2026-08-27:
+`A "total etag" field can be flagged only if "with draft" is used.`) — BO นี้เป็น API ไม่มี draft
+จึงใช้ `lock master` เปล่า ๆ และ **ไม่ได้ประกาศ `total etag` เลย**
 
 ```abap
 define behavior for ZR_ZARI002 alias Payment
 persistent table ztar_i002_pymt
-lock master total etag LastChangedAt
+lock master
 etag master LocalLastChangedAt
 ...
 define behavior for ZI_ZARI002_ITEM alias Item
@@ -78,8 +79,14 @@ lock dependent by _Payment
 etag master LocalLastChangedAt
 ```
 
-item จึงมี optimistic concurrency ของตัวเองเต็มรูปแบบ — **ZARE002 แก้คนละ item
-ใน payment เดียวกันพร้อมกันได้ไม่ชนกัน**
+`last_changed_at` ยังอยู่ใน table และยังถูก managed runtime เติมให้จาก annotation
+`@Semantics.systemDateTime.lastChangedAt` ใน CDS (คนละกลไกกับ etag) — **ZARE002 ใช้ได้ตามปกติ**
+และถ้าวันหน้าทำ draft ก็พร้อมใช้เป็น total etag ทันที
+
+⬜ ต้องยืนยันตอนทดสอบ EML deep create ปลาย Phase 3 ว่า `last_changed_at` มีค่าขึ้นจริง
+
+item ยังมี optimistic concurrency ของตัวเองเต็มรูปแบบผ่าน `local_last_changed_at` —
+**ZARE002 แก้คนละ item ใน payment เดียวกันพร้อมกันได้ไม่ชนกัน**
 
 | ค่า | ความหมาย | ใครเขียน |
 |-----|----------|---------|
