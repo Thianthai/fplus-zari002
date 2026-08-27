@@ -219,6 +219,6 @@ description เป็น config text ที่ business user แก้ได้�
 | Validation | Entity | Message | สถานะ |
 |---|---|---|---|
 | `validateAmountFormat` | Payment | `009` | 🟨 ที่ว่าง — OQ-10 |
-| `validateItemDuplicate` | Payment | `010` | ✅ ทำได้เลย |
+| `validateItemDuplicate` | Payment | `010` | 🟨 ที่ว่าง — OQ-09 (พักไว้) |
 | `validateAmountPaidTotal` | Payment | `011` | ✅ ทำได้เลย |
 | `validateArOpenItem` | Item | `206` | 🟨 ที่ว่าง — OQ-08 |

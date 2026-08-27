@@ -109,8 +109,8 @@ Salesforce จึงเห็นปัญหาทั้งหมดในคร
 
 1. **RAP validation `validateSalesforceId`** — `SELECT SINGLE` เช็คว่ามีอยู่แล้วไหม
    ถ้ามี → 400 พร้อม message ที่อ่านรู้เรื่อง (จับได้ 99.9% ของเคสจริง)
-   · คู่กับ `validateItemDuplicate` ที่กันคนละเคส: **item เดิมโผล่มาใน payment ใบใหม่**
-   ซึ่ง header uniqueness จับไม่ได้เลยเพราะ `salesforce_id` ไม่ซ้ำ
+   · เคส **item เดิมโผล่มาใน payment ใบใหม่** (`salesforce_id` ไม่ซ้ำ จึงหลุด `004`)
+   ยัง**ไม่ถูกจับ** — `validateItemDuplicate` ประกาศไว้แล้วแต่เป็นที่ว่าง รอ OQ-09
 2. **Unique secondary index** บน `ZTAR_I002_PYMT` (`client` + `salesforce_id`)
    จับเคส race ที่ validation จับไม่ได้ — request 2 ตัวยิงพร้อมกัน SELECT ไม่เจอกันเอง
    ผ่าน validation ทั้งคู่ แล้วมา INSERT ชนกันตอน save
@@ -135,7 +135,7 @@ Salesforce จึงเห็นปัญหาทั้งหมดในคร
 | `validatePaymentTotal` | Payment | **ที่ว่างไว้ ยังไม่ใส่ logic** — เผื่อภายหลังต้องเทียบ `payment_amount` กับผลรวม `amount_paid` |
 | `validateAmountPaidTotal` | Payment | ผลรวม `amount_paid` ของทุก item ต้อง **> 0** |
 | `validateAmountFormat` | Payment | **ที่ว่างไว้ ยังไม่ใส่ logic** — OData จับค่าที่ไม่ใช่ตัวเลขไปก่อนแล้ว รอนิยามเงื่อนไข (OQ-10) |
-| `validateItemDuplicate` | Payment | `salesforce_item_id` ของ item ที่ส่งมา ต้องไม่เคยมีใน payment ใบก่อนหน้า |
+| `validateItemDuplicate` | Payment | **ที่ว่างไว้ ยังไม่ใส่ logic** — รอสรุปว่า duplicate ตัดสินจากอะไร (OQ-09) |
 | `validateNumberOfItems` | Payment | ต้องเท่ากับจำนวน `_Item` ที่ส่งมาจริง |
 | `validateDates` | Payment | `due_on` ต้องไม่ก่อน `issue_date` |
 | `validateSalesforceItemId` | Item | mandatory + ไม่ซ้ำกันเองภายใน payment เดียวกัน |

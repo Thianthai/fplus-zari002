@@ -18,7 +18,7 @@
 | OQ-07 | จำนวน item สูงสุดต่อ request | — | Phase 1 | กำหนดหลัง volume test Phase 7.7 | ⬜ |
 
 | OQ-08 | released CDS view ตัวไหนบอกได้ว่า accounting document ถูกรับชำระ/reverse แล้ว (`I_OperationalAcctgDocItem` / กลุ่ม journal entry) | ผู้ใช้ + FI | Phase 3 | `validateArOpenItem` เป็นที่ว่างไว้ · ถ้าไม่มี view ที่ released จะเขียน logic ไม่ได้เลย | ⬜ |
-| OQ-09 | key ของ duplicate check ที่ให้มามี 4 field แต่ `salesforce_id` unique อยู่แล้ว การ AND ทั้ง 4 จึงไม่มีวัน fire · และ `billing_note_no` เป็น optional จึงเป็น key ที่เชื่อถือไม่ได้ → **ตอนนี้ทำเป็นเช็ค `salesforce_item_id` ข้าม payment** | Salesforce | Phase 3 | `validateItemDuplicate` ทำงานตามที่ตีความไว้ ถ้าตีความผิดต้องแก้ | 🟨 |
+| OQ-09 | **พักไว้ (2026-08-27)** duplicate check แบบ 4-field AND จับได้เฉพาะเคสที่ `004` จับไปแล้ว และปล่อยเคส "จ่ายซ้ำใบแจ้งหนี้เดิมผ่าน payment ใบใหม่" หลุด · ต้องเลือกระหว่างเก็บ unique index ไว้ (จับ 2 ชั้น) กับถอด index แล้วใช้ 4-field ตาม spec | Salesforce / ผู้ใช้ | Phase 3 | `validateItemDuplicate` **ประกาศใน BDEF แล้วแต่เป็นที่ว่าง** · `004` + unique index ยังทำงานปกติ | 🟨 พัก |
 | OQ-10 | `validateAmountFormat` ควร fire ตอนไหน — OData จับค่าที่ไม่ใช่ตัวเลขไปก่อนแล้ว | Salesforce | Phase 3 | message `009` ประกาศไว้แล้ว แต่ยังไม่มี logic | 🟨 |
 
 ## วิธีใช้
