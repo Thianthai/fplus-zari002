@@ -4,8 +4,14 @@ API field ↔ table field · CDS alias เป็น **CamelCase** · field ใ�
 
 **I/O**: `in` = 3rd-party ส่งเข้ามาได้ · `out` = ระบบเติมให้ ไม่รับจาก payload (ส่งมาก็ถูกเมิน)
 
-> ⚠️ คอลัมน์ **Mand.** เป็น **ข้อเสนอของ Claude รอผู้ใช้/ทีม Salesforce ยืนยันใน Phase 1 (§1.1)**
-> ที่เหลือยืนยันแล้วทั้งหมด
+**Mand.**: `✔` = บังคับเสมอ · `–` = optional · `⚠️` = ยังไม่ปิด (ดู §5)
+ยืนยัน mandatory list แล้ว 2026-08-27 ยกเว้นแถวที่ยัง `⚠️`
+
+### Conditional mandatory — payment แบบเช็ค
+
+`cheque_no` · `issue_date` · `due_on` · `cheque_bankbranch` **ไม่ใช่ mandatory ทั่วไป
+แต่บังคับเมื่อ `payment_method` = เช็ค** → validation `validateChequeFields`
+⚠️ ค่า code ของ "เช็ค" ยังไม่ล็อก (ดู §5)
 
 ---
 
@@ -15,21 +21,21 @@ API field ↔ table field · CDS alias เป็น **CamelCase** · field ใ�
 |---|---|---|---|---|---|---|
 | `PaymentUUID` | `payment_uuid` | `sysuuid_x16` | `Edm.Guid` | out | – | Key — RAP gen (early numbering) · คืนกลับใน response |
 | `SalesforceId` | `salesforce_id` | `char(18)` | `Edm.String(18)` | in | ✔ | **Unique** — `validateSalesforceId` + unique index |
-| `PaymentDocumentNo` | `payment_document_no` | `char(10)` | `Edm.String(10)` | in | – | เลขเอกสารฝั่ง Salesforce · ⚠️ ยืนยันความหมายใน Phase 1 |
+| `PaymentDocumentNo` | `payment_document_no` | `char(10)` | `Edm.String(10)` | in | ✔ | เลขที่เอกสารรับชำระเงินจากระบบ Salesforce |
 | `NumberOfItems` | `number_of_items` | `char(3)` | `Edm.String(3)` | in | ✔ | ต้องเท่ากับจำนวน `_Item` ที่ส่งมา — `validateNumberOfItems` · ⚠️ ตกลง leading zero ใน Phase 1 |
 | `CompanyCode` | `company_code` | `char(4)` | `Edm.String(4)` | in | ✔ | `I_CompanyCode` |
 | `PostingDate` | `posting_date` | `dats` | `Edm.Date` | in | ✔ | |
 | `GLAccount` | `gl_account` | `char(10)` | `Edm.String(10)` | in | ✔ | `I_GLAccountInCompanyCode` (คู่กับ `CompanyCode`) |
-| `PaymentMethod` | `payment_method` | `char(8)` | `Edm.String(8)` | in | – | `I_PaymentMethod` — เช็คเฉพาะเมื่อส่งมา |
-| `ChequeNo` | `cheque_no` | `char(8)` | `Edm.String(8)` | in | – | |
-| `IssueDate` | `issue_date` | `dats` | `Edm.Date` | in | – | |
-| `DueOn` | `due_on` | `dats` | `Edm.Date` | in | – | ต้องไม่ก่อน `IssueDate` |
-| `ChequeBankBranch` | `cheque_bankbranch` | `char(7)` | `Edm.String(7)` | in | – | ⚠️ ยืนยัน format ใน Phase 1 |
-| `Currency` | `currency` | `cuky` | `Edm.String(5)` | in | ✔ | `I_Currency` · เป็น currency reference ของทุก amount ใน header |
+| `PaymentMethod` | `payment_method` | `char(8)` | `Edm.String(8)` | in | ✔ | `I_PaymentMethod` · เป็นตัวตัดสิน conditional mandatory ของกลุ่มเช็ค |
+| `ChequeNo` | `cheque_no` | `char(8)` | `Edm.String(8)` | in | ⚠️ | |
+| `IssueDate` | `issue_date` | `dats` | `Edm.Date` | in | ⚠️ | |
+| `DueOn` | `due_on` | `dats` | `Edm.Date` | in | ⚠️ | ต้องไม่ก่อน `IssueDate` |
+| `ChequeBankBranch` | `cheque_bankbranch` | `char(7)` | `Edm.String(7)` | in | ⚠️ | = `I_Bank_2.BankInternalID` · ⚠️ ความยาวไม่พอ ดู §5 |
+| `Currency` | `currency` | `cuky` | `Edm.String(5)` | in | ⚠️ | `I_Currency` · เป็น currency reference ของทุก amount ใน header |
 | `RoundingDiff` | `rounding_diff` | `curr(23,2)` | `Edm.Decimal` | in | – | |
 | `AdvancePayment` | `advance_payment` | `curr(23,2)` | `Edm.Decimal` | in | – | ไม่ติดลบ |
 | `Fees` | `fees` | `curr(23,2)` | `Edm.Decimal` | in | – | ไม่ติดลบ |
-| `PaymentAmount` | `payment_amount` | `curr(23,2)` | `Edm.Decimal` | in | ✔ | ไม่ติดลบ · ⚠️ ต้องเท่ากับผลรวม `AmountPaid` ของ item หรือไม่ — ยืนยัน Phase 1 |
+| `PaymentAmount` | `payment_amount` | `curr(23,2)` | `Edm.Decimal` | in | ✔ | ไม่ติดลบ · มี validation `validatePaymentTotal` เป็นที่ว่างไว้ให้ ยังไม่ใส่ logic (ตกลง 2026-08-27) |
 | `Status` | `status` | `ze_status` | `Edm.String(1)` | out | – | ZARI002 set = `N` เสมอ |
 | `ErrorMessage` | `error_message` | `string` | `Edm.String` | out | – | ว่างเสมอตอน create (เป็นของ ZARE002) |
 | `CreatedBy` | `created_by` | `abp_creation_user` | `Edm.String` | out | – | managed |
@@ -40,6 +46,8 @@ API field ↔ table field · CDS alias เป็น **CamelCase** · field ใ�
 | `_Item` | — | — | navigation | in | ✔ | Composition ไป `PaymentItem` — ต้องมีอย่างน้อย 1 |
 
 **Input field ที่ 3rd-party ส่งได้: 16 field** (ตามที่ requirement ระบุ — ไม่รวม key/status/error/admin)
+**Mandatory 8 ตัว**: `SalesforceId` `PaymentDocumentNo` `NumberOfItems` `CompanyCode`
+`PostingDate` `GLAccount` `PaymentMethod` `PaymentAmount` · **conditional อีก 4 ตัว** (กรณีเช็ค)
 
 ## 2. Item — entity set `PaymentItem` ← `ZTAR_I002_ITEM`
 
@@ -50,20 +58,26 @@ API field ↔ table field · CDS alias เป็น **CamelCase** · field ใ�
 | `SalesforceItemId` | `salesforce_item_id` | `char(18)` | `Edm.String(18)` | in | ✔ | **Business key / item number** — ห้ามซ้ำภายใน payment เดียวกัน |
 | `CustomerCode` | `customer_code` | `char(10)` | `Edm.String(10)` | in | ✔ | `I_Customer` |
 | `BillingNoteNo` | `billing_note_no` | `char(10)` | `Edm.String(10)` | in | – | |
-| `AccountingDocument` | `accounting_document` | `char(10)` | `Edm.String(10)` | in | – | **ไม่ validate** กับ master data (ตกลง 2026-08-27) |
-| `BillingDocument` | `billing_document` | `char(10)` | `Edm.String(10)` | in | – | **ไม่ validate** กับ master data |
-| `InvoicePostingDate` | `invoice_posting_date` | `dats` | `Edm.Date` | in | – | |
-| `Currency` | `currency` | `cuky` | `Edm.String(5)` | **out** | – | Determination `setItemDefaults` copy จาก header — ไม่รับจาก payload เพื่อไม่ให้ขัดกับ header |
+| `AccountingDocument` | `accounting_document` | `char(10)` | `Edm.String(10)` | in | ✔ | **ไม่ validate** กับ master data (ตกลง 2026-08-27) |
+| `BillingDocument` | `billing_document` | `char(10)` | `Edm.String(10)` | in | ✔ | **ไม่ validate** กับ master data |
+| `InvoicePostingDate` | `invoice_posting_date` | `dats` | `Edm.Date` | in | ✔ | |
+| `Currency` | `currency` | `cuky` | `Edm.String(5)` | **out** | ⚠️ | Determination `setItemDefaults` copy จาก header — ไม่รับจาก payload เพื่อไม่ให้ขัดกับ header |
 | `InvoiceAmount` | `invoice_amount` | `curr(23,2)` | `Edm.Decimal` | in | ✔ | ไม่ติดลบ |
 | `AmountPaid` | `amount_paid` | `curr(23,2)` | `Edm.Decimal` | in | ✔ | ไม่ติดลบ |
 | `PartialAmount` | `partial_amount` | `curr(23,2)` | `Edm.Decimal` | in | – | ไม่ติดลบ |
-| `SaleSubmitDate` | `sale_submit_date` | `dats` | `Edm.Date` | in | – | |
+| `SaleSubmitDate` | `sale_submit_date` | `dats` | `Edm.Date` | in | ✔ | |
 | `Status` | `status` | `ze_status` | `Edm.String(1)` | out | – | set = `N` |
 | `ErrorMessage` | `error_message` | `string` | `Edm.String` | out | – | ว่างเสมอตอน create |
 | `CreatedBy` / `CreatedAt` / `LastChangedBy` / `LastChangedAt` / `LocalLastChangedAt` | admin fields | | | out | – | managed · `LastChangedAt` = etag |
 | `_Payment` | — | — | navigation | – | – | Association to parent |
 
 **Input field ที่ 3rd-party ส่งได้: 10 field**
+**Mandatory 8 ตัว**: `SalesforceItemId` `CustomerCode` `AccountingDocument` `BillingDocument`
+`InvoicePostingDate` `InvoiceAmount` `AmountPaid` `SaleSubmitDate`
+optional 2 ตัว: `BillingNoteNo` `PartialAmount`
+
+> `AccountingDocument` / `BillingDocument` **บังคับให้ส่ง แต่ไม่ validate กับ master data**
+> — เป็นคนละเรื่องกัน (ตกลง 2026-08-27)
 
 ## 3. ตัวอย่าง payload
 
@@ -131,3 +145,16 @@ message ที่เกี่ยวกับ item จะอ้างถึงด
 ⚠️ **`500` จากการยิงซ้ำพร้อมกัน**: ถ้า unique index เป็นตัวจับ duplicate (เคส race)
 จะออกมาเป็น 500 ไม่ใช่ 400 — ให้ถือว่า **อาจสร้างสำเร็จไปแล้ว ห้าม retry อัตโนมัติ**
 (เหตุผลเต็ม: `01_architecture.md` §5)
+
+
+---
+
+## 5. ข้อที่ยังไม่ปิด
+
+| # | เรื่อง | สถานะ |
+|---|--------|--------|
+| 5.1 | `Currency` ไม่อยู่ใน mandatory list ที่ยืนยันมา แต่ทุก amount ทั้ง 2 table อ้าง currency นี้ และ item copy ไปใช้ | รอตัดสินใจ |
+| 5.2 | `ChequeBankBranch` เป็น `char(7)` แต่ `I_Bank_2.BankInternalID` เป็น `CHAR 15` | รอตัดสินใจ |
+| 5.3 | ค่า code ของ payment method "เช็ค" ที่ใช้ตัดสิน conditional mandatory | รอคำตอบ |
+| 5.4 | `NumberOfItems` เปลี่ยนเป็น numeric type | รอ activate |
+| 5.5 | รูปแบบ response ตอน error (ดู §4) | รอตัดสินใจ |
