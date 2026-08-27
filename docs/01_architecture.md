@@ -230,10 +230,38 @@ released CDS view ใช้ได้ครบทั้ง 6 ตัว ชื่�
 | `I_CompanyCode` | `1000`, `2000` — **ทั้งคู่ `THB` / `TH`** → derive currency + bank country ได้จริง |
 | `I_GLAccountInCompanyCode` | ใช้ได้ · format บน tenant มี leading zero เต็ม 10 หลัก เช่น `0011001000` |
 | `I_Currency` | `THB` ✅ |
-| `I_PaymentMethod` | TH มี code `A B C E F I M N S T` (อย่างน้อย 10 ตัว) · **ยังไม่รู้ว่าตัวไหนคือ Cheque / Transfer** |
+| `I_PaymentMethod` | TH มี 10 code — ดูตารางข้างล่าง |
 | `I_Customer` | **มีแค่ 3 ราย**: `1000000002` `1000000003` `1000000004` |
 | `I_Bank_2` | key = `BankCountry` + `BankInternalID` · ค่าบน tenant เป็น **รหัส 3 หลัก**: `002 004 006 008 009 011 014 017 018 020` |
 
 ⚠️ **`I_Customer` มีแค่ 3 ราย** แต่ sample data ของ Salesforce อ้างถึง customer อย่างน้อย 8 ราย
 (`1000000001` `1000000005` `1000000013` `1000000020` `1000000021` …) → ถ้าไม่โหลด customer เพิ่ม
 `validateCustomerCode` จะ reject sample แทบทุกใบ **ต้องเตรียม test data ก่อน Phase 7**
+
+
+### Payment method บน tenant (TH)
+
+| Code | ชื่อ | ใช้กับเช็ค | สำหรับ **incoming payment** |
+|---|---|---|---|
+| `A` | Manual Cheque | **X** | |
+| `B` | BAHTNET | | |
+| `C` | Cheque Direct | | |
+| `E` | Direct Debit | | **X** |
+| `F` | Bank Transfer–Foreign | | |
+| `I` | iCash | | |
+| `M` | Direct Debit Customer Payments | | **X** |
+| `N` | Card Payment | | **X** |
+| `S` | Cash Payment | | |
+| `T` | Bank Transfer | | |
+
+⚠️ **`IsPaymentMethodForIncomingPayments` ติ๊กไว้แค่ `M` `N` `E`** — ไม่รวม cheque หรือ
+bank transfer ที่ Salesforce ส่งเข้ามาจริง ทั้งที่ ZARI002 เป็น interface ของ **incoming payment**
+ถ้า config นี้ถูกต้องตามที่ใช้งานจริง ZARE002 อาจ post ไม่ผ่านตอนใช้ `A`/`C`/`T`
+→ ต้องให้ทีม FI ยืนยันก่อน (ดู `04_field_mapping.md` §7.6)
+
+### ยืนยันจาก spike รอบ 2
+
+- **leading zero**: pad `11011214` → `0011011214` แล้ว **เจอครบ 3/3** บน company code `2000`
+  → determination ที่ pad ก่อน validate ทำงานถูกต้องแน่นอน
+- **`cheque_bankbranch`**: `004` มีใน `I_Bank_2` แต่ `0040129` **ไม่มี** → ยืนยันว่า field นี้
+  ไม่ใช่ `BankInternalID` ล้วน เป็น bank + branch ประกอบกัน

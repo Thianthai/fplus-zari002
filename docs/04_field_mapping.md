@@ -65,7 +65,7 @@ API field ↔ table field · CDS alias เป็น **CamelCase** · field ใ�
 | `Currency` | `currency` | `cuky` | `Edm.String(5)` | **out** | ⚠️ | Determination `setItemDefaults` copy จาก header — ไม่รับจาก payload เพื่อไม่ให้ขัดกับ header |
 | `InvoiceAmount` | `invoice_amount` | `curr(23,2)` | `Edm.Decimal` | in | ✔ | |
 | `AmountPaid` | `amount_paid` | `curr(23,2)` | `Edm.Decimal` | in | ✔ | |
-| `PartialFlag` | `partial_flag` | `char(1)` | `Edm.String(1)` | in | – | **flag ไม่ใช่จำนวนเงิน** — `X` = จ่ายบางส่วน · ว่าง = จ่ายเต็ม |
+| `PartialAmount` | `partial_amount` | `char(1)` | `Edm.String(1)` | in | – | **เป็น flag ไม่ใช่จำนวนเงิน** (คงชื่อเดิมไว้) — `X` = จ่ายบางส่วน · ว่าง = จ่ายเต็ม |
 | `SaleSubmitDate` | `sale_submit_date` | `dats` | `Edm.Date` | in | ✔ | |
 | `Status` | `status` | `ze_status` | `Edm.String(1)` | out | – | set = `N` |
 | `ErrorMessage` | `error_message` | `string` | `Edm.String` | out | – | ว่างเสมอตอน create |
@@ -75,7 +75,7 @@ API field ↔ table field · CDS alias เป็น **CamelCase** · field ใ�
 **Input field ที่ 3rd-party ส่งได้: 10 field**
 **Mandatory 8 ตัว**: `SalesforceItemId` `CustomerCode` `AccountingDocument` `BillingDocument`
 `InvoicePostingDate` `InvoiceAmount` `AmountPaid` `SaleSubmitDate`
-optional 2 ตัว: `BillingNoteNo` `PartialFlag`
+optional 2 ตัว: `BillingNoteNo` `PartialAmount`
 
 > `AccountingDocument` / `BillingDocument` **บังคับให้ส่ง แต่ไม่ validate กับ master data**
 > — เป็นคนละเรื่องกัน (ตกลง 2026-08-27)
@@ -201,10 +201,11 @@ description เป็น config text ที่ business user แก้ได้�
 
 | # | เรื่อง | สถานะ |
 |---|--------|--------|
-| 7.1 | `partial_amount` → **`partial_flag : abap.char(1)`** (เป็น flag ไม่ใช่จำนวนเงิน) | ✅ ตกลง · รอ convert table |
-| 7.2 | `cheque_bankbranch` โครงสร้างยังไม่ชัด — เปิด `validateChequeBankBranch` เป็นที่ว่างไว้ ยังไม่ใส่ logic · คง `char(15)` ไว้ก่อนเพราะยังไม่รู้ว่าต้องยาวเท่าไหร่ | 🟨 รอคำตอบจาก Salesforce/FI |
-| 7.3 | `gl_account` (และ `customer_code`) pad ซ้ายเป็น 10 หลักฝั่ง SAP ก่อน validate + ก่อนบันทึก | ✅ ตกลง 2026-08-27 |
+| 7.1 | `partial_amount` → **`abap.char(1)`** คงชื่อเดิม เป็น flag (`X` = จ่ายบางส่วน) | ✅ activate แล้ว |
+| 7.2 | `cheque_bankbranch` — **ยืนยันแล้วว่า `0040129` ไม่มีใน `I_Bank_2` ส่วน `004` มี** → เป็น bank + branch จริง · `validateChequeBankBranch` เป็นที่ว่าง ยังไม่ใส่ logic · คง `char(15)` | 🟨 รอยืนยันโครงสร้างจาก Salesforce/FI |
+| 7.3 | `gl_account` (และ `customer_code`) pad ซ้ายเป็น 10 หลักฝั่ง SAP — **พิสูจน์แล้ว: pad แล้วเจอครบ 3/3 บน company code 2000** | ✅ ยืนยัน 2026-08-27 |
 | 7.4 | **ไม่เช็คเครื่องหมายจำนวนเงินเลย** ทุก field — ปล่อยให้ ZARE002 ไปเจอเองตอน post | ✅ ตกลง 2026-08-27 |
-| 7.5 | Mapping `Cheque` / `Transfer` → SAP code ยังเติมไม่ได้ ต้องรู้ description ของ payment method บน tenant ก่อน | ⬜ รอผล spike |
+| 7.5 | Mapping `Cheque` / `Transfer` → SAP code — ได้ description แล้ว แต่ **`Cheque` แมตช์ได้ 2 ตัว** (`A` Manual Cheque / `C` Cheque Direct) | ⬜ รอเลือก |
+| 7.6 | payment method ที่ flag `IsPaymentMethodForIncomingPayments` มีแค่ `M` `N` `E` — ไม่รวม cheque/transfer ที่ Salesforce ส่งมา | ⬜ รอตัดสินใจ |
 
 `payment_method` **คง `char(8)` ตามเดิม** — sample มีแค่ `Cheque` (6) กับ `Transfer` (8) พอดีตัว
