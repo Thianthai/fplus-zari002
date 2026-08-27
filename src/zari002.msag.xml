@@ -59,6 +59,30 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZARI002</ARBGB>
+     <MSGNR>009</MSGNR>
+     <TEXT>Invalid payment data for payment &amp;1. Please verify.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
+     <MSGNR>010</MSGNR>
+     <TEXT>Duplicate record item &amp;1 already exists in SAP</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
+     <MSGNR>011</MSGNR>
+     <TEXT>Payment &amp;1 received amount must be greater than zero</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
+     <MSGNR>012</MSGNR>
+     <TEXT>Item &amp;1 document &amp;2 already cleared or reversed</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
      <MSGNR>100</MSGNR>
      <TEXT>Salesforce ID is required</TEXT>
     </T100>

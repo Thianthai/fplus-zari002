@@ -5,7 +5,7 @@
    <VSEOCLASS>
     <CLSNAME>ZCL_ZARI002_SPIKE_MD</CLSNAME>
     <LANGU>E</LANGU>
-    <DESCRIPT>Spike Class</DESCRIPT>
+    <DESCRIPT>Incoming Payments - Spike Class</DESCRIPT>
     <STATE>1</STATE>
     <CLSCCINCL>X</CLSCCINCL>
     <FIXPT>X</FIXPT>

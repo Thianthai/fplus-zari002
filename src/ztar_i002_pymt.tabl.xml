@@ -263,7 +263,7 @@
      <DDLANGUAGE>E</DDLANGUAGE>
      <UNIQUEFLAG>X</UNIQUEFLAG>
      <DBINDEX>ZTAR_I002_PYMT~SFI</DBINDEX>
-     <DDTEXT>Incoming Payment - Table Index</DDTEXT>
+     <DDTEXT>Incoming Payments - Table Index</DDTEXT>
      <ABAP_LANGUAGE_VERSION>5</ABAP_LANGUAGE_VERSION>
     </DD12V>
    </DD12V>
