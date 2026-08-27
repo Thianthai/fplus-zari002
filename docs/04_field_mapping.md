@@ -59,7 +59,7 @@ API field ↔ table field · CDS alias เป็น **CamelCase** · field ใ�
 | `SalesforceItemId` | `salesforce_item_id` | `char(18)` | `Edm.String(18)` | in | ✔ | **Business key / item number** — ห้ามซ้ำภายใน payment เดียวกัน |
 | `CustomerCode` | `customer_code` | `char(10)` | `Edm.String(10)` | in | ✔ | pad ซ้ายเป็น 10 หลักเช่นเดียวกับ `GLAccount` · `I_Customer` |
 | `BillingNoteNo` | `billing_note_no` | `char(10)` | `Edm.String(10)` | in | – | |
-| `AccountingDocument` | `accounting_document` | `char(10)` | `Edm.String(10)` | in | ✔ | **ไม่ validate** กับ master data (ตกลง 2026-08-27) |
+| `AccountingDocument` | `accounting_document` | `char(10)` | `Edm.String(10)` | in | ✔ | ต้องยังไม่ถูกรับชำระ/reverse — `validateArOpenItem` (ที่ว่าง รอ OQ-08) |
 | `BillingDocument` | `billing_document` | `char(10)` | `Edm.String(10)` | in | ✔ | **ไม่ validate** กับ master data |
 | `InvoicePostingDate` | `invoice_posting_date` | `dats` | `Edm.Date` | in | ✔ | |
 | `Currency` | `currency` | `cuky` | `Edm.String(5)` | **out** | ⚠️ | Determination `setItemDefaults` copy จาก header — ไม่รับจาก payload เพื่อไม่ให้ขัดกับ header |
@@ -210,3 +210,15 @@ description เป็น config text ที่ business user แก้ได้�
 | 7.7 | Salesforce ส่งคำอะไรมาได้อีกบ้างนอกจาก `Cheque` / `Transfer` | ⬜ รอคำตอบ |
 
 `payment_method` **คง `char(8)` ตามเดิม** — sample มีแค่ `Cheque` (6) กับ `Transfer` (8) พอดีตัว
+
+
+---
+
+## 8. Validation เพิ่มจาก Salesforce (2026-08-27)
+
+| Validation | Entity | Message | สถานะ |
+|---|---|---|---|
+| `validateAmountFormat` | Payment | `009` | 🟨 ที่ว่าง — OQ-10 |
+| `validateItemDuplicate` | Payment | `010` | ✅ ทำได้เลย |
+| `validateAmountPaidTotal` | Payment | `011` | ✅ ทำได้เลย |
+| `validateArOpenItem` | Item | `206` | 🟨 ที่ว่าง — OQ-08 |

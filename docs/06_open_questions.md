@@ -17,6 +17,10 @@
 | OQ-06 | URL endpoint ตัวจริง | — | Phase 1 | `05_api_spec.md` §2 ยังเป็นค่าประมาณ · ได้จริงตอน Phase 5.4 | ⬜ |
 | OQ-07 | จำนวน item สูงสุดต่อ request | — | Phase 1 | กำหนดหลัง volume test Phase 7.7 | ⬜ |
 
+| OQ-08 | released CDS view ตัวไหนบอกได้ว่า accounting document ถูกรับชำระ/reverse แล้ว (`I_OperationalAcctgDocItem` / กลุ่ม journal entry) | ผู้ใช้ + FI | Phase 3 | `validateArOpenItem` เป็นที่ว่างไว้ · ถ้าไม่มี view ที่ released จะเขียน logic ไม่ได้เลย | ⬜ |
+| OQ-09 | key ของ duplicate check ที่ให้มามี 4 field แต่ `salesforce_id` unique อยู่แล้ว การ AND ทั้ง 4 จึงไม่มีวัน fire · และ `billing_note_no` เป็น optional จึงเป็น key ที่เชื่อถือไม่ได้ → **ตอนนี้ทำเป็นเช็ค `salesforce_item_id` ข้าม payment** | Salesforce | Phase 3 | `validateItemDuplicate` ทำงานตามที่ตีความไว้ ถ้าตีความผิดต้องแก้ | 🟨 |
+| OQ-10 | `validateAmountFormat` ควร fire ตอนไหน — OData จับค่าที่ไม่ใช่ตัวเลขไปก่อนแล้ว | Salesforce | Phase 3 | message `009` ประกาศไว้แล้ว แต่ยังไม่มี logic | 🟨 |
+
 ## วิธีใช้
 
 - เจอข้อสงสัยใหม่ระหว่างทำ → **เพิ่มแถวที่นี่ทันที** อย่าเก็บไว้ในหัวหรือใน commit message

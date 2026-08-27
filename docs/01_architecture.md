@@ -109,6 +109,8 @@ Salesforce จึงเห็นปัญหาทั้งหมดในคร
 
 1. **RAP validation `validateSalesforceId`** — `SELECT SINGLE` เช็คว่ามีอยู่แล้วไหม
    ถ้ามี → 400 พร้อม message ที่อ่านรู้เรื่อง (จับได้ 99.9% ของเคสจริง)
+   · คู่กับ `validateItemDuplicate` ที่กันคนละเคส: **item เดิมโผล่มาใน payment ใบใหม่**
+   ซึ่ง header uniqueness จับไม่ได้เลยเพราะ `salesforce_id` ไม่ซ้ำ
 2. **Unique secondary index** บน `ZTAR_I002_PYMT` (`client` + `salesforce_id`)
    จับเคส race ที่ validation จับไม่ได้ — request 2 ตัวยิงพร้อมกัน SELECT ไม่เจอกันเอง
    ผ่าน validation ทั้งคู่ แล้วมา INSERT ชนกันตอน save
@@ -131,6 +133,9 @@ Salesforce จึงเห็นปัญหาทั้งหมดในคร
 | `validateMandatory` | Payment | 8 field บังคับ ครบไหม (ดู `04_field_mapping.md`) |
 | `validateChequeFields` | Payment | ถ้า `sap_payment_method` = เช็ค → `cheque_no` `issue_date` `due_on` `cheque_bankbranch` ต้องครบ (ดูจาก code ที่แปลงแล้ว ไม่ใช่คำดิบ) |
 | `validatePaymentTotal` | Payment | **ที่ว่างไว้ ยังไม่ใส่ logic** — เผื่อภายหลังต้องเทียบ `payment_amount` กับผลรวม `amount_paid` |
+| `validateAmountPaidTotal` | Payment | ผลรวม `amount_paid` ของทุก item ต้อง **> 0** |
+| `validateAmountFormat` | Payment | **ที่ว่างไว้ ยังไม่ใส่ logic** — OData จับค่าที่ไม่ใช่ตัวเลขไปก่อนแล้ว รอนิยามเงื่อนไข (OQ-10) |
+| `validateItemDuplicate` | Payment | `salesforce_item_id` ของ item ที่ส่งมา ต้องไม่เคยมีใน payment ใบก่อนหน้า |
 | `validateNumberOfItems` | Payment | ต้องเท่ากับจำนวน `_Item` ที่ส่งมาจริง |
 | `validateDates` | Payment | `due_on` ต้องไม่ก่อน `issue_date` |
 | `validateSalesforceItemId` | Item | mandatory + ไม่ซ้ำกันเองภายใน payment เดียวกัน |
@@ -144,6 +149,7 @@ Salesforce จึงเห็นปัญหาทั้งหมดในคร
 | `validateGLAccount` | `gl_account` | `I_GLAccountInCompanyCode` |
 | `validatePaymentMethod` | `sap_payment_method` | `I_PaymentMethod` เช็คแค่ว่า code มีจริง · ถ้าแปลงไม่ได้ (คำที่ไม่รู้จัก) ต้องแจ้งคำที่ส่งมาในข้อความด้วย |
 | `validateCustomerCode` | `customer_code` (Item) | `I_Customer` |
+| `validateArOpenItem` | `accounting_document` (Item) | **ที่ว่างไว้ ยังไม่ใส่ logic** — ตรวจว่ารายการยังไม่ถูกรับชำระหรือ reverse · ต้องหา released view ที่มีสถานะนี้ก่อน (OQ-08) |
 | `validateChequeBankBranch` | `cheque_bankbranch` | **ที่ว่างไว้ ยังไม่ใส่ logic** — โครงสร้างของ field ยังไม่ชัด (`0040129` ไม่มีใน `I_Bank_2`) ดู `04_field_mapping.md` §7.2 |
 
 **ไม่เช็คเครื่องหมายจำนวนเงิน** — sample จริงมี `rounding_diff = -1.00` และ
@@ -158,8 +164,10 @@ Salesforce ส่ง `gl_account` มาแบบ **ไม่มี leading zero
 `gl_account` และ `customer_code` ก่อน แล้ว validation ค่อยทำงานกับค่าที่ normalize แล้ว
 — กันเคสที่ต้นทางส่งมาบ้างไม่ส่งมาบ้างด้วย
 
-**ไม่ validate**: `billing_document`, `accounting_document` — เป็นเลขอ้างอิงฝั่ง Salesforce
-ที่อาจยังไม่มีใน SAP ตอนส่งเข้ามา (ตกลง 2026-08-27 — ถ้าต้องการเพิ่มทีหลังบอกได้)
+**ไม่ validate**: `billing_document` — เป็นเลขอ้างอิงฝั่ง Salesforce ที่อาจยังไม่มีใน SAP
+
+⚠️ `accounting_document` **เคยตกลงว่าไม่ validate แล้วกลับคำ** (2026-08-27) — ตอนนี้ต้องตรวจว่า
+รายการยังเปิดอยู่ ผ่าน `validateArOpenItem`
 
 การอ่าน master data ทั้งหมดผ่าน **`ZIF_ZARI002_MD_CHECK`** เพื่อให้ unit test ใส่ test double ได้
 ไม่ต้องพึ่งข้อมูลจริงบน tenant

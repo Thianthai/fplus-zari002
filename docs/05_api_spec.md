@@ -73,7 +73,7 @@ POST /sap/opu/odata4/sap/zapi_zari002_o4/srvd_a2x/sap/zapi_zari002/0001/Payment
 | `SalesforceItemId` | String(18) | ✔ | **business key ของ item** — ต้องไม่ซ้ำกันเองภายใน payment เดียวกัน · error message จะอ้างถึง item ด้วยค่านี้ |
 | `CustomerCode` | String(10) | ✔ | ต้องมีจริงใน SAP · ส่งแบบไม่มี leading zero ได้ |
 | `BillingNoteNo` | String(10) | – | |
-| `AccountingDocument` | String(10) | ✔ | **ไม่ถูกตรวจกับข้อมูลใน SAP** |
+| `AccountingDocument` | String(10) | ✔ | ต้องเป็นรายการที่**ยังไม่ถูกรับชำระหรือ reverse** (`ZARI002/206`) |
 | `BillingDocument` | String(10) | ✔ | **ไม่ถูกตรวจกับข้อมูลใน SAP** |
 | `InvoicePostingDate` | Date | ✔ | |
 | `InvoiceAmount` | Decimal(23,2) | ✔ | |
@@ -171,11 +171,16 @@ API แปลงคำเป็น SAP payment method code ให้เอง
 
 ### 6.5 ไม่มีการตรวจเครื่องหมายจำนวนเงิน
 
-ทุก field จำนวนเงินรับค่าติดลบได้ ไม่มี validation เรื่องนี้
+**รายบรรทัด**รับค่าติดลบได้ (CN เป็นค่าติดลบตามปกติ) — แต่ **ผลรวม `AmountPaid` ของทุก item
+ในหนึ่ง payment ต้องมากกว่า 0** ไม่งั้นได้ `ZARI002/011`
 
 ## 7. Idempotency — ห้ามยิงซ้ำ
 
-`SalesforceId` ต้องไม่ซ้ำในระบบ ยิง id เดิมเข้ามาอีกครั้งจะได้ **400**
+ตรวจ 2 ชั้น:
+
+1. **`SalesforceId` ต้องไม่ซ้ำ** ในระดับ payment — ยิง id เดิมเข้ามาอีกครั้งได้ `ZARI002/004`
+2. **`SalesforceItemId` ต้องไม่เคยเข้ามาใน payment ใบก่อนหน้า** — กันจ่ายซ้ำใบแจ้งหนี้เดิม
+   ผ่าน payment คนละใบ ได้ `ZARI002/010`
 
 ⚠️ **ถ้าได้ `500` จากการยิงซ้ำพร้อมกัน 2 request ให้ถือว่าอาจสร้างสำเร็จไปแล้ว
 ห้าม retry อัตโนมัติ** — API นี้ไม่มี read operation ให้ query กลับมาเช็ค
@@ -241,6 +246,9 @@ API แปลงคำเป็น SAP payment method code ให้เอง
 | `ZARI002/006` | Item &1: partial flag must be X or blank |
 | `ZARI002/007` | Payment amount &1 does not match item total &2 — ⬜ ยังไม่เปิดใช้ (OQ-05) |
 | `ZARI002/008` | Bank/branch &1 does not exist — ⬜ ยังไม่เปิดใช้ (OQ-01) |
+| `ZARI002/009` | Invalid payment data for payment &1. Please verify — ⬜ ยังไม่เปิดใช้ (OQ-10) |
+| `ZARI002/010` | Duplicate record: item &1 already exists in SAP |
+| `ZARI002/011` | Payment &1: received amount must be greater than zero |
 
 **`1xx` — field ที่บังคับ**
 
@@ -278,6 +286,7 @@ API แปลงคำเป็น SAP payment method code ให้เอง
 | `ZARI002/203` | Payment method &1 does not exist for country &2 |
 | `ZARI002/204` | Currency for company code &1 cannot be determined |
 | `ZARI002/205` | Item &1: customer &2 does not exist |
+| `ZARI002/206` | Item &1: document &2 already cleared or reversed — ⬜ ยังไม่เปิดใช้ (OQ-08) |
 
 `202` = คำที่ส่งมาไม่อยู่ในรายการแปลง (ดู §6.2) · `203` = แปลงได้แต่ code ไม่มีใน SAP
 
