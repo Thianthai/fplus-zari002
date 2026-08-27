@@ -26,8 +26,8 @@
 | `ZE_STATUS` | Data element | `src/ze_status.dtel.xml` | 0 | ✅ |
 | `ZTAR_I002_PYMT` | Table — payment header | `src/ztar_i002_pymt.tabl.xml` | 0 | ✅ |
 | `ZTAR_I002_ITEM` | Table — payment item | `src/ztar_i002_item.tabl.xml` | 0 | ✅ |
-| `ZTAR_I002_PYMT~SFI` | Unique secondary index (`client` + `salesforce_id`) | อยู่ใน `ztar_i002_pymt.tabl.xml` | 2 | ⬜ |
-| `ZARI002` | Message class | `src/zari002.msag.xml` | 2 | ⬜ |
+| `ZTAR_I002_PYMT~SFI` | Unique secondary index (`client` + `salesforce_id`) | รอดูจากของจริง | 2 | 🟨 |
+| `ZARI002` | Message class (30 messages) | `src/zari002.msag.xml` | 2 | 🟨 |
 
 > `ZD_STATUS` / `ZE_STATUS` เป็น object กลาง **จงใจไม่ใส่ RICEFW ID ในชื่อ** เพื่อให้ RICEFW อื่น reuse ได้
 > `ZTAR_I002_*` ใช้ชื่อที่ผู้ใช้ออกแบบไว้เดิม ไม่เปลี่ยนตาม pattern `ZR_`/`ZC_` ของ project
@@ -36,10 +36,11 @@
 
 | Object | Type | ไฟล์ | Phase | Status |
 |--------|------|------|-------|--------|
-| `ZCX_ZARI002_ERROR` | Exception class | `src/zcx_zari002_error.clas.abap` | 2 | ⬜ |
+| `ZCX_ZARI002_ERROR` | Exception class | `src/zcx_zari002_error.clas.abap` | 2 | 🟨 |
 | `ZIF_ZARI002_MD_CHECK` | Interface — อ่าน master data (mock ได้) | `src/zif_zari002_md_check.intf.abap` | 4 | ⬜ |
 | `ZCL_ZARI002_MD_CHECK` | Class — implementation จริงบน released CDS view | `src/zcl_zari002_md_check.clas.abap` | 4 | ⬜ |
-| `ZCL_ZARI002_VALIDATOR` | Class — validation กลุ่ม format/mandatory/consistency | `src/zcl_zari002_validator.clas.abap` | 4 | ⬜ |
+| `ZCL_ZARI002_VALIDATOR` | Class — validation กลุ่ม format/mandatory/consistency **+ constant แปลง payment method** | `src/zcl_zari002_validator.clas.abap` | 4 | ⬜ |
+| `ZCL_ZARI002_SPIKE_MD` | Console class — spike ตรวจ released view (throwaway) | `src/zcl_zari002_spike_md.clas.abap` | 1 | 🟨 |
 
 ทุก class มีไฟล์คู่: `*.clas.xml` (metadata) + `*.clas.testclasses.abap` (ABAP Unit)
 
@@ -83,3 +84,5 @@ Entity set ที่ 3rd-party เห็น: **`Payment`** และ **`PaymentI
 | Authorization object `Z_ZARI002` | ใช้ `authorization master ( global )` + คุมสิทธิ์ที่ communication arrangement |
 | Data element ของ field อื่น ๆ | table ใช้ built-in type ตรง ๆ → label ไปอยู่ที่ `@EndUserText.label` ใน CDS |
 | Log table | reject ทั้ง request ไม่บันทึกอะไร → ถ้าต้องการ audit trail ค่อยพิจารณาเพิ่ม (`01_architecture.md` §8) |
+
+> `ZCL_ZARI002_SPIKE_MD` เป็น throwaway — **ลบทิ้งเมื่อจบ Phase 4** · ไม่มี unit test เพราะเป็น manual probe
