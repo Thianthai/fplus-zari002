@@ -64,14 +64,14 @@ serialize ขึ้นมา แล้วค่อยเอาเอกสาร
 
 | # | Object | Status |
 |---|--------|--------|
-| 2.1 | Unique secondary index บน `ZTAR_I002_PYMT` (`client` + `salesforce_id`) | ⬜ |
-| 2.2 | Message class `ZARI002` — message ทุกตัวที่ validation จะใช้ | ⬜ |
-| 2.3 | Exception class `ZCX_ZARI002_ERROR` | ⬜ |
+| 2.1 | Unique secondary index `ZTAR_I002_PYMT~SFI` (`client` + `salesforce_id`) | ✅ |
+| 2.2 | Message class `ZARI002` — 34 messages (`0xx` โครงสร้าง · `1xx` mandatory · `2xx` master data · `900` technical) | ✅ |
+| 2.3 | Exception class `ZCX_ZARI002_ERROR` | ✅ |
 
 > ไม่มี data element/domain เพิ่มแล้ว — `ZD_STATUS` / `ZE_STATUS` ทำใน Phase 0
 > field อื่นใช้ built-in type ตรง ๆ label ไปอยู่ที่ `@EndUserText.label` ใน CDS
 
-**Exit criteria**: activate ผ่านทุก object · index สร้างสำเร็จ (ถ้ามี duplicate ค้างต้องเคลียร์ก่อน)
+**Exit criteria**: activate ผ่านทุก object · index สร้างสำเร็จ ✅ — รีวิวทะเบียนข้อสงสัยแล้ว ไม่มีข้อใหม่จาก Phase 2
 
 ---
 
