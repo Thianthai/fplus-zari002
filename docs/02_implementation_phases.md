@@ -14,10 +14,15 @@
 | 0.2 | Push ขึ้น GitHub | Claude | ✅ |
 | 0.3 | ผูก abapGit repo กับ package `ZARI002` บน tenant | ผู้ใช้ | ✅ |
 | 0.4 | เอา `.abapgit.xml` + `src/` ที่เขียนมือออกจาก repo เพื่อให้ SAP serialize เองเป็น baseline | Claude | ✅ |
-| 0.5 | abapGit push `ZTAR_I002_PYMT`, `ZTAR_I002_ITEM`, `ZD_STATUS`, `ZE_STATUS` + `.abapgit.xml` + `package.devc.xml` ตัวจริงขึ้นมา | ผู้ใช้ | ⬜ |
-| 0.6 | Claude ตรวจว่าไฟล์ที่ได้มาตรงกับที่ออกแบบ อัปเดต `03_object_list.md` + path ใน `README` | Claude | ⬜ |
+| 0.5 | abapGit push `ZTAR_I002_PYMT`, `ZTAR_I002_ITEM`, `ZD_STATUS`, `ZE_STATUS` + `.abapgit.xml` + `package.devc.xml` ตัวจริงขึ้นมา | ผู้ใช้ | ✅ |
+| 0.6 | Claude ตรวจ baseline ว่าตรงกับที่ออกแบบ แล้วอัปเดตเอกสาร | Claude | ✅ |
 
-**Exit criteria**: pull/push ระหว่าง GitHub ↔ tenant ผ่านทั้ง 2 ทาง และเห็น table/domain/data element เป็นไฟล์ใน repo
+**Exit criteria**: pull/push ระหว่าง GitHub ↔ tenant ผ่านทั้ง 2 ทาง และเห็น table/domain/data element เป็นไฟล์ใน repo ✅
+
+ผลตรวจ baseline (commit `c065712`): field ครบถูกต้องทั้ง 2 table — header 25 field
+(input 16 ตัวตาม requirement ครบ) · item 20 field · CURR ทุกตัว reference `currency`
+ในตารางตัวเองถูก · `status` ผูก `ZE_STATUS` ทั้งคู่ · `ZD_STATUS` มี fixed value ครบ 4 ค่า
+· ยังไม่มี secondary index — ถูกต้อง เป็นงาน Phase 2.1
 
 ### ⚠️ Gotcha ที่เจอจริงตอน link (2026-08-27)
 

@@ -12,20 +12,20 @@
 
 | Package | Folder | Description | Status |
 |---------|--------|-------------|--------|
-| `ZARI002` | `src/` (รอยืนยัน) | ZARI002 Incoming Payments (API) | 🟨 |
+| `ZARI002` | `src/` | Incoming Payments (API) | ✅ |
 
-⏳ **path ในคอลัมน์ "ไฟล์" ทั้งเอกสารนี้ยังเป็นค่าประมาณ** — `STARTING_FOLDER` และ
-`FOLDER_LOGIC` ตัวจริงจะรู้หลัง push แรกจาก tenant (`.abapgit.xml` ที่ SAP เขียนเอง)
-ถ้า folder logic ออกมาเป็น `FULL` path จะกลายเป็น `src/zari002/...` ทั้งหมด — Claude จะแก้ให้ตอนนั้น
+`.abapgit.xml` ที่ tenant serialize มาใช้ `STARTING_FOLDER = /src/` + `FOLDER_LOGIC = FULL`
+เนื่องจาก `ZARI002` เป็น top package ที่ link ไว้และไม่มี sub-package ไฟล์จึงลง `src/` ตรง ๆ
+(ถ้าวันหน้าเพิ่ม sub-package ไฟล์ของมันจะไปอยู่ `src/<ชื่อ package เต็ม>/`)
 
 ## DDIC
 
 | Object | Type | ไฟล์ | Phase | Status |
 |--------|------|------|-------|--------|
-| `ZD_STATUS` | Domain (`N`/`S`/`W`/`E`) | `src/zd_status.doma.xml` | 0 | 🟨 |
-| `ZE_STATUS` | Data element | `src/ze_status.dtel.xml` | 0 | 🟨 |
-| `ZTAR_I002_PYMT` | Table — payment header | `src/ztar_i002_pymt.tabl.xml` | 0 | 🟨 |
-| `ZTAR_I002_ITEM` | Table — payment item | `src/ztar_i002_item.tabl.xml` | 0 | 🟨 |
+| `ZD_STATUS` | Domain (`N`/`S`/`W`/`E`) | `src/zd_status.doma.xml` | 0 | ✅ |
+| `ZE_STATUS` | Data element | `src/ze_status.dtel.xml` | 0 | ✅ |
+| `ZTAR_I002_PYMT` | Table — payment header | `src/ztar_i002_pymt.tabl.xml` | 0 | ✅ |
+| `ZTAR_I002_ITEM` | Table — payment item | `src/ztar_i002_item.tabl.xml` | 0 | ✅ |
 | `ZTAR_I002_PYMT~SFI` | Unique secondary index (`client` + `salesforce_id`) | อยู่ใน `ztar_i002_pymt.tabl.xml` | 2 | ⬜ |
 | `ZARI002` | Message class | `src/zari002.msag.xml` | 2 | ⬜ |
 

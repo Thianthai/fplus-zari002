@@ -51,6 +51,36 @@ Table ทั้ง 2 ตัวออกแบบไว้ก่อนหน้�
 
 `ZD_STATUS` เป็น domain กลาง **ไม่ใส่ RICEFW ID ในชื่อ** เพื่อให้ RICEFW อื่น reuse ได้
 
+### 3.4 Admin field ของ header กับ item ไม่เท่ากัน — **ตั้งใจ ไม่ใช่ของที่ตกหล่น**
+
+| Table | admin field |
+|---|---|
+| `ZTAR_I002_PYMT` | `created_by` `created_at` `last_changed_by` **`last_changed_at`** `local_last_changed_at` |
+| `ZTAR_I002_ITEM` | `created_by` `created_at` `last_changed_by` — `local_last_changed_at` |
+
+เป็น pattern มาตรฐานของ RAP ห้ามไป "แก้ให้เท่ากัน" ความหมายของ 2 field ต่างกัน:
+
+- `local_last_changed_at` (`abp_locinst_lastchange_tstmpl`) = **instance ตัวนี้ตัวเดียว** ถูกแก้เมื่อไหร่ → ใช้เป็น `etag master`
+- `last_changed_at` (`abp_lastchange_tstmpl`) = instance นี้ **หรือลูกตัวใดก็ได้ในสายพันธุ์** ถูกแก้เมื่อไหร่ → ใช้เป็น `total etag` ที่ผูกกับ `lock master`
+
+Root จึงต้องมีทั้งคู่เพราะเป็นทั้ง etag master และ lock master ที่ถือ total etag
+ส่วน child เป็น `lock dependent by _Payment` ไม่ได้ถือ total etag จึงต้องการแค่ตัวแรก
+
+```abap
+define behavior for ZR_ZARI002 alias Payment
+persistent table ztar_i002_pymt
+lock master total etag LastChangedAt
+etag master LocalLastChangedAt
+...
+define behavior for ZI_ZARI002_ITEM alias Item
+persistent table ztar_i002_item
+lock dependent by _Payment
+etag master LocalLastChangedAt
+```
+
+item จึงมี optimistic concurrency ของตัวเองเต็มรูปแบบ — **ZARE002 แก้คนละ item
+ใน payment เดียวกันพร้อมกันได้ไม่ชนกัน**
+
 | ค่า | ความหมาย | ใครเขียน |
 |-----|----------|---------|
 | `N` | New — รับเข้ามาแล้ว รอ post | **ZARI002** |

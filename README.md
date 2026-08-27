@@ -37,17 +37,23 @@ fplus-zari002/
 ├── .gitignore
 ├── README.md
 ├── CLAUDE.md                     # กฎ/บริบทสำหรับ AI assistant ใน project นี้
-└── docs/                         # เอกสาร design (ไม่ถูก sync เข้า SAP)
-    ├── 01_architecture.md        # สถาปัตยกรรม + design decision + เหตุผล
-    ├── 02_implementation_phases.md
-    ├── 03_object_list.md         # รายชื่อ repository object ทั้งหมด + status
-    └── 04_field_mapping.md       # API field ↔ table field + mandatory + validation
+├── docs/                         # เอกสาร design (ไม่ถูก sync เข้า SAP)
+│   ├── 01_architecture.md        # สถาปัตยกรรม + design decision + เหตุผล
+│   ├── 02_implementation_phases.md
+│   ├── 03_object_list.md         # รายชื่อ repository object ทั้งหมด + status
+│   └── 04_field_mapping.md       # API field ↔ table field + mandatory + validation
+├── .abapgit.xml                  # ← tenant serialize เอง ห้ามแก้มือ
+└── src/                          # ← abapGit sync เฉพาะโฟลเดอร์นี้ (package ZARI002)
+    ├── package.devc.xml
+    ├── zd_status.doma.xml
+    ├── ze_status.dtel.xml
+    ├── ztar_i002_pymt.tabl.xml
+    └── ztar_i002_item.tabl.xml
 ```
 
-⏳ **`.abapgit.xml` และ `src/` ยังไม่มีโดยตั้งใจ** — ปล่อยให้ abapGit ฝั่ง tenant
-serialize ขึ้นมาเองใน push แรก จะได้ config + metadata XML ที่ SAP เขียนเองแบบเป๊ะ ๆ
-เป็น baseline (ดู §Sync workflow ข้อ 1) · `STARTING_FOLDER` / `FOLDER_LOGIC` ตัวจริง
-และ path ของแต่ละไฟล์ จะอัปเดตลงเอกสารหลังจาก push แรกเข้ามาแล้ว
+`.abapgit.xml` และ `src/` ทั้งหมด **tenant เป็นคน serialize** ไม่ได้เขียนมือ —
+`STARTING_FOLDER = /src/` · `FOLDER_LOGIC = FULL` · object ของ package `ZARI002`
+ลง `src/` ตรง ๆ เพราะไม่มี sub-package
 
 ## Sync workflow
 
@@ -95,4 +101,5 @@ Domain / data element ที่ใช้ร่วมข้าม RICEFW: `ZD_STA
 
 ## Status
 
-Phase 0 — เอกสาร design ✅ · abapGit link ✅ · รอ push แรกจาก tenant (`.abapgit.xml` + `src/` + table/domain/data element) แล้วเข้า Phase 1
+**Phase 0 ✅ ปิดแล้ว** — repo, abapGit link, และ baseline (2 table + domain + data element) ตรวจแล้วถูกต้องครบ
+กำลังอยู่ **Phase 1** — spec freeze + verify release state ของ released CDS view ที่จะใช้ validate master data
