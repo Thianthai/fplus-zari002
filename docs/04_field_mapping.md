@@ -4,14 +4,14 @@ API field ↔ table field · CDS alias เป็น **CamelCase** · field ใ�
 
 **I/O**: `in` = 3rd-party ส่งเข้ามาได้ · `out` = ระบบเติมให้ ไม่รับจาก payload (ส่งมาก็ถูกเมิน)
 
-**Mand.**: `✔` = บังคับเสมอ · `–` = optional · `⚠️` = ยังไม่ปิด (ดู §5)
-ยืนยัน mandatory list แล้ว 2026-08-27 ยกเว้นแถวที่ยัง `⚠️`
+**Mand.**: `✔` = บังคับเสมอ · `(✔)` = บังคับแบบมีเงื่อนไข · `–` = optional
+ยืนยัน mandatory list แล้ว 2026-08-27
 
 ### Conditional mandatory — payment แบบเช็ค
 
 `cheque_no` · `issue_date` · `due_on` · `cheque_bankbranch` **ไม่ใช่ mandatory ทั่วไป
 แต่บังคับเมื่อ `payment_method` = เช็ค** → validation `validateChequeFields`
-⚠️ ค่า code ของ "เช็ค" ยังไม่ล็อก (ดู §5)
+⚠️ ค่า code ของ "เช็ค" ยังไม่ล็อก (ดู §5)  <!-- open -->
 
 ---
 
@@ -22,16 +22,16 @@ API field ↔ table field · CDS alias เป็น **CamelCase** · field ใ�
 | `PaymentUUID` | `payment_uuid` | `sysuuid_x16` | `Edm.Guid` | out | – | Key — RAP gen (early numbering) · คืนกลับใน response |
 | `SalesforceId` | `salesforce_id` | `char(18)` | `Edm.String(18)` | in | ✔ | **Unique** — `validateSalesforceId` + unique index |
 | `PaymentDocumentNo` | `payment_document_no` | `char(10)` | `Edm.String(10)` | in | ✔ | เลขที่เอกสารรับชำระเงินจากระบบ Salesforce |
-| `NumberOfItems` | `number_of_items` | `char(3)` | `Edm.String(3)` | in | ✔ | ต้องเท่ากับจำนวน `_Item` ที่ส่งมา — `validateNumberOfItems` · ⚠️ ตกลง leading zero ใน Phase 1 |
+| `NumberOfItems` | `number_of_items` | `int4` | `Edm.Int32` | in | ✔ | จำนวนนับ (`5` ไม่ใช่ `"005"`) · ต้องเท่ากับจำนวน `_Item` ที่ส่งมา — `validateNumberOfItems` |
 | `CompanyCode` | `company_code` | `char(4)` | `Edm.String(4)` | in | ✔ | `I_CompanyCode` |
 | `PostingDate` | `posting_date` | `dats` | `Edm.Date` | in | ✔ | |
 | `GLAccount` | `gl_account` | `char(10)` | `Edm.String(10)` | in | ✔ | `I_GLAccountInCompanyCode` (คู่กับ `CompanyCode`) |
 | `PaymentMethod` | `payment_method` | `char(8)` | `Edm.String(8)` | in | ✔ | `I_PaymentMethod` · เป็นตัวตัดสิน conditional mandatory ของกลุ่มเช็ค |
-| `ChequeNo` | `cheque_no` | `char(8)` | `Edm.String(8)` | in | ⚠️ | |
-| `IssueDate` | `issue_date` | `dats` | `Edm.Date` | in | ⚠️ | |
-| `DueOn` | `due_on` | `dats` | `Edm.Date` | in | ⚠️ | ต้องไม่ก่อน `IssueDate` |
-| `ChequeBankBranch` | `cheque_bankbranch` | `char(7)` | `Edm.String(7)` | in | ⚠️ | = `I_Bank_2.BankInternalID` · ⚠️ ความยาวไม่พอ ดู §5 |
-| `Currency` | `currency` | `cuky` | `Edm.String(5)` | in | ⚠️ | `I_Currency` · เป็น currency reference ของทุก amount ใน header |
+| `ChequeNo` | `cheque_no` | `char(8)` | `Edm.String(8)` | in | (✔) | บังคับเมื่อจ่ายด้วยเช็ค |
+| `IssueDate` | `issue_date` | `dats` | `Edm.Date` | in | (✔) | บังคับเมื่อจ่ายด้วยเช็ค |
+| `DueOn` | `due_on` | `dats` | `Edm.Date` | in | (✔) | บังคับเมื่อจ่ายด้วยเช็ค · ต้องไม่ก่อน `IssueDate` |
+| `ChequeBankBranch` | `cheque_bankbranch` | `char(15)` | `Edm.String(15)` | in | (✔) | บังคับเมื่อจ่ายด้วยเช็ค · = `I_Bank_2.BankInternalID` · validate กับ `I_Bank_2` |
+| `Currency` | `currency` | `cuky` | `Edm.String(5)` | in | – | ไม่ส่ง → determination ดึง currency ของ `CompanyCode` จาก `I_CompanyCode` มาเติม · ถ้าส่งมา validate กับ `I_Currency` · เป็น currency reference ของทุก amount ใน header **และของ item** |
 | `RoundingDiff` | `rounding_diff` | `curr(23,2)` | `Edm.Decimal` | in | – | |
 | `AdvancePayment` | `advance_payment` | `curr(23,2)` | `Edm.Decimal` | in | – | ไม่ติดลบ |
 | `Fees` | `fees` | `curr(23,2)` | `Edm.Decimal` | in | – | ไม่ติดลบ |
@@ -153,8 +153,9 @@ message ที่เกี่ยวกับ item จะอ้างถึงด
 
 | # | เรื่อง | สถานะ |
 |---|--------|--------|
-| 5.1 | `Currency` ไม่อยู่ใน mandatory list ที่ยืนยันมา แต่ทุก amount ทั้ง 2 table อ้าง currency นี้ และ item copy ไปใช้ | รอตัดสินใจ |
-| 5.2 | `ChequeBankBranch` เป็น `char(7)` แต่ `I_Bank_2.BankInternalID` เป็น `CHAR 15` | รอตัดสินใจ |
-| 5.3 | ค่า code ของ payment method "เช็ค" ที่ใช้ตัดสิน conditional mandatory | รอคำตอบ |
-| 5.4 | `NumberOfItems` เปลี่ยนเป็น numeric type | รอ activate |
-| 5.5 | รูปแบบ response ตอน error (ดู §4) | รอตัดสินใจ |
+| 5.1 | `Currency` optional — determination ดึงจาก company code | ✅ ตกลง 2026-08-27 |
+| 5.2 | `ChequeBankBranch` ขยายเป็น `char(15)` + validate กับ `I_Bank_2` | ✅ ตกลง 2026-08-27 · รอ activate |
+| 5.3 | ค่า code ของ payment method "เช็ค" ที่ใช้ตัดสิน conditional mandatory | ⬜ รอคำตอบ |
+| 5.4 | `BankCountry` ที่ใช้เป็น key คู่กับ `BankInternalID` ตอน validate `I_Bank_2` — Salesforce ส่งมา หรือ derive จาก country ของ company code | ⬜ รอคำตอบ |
+| 5.5 | `NumberOfItems` เปลี่ยนเป็น `int4` | ✅ ตกลง 2026-08-27 · รอ activate |
+| 5.6 | รูปแบบ response ตอน error | ✅ คง reject ทั้ง request → 400 OData error payload |

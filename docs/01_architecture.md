@@ -128,6 +128,9 @@ Salesforce จึงเห็นปัญหาทั้งหมดในคร
 | Validation | Entity | ตรวจอะไร |
 |---|---|---|
 | `validateSalesforceId` | Payment | mandatory + ไม่ซ้ำใน table |
+| `validateMandatory` | Payment | 8 field บังคับ ครบไหม (ดู `04_field_mapping.md`) |
+| `validateChequeFields` | Payment | ถ้าจ่ายด้วยเช็ค → `cheque_no` `issue_date` `due_on` `cheque_bankbranch` ต้องครบ |
+| `validatePaymentTotal` | Payment | **ที่ว่างไว้ ยังไม่ใส่ logic** — เผื่อภายหลังต้องเทียบ `payment_amount` กับผลรวม `amount_paid` |
 | `validateNumberOfItems` | Payment | ต้องเท่ากับจำนวน `_Item` ที่ส่งมาจริง |
 | `validateAmounts` | Payment | mandatory + ไม่ติดลบ |
 | `validateDates` | Payment | รูปแบบวันที่ + `due_on` ต้องไม่ก่อน `issue_date` |
@@ -143,6 +146,7 @@ Salesforce จึงเห็นปัญหาทั้งหมดในคร
 | `validateCurrency` | `currency` | `I_Currency` |
 | `validatePaymentMethod` | `payment_method` | `I_PaymentMethod` |
 | `validateCustomerCode` | `customer_code` (Item) | `I_Customer` |
+| `validateChequeBankBranch` | `cheque_bankbranch` | `I_Bank_2` (key = `BankCountry` + `BankInternalID`) |
 
 **ไม่ validate**: `billing_document`, `accounting_document` — เป็นเลขอ้างอิงฝั่ง Salesforce
 ที่อาจยังไม่มีใน SAP ตอนส่งเข้ามา (ตกลง 2026-08-27 — ถ้าต้องการเพิ่มทีหลังบอกได้)
@@ -154,10 +158,27 @@ Salesforce จึงเห็นปัญหาทั้งหมดในคร
 
 | Determination | Entity | ทำอะไร |
 |---|---|---|
-| `setInitialStatus` | Payment | `status = 'N'`, เคลียร์ `error_message` |
-| `setItemDefaults` | Item | copy `currency` จาก header, `status = 'N'`, เคลียร์ `error_message` |
+| `setPaymentDefaults` | Payment | `status = 'N'`, เคลียร์ `error_message`, เติม `currency` ถ้าไม่ได้ส่งมา **และ push `currency` ลงทุก item** |
+| `setItemDefaults` | Item | `status = 'N'`, เคลียร์ `error_message` |
 
 ทั้งคู่เป็น `determination on save { create; }` — ทำงานก่อน validation ในลำดับ RAP save sequence
+
+### ทำไม `currency` ของ item ถึงเติมจาก determination ฝั่ง header ไม่ใช่ฝั่ง item
+
+RAP **ไม่การันตีลำดับ**ของ determination ข้าม entity — ถ้าให้ item ไปอ่าน `currency`
+ของ parent เอง อาจอ่านตอนที่ header ยังไม่ได้เติมค่า (กรณี Salesforce ไม่ส่ง currency มา
+แล้วต้อง derive จาก company code) แล้วได้ค่าว่างแบบเงียบ ๆ
+
+`setPaymentDefaults` จึงหา currency ให้เสร็จในที่เดียว แล้วเขียนลง item ทั้งหมดด้วย EML
+ในจังหวะเดียวกัน — ลำดับถูกต้องแน่นอนเพราะอยู่ใน method เดียว
+
+### Currency มาจากไหน
+
+1. Salesforce ส่ง `Currency` มา → ใช้ค่านั้น (validate กับ `I_Currency`)
+2. ไม่ส่งมา → ดึง currency ของ `CompanyCode` จาก `I_CompanyCode`
+
+⚠️ ข้อ 2 แปลว่า payment ที่เป็นสกุลต่างประเทศ **ต้องส่ง `Currency` มาเสมอ** ไม่งั้นจะได้
+สกุลเงินของ company code ไปเงียบ ๆ — ต้องเขียนเตือนไว้ใน `05_api_spec.md`
 
 ## 8. สิ่งที่จงใจไม่ทำในรอบนี้
 
