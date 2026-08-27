@@ -74,6 +74,16 @@
 - Push เอกสารขึ้น GitHub ได้เลยเมื่อผู้ใช้สั่ง ไม่ต้อง confirm ซ้ำ
 - Remote: https://github.com/Thianthai/fplus-zari002.git
 
+## วิธีทำงานเมื่อข้อมูลยังไม่ครบ (ตกลง 2026-08-27)
+
+master data บน tenant ยัง config ไม่เสร็จ และ sample data บางส่วนยังไม่มีจริงในระบบ
+→ **ABAP implement รอไว้ก่อน ไม่ต้องหยุดรอ**
+
+- เจอจุดที่ไม่ชัด → **note ลง `docs/06_open_questions.md` แล้วเดินต่อทันที**
+- validation ที่ยังตัดสินใจไม่ได้ → เปิดเป็น **ที่ว่าง (empty hook)** ไว้ใน BDEF พร้อม comment
+  ว่ารออะไร จะได้เติม logic ทีหลังโดยไม่ต้องแก้ BDEF
+- **จบทุก phase ต้องไล่รีวิวทะเบียนข้อสงสัยทั้งตาราง** ก่อนขึ้น phase ถัดไป
+
 ## Related RICEFW
 
 ทั้ง 3 รหัสคุยกันผ่าน `ZTAR_I002_PYMT` / `ZTAR_I002_ITEM` เท่านั้น ไม่มี call ตรงระหว่างกัน

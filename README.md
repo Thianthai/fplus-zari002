@@ -40,7 +40,9 @@ fplus-zari002/
 │   ├── 01_architecture.md        # สถาปัตยกรรม + design decision + เหตุผล
 │   ├── 02_implementation_phases.md
 │   ├── 03_object_list.md         # รายชื่อ repository object ทั้งหมด + status
-│   └── 04_field_mapping.md       # API field ↔ table field + mandatory + validation
+│   ├── 04_field_mapping.md       # API field ↔ table field + mandatory + validation
+│   ├── 05_api_spec.md            # contract สำหรับทีม Salesforce
+│   └── 06_open_questions.md      # ทะเบียนข้อสงสัย — รีวิวทุกครั้งที่จบ phase
 ├── .abapgit.xml                  # ← tenant serialize เอง ห้ามแก้มือ
 └── src/                          # ← abapGit sync เฉพาะโฟลเดอร์นี้ (package ZARI002)
     ├── package.devc.xml
