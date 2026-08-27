@@ -79,8 +79,8 @@ serialize ขึ้นมา แล้วค่อยเอาเอกสาร
 
 | # | Object | Status |
 |---|--------|--------|
-| 3.1 | Root view entity `ZR_ZARI002` (บน `ztar_i002_pymt`) + composition `_Item` | ⬜ |
-| 3.2 | Child view entity `ZI_ZARI002_ITEM` + `association to parent _Payment` | ⬜ |
+| 3.1 | Root view entity `ZR_ZARI002` (บน `ztar_i002_pymt`) + composition `_Item` | ✅ |
+| 3.2 | Child view entity `ZI_ZARI002_ITEM` + `association to parent _Payment` | ✅ |
 | 3.3 | Behavior definition `ZR_ZARI002` — `managed; strict ( 2 ); persistent table; lock master / dependent by _Payment;` early numbering UUID, etag `last_changed_at`, total etag `local_last_changed_at`, `authorization master ( global )` | ⬜ |
 | 3.4 | Behavior pool `ZBP_R_ZARI002` — โครง `lhc_Payment` / `lhc_Item` เปล่า ๆ + `get_global_authorizations` | ⬜ |
 

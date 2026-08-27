@@ -29,6 +29,7 @@
 | `ZTAR_I002_PYMT~SFI` | Unique secondary index (`client` + `salesforce_id`) | **ฝังใน** `src/ztar_i002_pymt.tabl.xml` | 2 | ✅ |
 | `ZARI002` | Message class (34 messages) | `src/zari002.msag.xml` | 2 | ✅ |
 
+> CDS view หนึ่งตัวได้ **3 ไฟล์**: `.ddls.asddls` (source) + `.ddls.xml` (metadata) + `.ddls.baseinfo`
 > **Index ไม่ใช่ไฟล์แยก** — abapGit ฝัง `DD12V` / `DD17V` ไว้ใน `.tabl.xml` ของ table เจ้าของ
 > `ZD_STATUS` / `ZE_STATUS` เป็น object กลาง **จงใจไม่ใส่ RICEFW ID ในชื่อ** เพื่อให้ RICEFW อื่น reuse ได้
 > `ZTAR_I002_*` ใช้ชื่อที่ผู้ใช้ออกแบบไว้เดิม ไม่เปลี่ยนตาม pattern `ZR_`/`ZC_` ของ project
@@ -49,8 +50,8 @@
 
 | Object | Type | ไฟล์ | Phase | Status |
 |--------|------|------|-------|--------|
-| `ZR_ZARI002` | CDS root view entity (payment header) | `src/zr_zari002.ddls.asddls` | 3 | ⬜ |
-| `ZI_ZARI002_ITEM` | CDS interface view entity (item) | `src/zi_zari002_item.ddls.asddls` | 3 | ⬜ |
+| `ZR_ZARI002` | CDS root view entity (payment header) | `src/zr_zari002.ddls.asddls` | 3 | ✅ |
+| `ZI_ZARI002_ITEM` | CDS interface view entity (item) | `src/zi_zari002_item.ddls.asddls` | 3 | ✅ |
 | `ZR_ZARI002` | Behavior definition (managed, strict 2) | `src/zr_zari002.bdef.asbdef` | 3 | ⬜ |
 | `ZBP_R_ZARI002` | Behavior pool (`lhc_Payment`, `lhc_Item`) | `src/zbp_r_zari002.clas.abap` | 3 | ⬜ |
 | `ZC_ZARI002` | CDS projection view (payment header) | `src/zc_zari002.ddls.asddls` | 5 | ⬜ |
