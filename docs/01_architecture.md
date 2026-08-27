@@ -191,10 +191,18 @@ RAP **ไม่การันตีลำดับ**ของ determination ข
 | Authorization object แยก (`Z_ZARI002`) | ตอนนี้ใช้ `authorization master ( global )` + คุมสิทธิ์ที่ communication arrangement |
 | Application log | ถ้าต้องการ audit trail ของ request ที่ถูก reject ต้องเพิ่ม log table (ตอนนี้ reject แล้วไม่เหลือร่องรอยฝั่ง SAP) |
 
-## 9. ความสัมพันธ์กับ ZARE002
+## 9. ความสัมพันธ์กับ ZARE002 และ ZARI003
 
-ZARI002 กับ ZARE002 คุยกันผ่าน **table + field `status` เท่านั้น** ไม่มี call ตรงระหว่างกัน
+ทั้ง 3 รหัสคุยกันผ่าน **table + field `status` เท่านั้น** ไม่มี call ตรงระหว่างกัน
+
+| RICEFW | หน้าที่ | ทำอะไรกับ table |
+|---|---|---|
+| **ZARI002** (งานนี้) | รับข้อมูลจาก Salesforce | insert อย่างเดียว · `status = 'N'` |
+| **ZARE002** | RAP UI post FI | อ่าน row `N` → update `status` = `S`/`W`/`E` + `error_message` |
+| **ZARI003** | ส่งผล post กลับ Salesforce | อ่านอย่างเดียว |
 
 - ZARI002 เป็นเจ้าของ contract ของ table (ใครแก้โครงสร้างต้องคุยกัน)
-- ZARE002 อ่าน row ที่ `status = 'N'` ไป post แล้วเขียนกลับเป็น `S` / `W` / `E`
+- **ZARI003 เป็นคำตอบว่า Salesforce รู้ผล post ได้ยังไง** — ZARI002 จึงไม่ต้องเปิด read
+  operation ให้ Salesforce poll และยืนยันว่า create-only ถูกต้องแล้ว
+- `sap_payment_method` เป็น field ที่ ZARE002 ใช้ post FI ไม่ใช่ `payment_method` ที่เป็นคำดิบ
 - ⚠️ ถ้าภายหลัง ZARI002 เปิด update/delete ต้องคุมไม่ให้แก้ row ที่ ZARE002 กำลัง post อยู่

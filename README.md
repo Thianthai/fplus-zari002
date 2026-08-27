@@ -13,7 +13,7 @@
 | Operation ที่เปิด | **Create อย่างเดียว** (deep insert header + items) |
 | Repo sync | abapGit (local ⇄ GitHub ⇄ S/4HANA Cloud) |
 | Package | **`ZARI002`** — package เดียว ไม่มี sub-package |
-| งานต่อเนื่อง | **ZARE002** — RAP UI ที่เอาข้อมูลจาก table ไป post FI จริง (คนละรหัส ทำทีหลัง) |
+| งานต่อเนื่อง | **ZARE002** (RAP UI → post FI) · **ZARI003** (ส่งผลกลับ Salesforce) — คนละรหัส ทำทีหลัง |
 
 ## Scope
 
@@ -21,13 +21,12 @@
 ระบบ validate แล้ว **บันทึกลง 2 table** — จบตรงนี้ ไม่ post FI
 
 ```
-Salesforce ──HTTPS/OData V4──▶ ZAPI_ZARI002_O4 ──▶ ZTAR_I002_PYMT
-                                                   ZTAR_I002_ITEM
-                                                        │
-                                                   status = 'N'
-                                                        │
-                                                        ▼
-                                            ZARE002 (RAP UI) ──▶ post FI
+             ┌──HTTPS/OData V4──▶ ZAPI_ZARI002_O4 ──▶ ZTAR_I002_PYMT   status = 'N'
+             │                    (งานนี้)              ZTAR_I002_ITEM        │
+Salesforce ──┤                                                ▲               ▼
+             │                                                │      ZARE002 (RAP UI)
+             └◀── ZARI003 ──────────────────────────────────── ┘         post FI
+                  ส่งผล post กลับ                        stamp S / W / E
 ```
 
 ## Repository layout

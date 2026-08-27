@@ -76,6 +76,12 @@
 
 ## Related RICEFW
 
-**ZARE002** — RAP UI ที่จะมาอ่านข้อมูลจาก `ZTAR_I002_PYMT` / `ZTAR_I002_ITEM` ไป post FI จริง
-เป็นงานคนละรหัส ทำหลังจบ ZARI002 · ZARI002 เขียน `status = 'N'` เท่านั้น
-ค่า `S` / `W` / `E` และ `error_message` เป็นของ ZARE002
+ทั้ง 3 รหัสคุยกันผ่าน `ZTAR_I002_PYMT` / `ZTAR_I002_ITEM` เท่านั้น ไม่มี call ตรงระหว่างกัน
+
+| RICEFW | หน้าที่ | เขียน `status` |
+|---|---|---|
+| **ZARI002** (งานนี้) | รับข้อมูลจาก Salesforce มาลง table | `N` |
+| **ZARE002** | RAP UI — อ่าน row `N` ไป post FI จริง | `S` / `W` / `E` + `error_message` |
+| **ZARI003** | ดึงผลการ post ส่งกลับไปให้ Salesforce | — (อ่านอย่างเดียว) |
+
+ZARI002 จึงเป็น **create อย่างเดียว ไม่ต้องเปิด read** — การรายงานผลกลับเป็นหน้าที่ ZARI003
