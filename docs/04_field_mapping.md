@@ -26,12 +26,13 @@ API field ↔ table field · CDS alias เป็น **CamelCase** · field ใ�
 | `CompanyCode` | `company_code` | `char(4)` | `Edm.String(4)` | in | ✔ | `I_CompanyCode` |
 | `PostingDate` | `posting_date` | `dats` | `Edm.Date` | in | ✔ | |
 | `GLAccount` | `gl_account` | `char(10)` | `Edm.String(10)` | in | ✔ | `I_GLAccountInCompanyCode` (คู่กับ `CompanyCode`) |
-| `PaymentMethod` | `payment_method` | `char(8)` | `Edm.String(8)` | in | ✔ | `I_PaymentMethod` · เป็นตัวตัดสิน conditional mandatory ของกลุ่มเช็ค |
+| `PaymentMethod` | `payment_method` | `char(30)` | `Edm.String(30)` | in | ✔ | **คำจาก Salesforce** (เช่น `Cheque`) เก็บดิบไว้เพื่อ audit |
+| `SapPaymentMethod` | `sap_payment_method` | `char(1)` | `Edm.String(1)` | out | – | code ที่แปลงแล้ว — determination `setPaymentMethodCode` · validate กับ `I_PaymentMethod` · เป็นตัวตัดสิน conditional mandatory ของกลุ่มเช็ค · **ZARE002 ใช้ตัวนี้ post FI** |
 | `ChequeNo` | `cheque_no` | `char(8)` | `Edm.String(8)` | in | (✔) | บังคับเมื่อจ่ายด้วยเช็ค |
 | `IssueDate` | `issue_date` | `dats` | `Edm.Date` | in | (✔) | บังคับเมื่อจ่ายด้วยเช็ค |
 | `DueOn` | `due_on` | `dats` | `Edm.Date` | in | (✔) | บังคับเมื่อจ่ายด้วยเช็ค · ต้องไม่ก่อน `IssueDate` |
 | `ChequeBankBranch` | `cheque_bankbranch` | `char(15)` | `Edm.String(15)` | in | (✔) | บังคับเมื่อจ่ายด้วยเช็ค · = `I_Bank_2.BankInternalID` · validate กับ `I_Bank_2` |
-| `Currency` | `currency` | `cuky` | `Edm.String(5)` | in | – | ไม่ส่ง → determination ดึง currency ของ `CompanyCode` จาก `I_CompanyCode` มาเติม · ถ้าส่งมา validate กับ `I_Currency` · เป็น currency reference ของทุก amount ใน header **และของ item** |
+| `Currency` | `currency` | `cuky` | `Edm.String(5)` | **out** | – | ไม่รับจาก payload — determination ดึง currency ของ `CompanyCode` จาก `I_CompanyCode` เสมอ (ธุรกิจใช้สกุลเดียว) · เป็น currency reference ของทุก amount ใน header **และของ item** |
 | `RoundingDiff` | `rounding_diff` | `curr(23,2)` | `Edm.Decimal` | in | – | |
 | `AdvancePayment` | `advance_payment` | `curr(23,2)` | `Edm.Decimal` | in | – | ไม่ติดลบ |
 | `Fees` | `fees` | `curr(23,2)` | `Edm.Decimal` | in | – | ไม่ติดลบ |
@@ -45,7 +46,7 @@ API field ↔ table field · CDS alias เป็น **CamelCase** · field ใ�
 | `LocalLastChangedAt` | `local_last_changed_at` | `abp_locinst_lastchange_tstmpl` | `Edm.DateTimeOffset` | out | – | total etag |
 | `_Item` | — | — | navigation | in | ✔ | Composition ไป `PaymentItem` — ต้องมีอย่างน้อย 1 |
 
-**Input field ที่ 3rd-party ส่งได้: 16 field** (ตามที่ requirement ระบุ — ไม่รวม key/status/error/admin)
+**Input field ที่ 3rd-party ส่งได้: 15 field** — เดิม 16 ตัด `Currency` ออกเพราะ derive เสมอ
 **Mandatory 8 ตัว**: `SalesforceId` `PaymentDocumentNo` `NumberOfItems` `CompanyCode`
 `PostingDate` `GLAccount` `PaymentMethod` `PaymentAmount` · **conditional อีก 4 ตัว** (กรณีเช็ค)
 
@@ -153,9 +154,9 @@ message ที่เกี่ยวกับ item จะอ้างถึงด
 
 | # | เรื่อง | สถานะ |
 |---|--------|--------|
-| 5.1 | `Currency` optional — determination ดึงจาก company code | ✅ ตกลง 2026-08-27 |
+| 5.1 | `Currency` ตัดออกจาก input — determination ดึงจาก company code เสมอ | ✅ ตกลง 2026-08-27 |
 | 5.2 | `ChequeBankBranch` ขยายเป็น `char(15)` + validate กับ `I_Bank_2` | ✅ ตกลง 2026-08-27 · รอ activate |
-| 5.3 | `payment_method` — Salesforce ส่ง**คำ** ไม่ใช่ SAP code ต้องมี conversion | 🔴 ดู §6 |
+| 5.3 | `payment_method` — แปลงคำ → SAP code ด้วย constant ใน `ZCL_ZARI002_VALIDATOR` | ✅ ตกลงวิธี · ⬜ รอค่าจริง ดู §6 |
 | 5.4 | `BankCountry` derive จาก `Country` ของ company code | ✅ ตกลง 2026-08-27 |
 | 5.5 | `NumberOfItems` เปลี่ยนเป็น `int4` | ✅ ตกลง 2026-08-27 · รอ activate |
 | 5.6 | รูปแบบ response ตอน error | ✅ คง reject ทั้ง request → 400 OData error payload |
@@ -178,14 +179,17 @@ Salesforce ส่ง**คำ** (เช่น `"Cheque"`) ไม่ใช่ SAP 
 description เป็น config text ที่ business user แก้ได้ตลอด · ขึ้นกับภาษา · ไม่ unique
 ถ้าใครไปแก้ข้อความ interface พังเงียบ ๆ ทันที — เอาข้อความ config มาเป็น key ไม่ได้
 
-**ถ้าต้องแปลงฝั่ง SAP จริง ต้องเพิ่มของ**
+**ทางที่เลือก (2026-08-27): แปลงฝั่ง SAP ด้วย constant**
 
-| ของที่ต้องเพิ่ม | ทำไม |
+| ของที่เพิ่ม | ทำไม |
 |---|---|
-| ขยาย `payment_method` เป็น `char(30)` | รับคำเต็ม ๆ จาก Salesforce ได้ |
-| field ใหม่ `sap_payment_method : abap.char(1)` | เก็บ code ที่แปลงแล้ว ให้ ZARE002 ใช้ post FI · เก็บของเดิมไว้ด้วยเพื่อ audit ว่าต้นทางส่งอะไรมา |
-| `ZCL_ZARI002_PM_MAP` หรือ mapping table | ตัวแปลงเอง |
+| ขยาย `payment_method` เป็น `char(30)` | รับคำเต็ม ๆ จาก Salesforce ได้ · เก็บค่าดิบไว้เพื่อ audit |
+| field ใหม่ `sap_payment_method : abap.char(1)` | code ที่แปลงแล้ว — ZARE002 ใช้ post FI |
+| constant `gc_payment_method_map` ใน `ZCL_ZARI002_VALIDATOR` | ตัวแปลง — **ไม่สร้าง class ใหม่** ตามที่ตกลง |
 | determination `setPaymentMethodCode` | แปลงก่อน validation ทำงาน |
 
-**ทางที่ดีที่สุดคือให้ Salesforce ส่ง SAP code มาเลย** — ไม่ต้องเพิ่มอะไรสักอย่าง
-และตัดจุดพังที่เกิดจาก mapping ไม่ตรงออกทั้งหมด
+⬜ **ยังเติมค่าจริงไม่ได้** ต้องรู้ 2 อย่างก่อน: Salesforce ส่งคำอะไรมาบ้าง (ทั้งชุด ไม่ใช่แค่เช็ค)
+และ tenant มี payment method code อะไรให้แมตช์ (ผลบล็อก 8 ของ spike)
+
+> ตั้งใจให้ย้ายไป **constant table** ที่ maintain เองได้ในภายหลัง — เก็บ mapping ไว้ที่เดียว
+> และให้ determination เรียกผ่าน method เดียว เพื่อให้ย้ายแล้วกระทบจุดเดียว

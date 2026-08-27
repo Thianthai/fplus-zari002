@@ -129,7 +129,7 @@ Salesforce จึงเห็นปัญหาทั้งหมดในคร
 |---|---|---|
 | `validateSalesforceId` | Payment | mandatory + ไม่ซ้ำใน table |
 | `validateMandatory` | Payment | 8 field บังคับ ครบไหม (ดู `04_field_mapping.md`) |
-| `validateChequeFields` | Payment | ถ้าจ่ายด้วยเช็ค → `cheque_no` `issue_date` `due_on` `cheque_bankbranch` ต้องครบ |
+| `validateChequeFields` | Payment | ถ้า `sap_payment_method` = เช็ค → `cheque_no` `issue_date` `due_on` `cheque_bankbranch` ต้องครบ (ดูจาก code ที่แปลงแล้ว ไม่ใช่คำดิบ) |
 | `validatePaymentTotal` | Payment | **ที่ว่างไว้ ยังไม่ใส่ logic** — เผื่อภายหลังต้องเทียบ `payment_amount` กับผลรวม `amount_paid` |
 | `validateNumberOfItems` | Payment | ต้องเท่ากับจำนวน `_Item` ที่ส่งมาจริง |
 | `validateAmounts` | Payment | mandatory + ไม่ติดลบ |
@@ -143,8 +143,7 @@ Salesforce จึงเห็นปัญหาทั้งหมดในคร
 |---|---|---|
 | `validateCompanyCode` | `company_code` | `I_CompanyCode` |
 | `validateGLAccount` | `gl_account` | `I_GLAccountInCompanyCode` |
-| `validateCurrency` | `currency` | `I_Currency` |
-| `validatePaymentMethod` | `payment_method` | `I_PaymentMethod` |
+| `validatePaymentMethod` | `sap_payment_method` | `I_PaymentMethod` — ถ้าแปลงไม่ได้ (คำที่ไม่รู้จัก) ต้องแจ้งคำที่ส่งมาในข้อความด้วย |
 | `validateCustomerCode` | `customer_code` (Item) | `I_Customer` |
 | `validateChequeBankBranch` | `cheque_bankbranch` | `I_Bank_2` — `BankCountry` derive จาก `Country` ของ company code |
 
@@ -158,7 +157,8 @@ Salesforce จึงเห็นปัญหาทั้งหมดในคร
 
 | Determination | Entity | ทำอะไร |
 |---|---|---|
-| `setPaymentDefaults` | Payment | `status = 'N'`, เคลียร์ `error_message`, เติม `currency` ถ้าไม่ได้ส่งมา **และ push `currency` ลงทุก item** |
+| `setPaymentDefaults` | Payment | อ่าน `I_CompanyCode` ครั้งเดียวได้ `Currency` + `Country` → เติม `currency` ให้ header **และ push ลงทุก item** · `status = 'N'` · เคลียร์ `error_message` |
+| `setPaymentMethodCode` | Payment | แปลงคำจาก Salesforce (`payment_method`) → SAP code (`sap_payment_method`) ด้วย constant ใน `ZCL_ZARI002_VALIDATOR` |
 | `setItemDefaults` | Item | `status = 'N'`, เคลียร์ `error_message` |
 
 ทั้งคู่เป็น `determination on save { create; }` — ทำงานก่อน validation ในลำดับ RAP save sequence
