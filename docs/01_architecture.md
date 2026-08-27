@@ -206,3 +206,23 @@ RAP **ไม่การันตีลำดับ**ของ determination ข
   operation ให้ Salesforce poll และยืนยันว่า create-only ถูกต้องแล้ว
 - `sap_payment_method` เป็น field ที่ ZARE002 ใช้ post FI ไม่ใช่ `payment_method` ที่เป็นคำดิบ
 - ⚠️ ถ้าภายหลัง ZARI002 เปิด update/delete ต้องคุมไม่ให้แก้ row ที่ ZARE002 กำลัง post อยู่
+
+
+---
+
+## 10. ข้อมูลจริงบน tenant (spike `ZCL_ZARI002_SPIKE_MD` — 2026-08-27)
+
+released CDS view ใช้ได้ครบทั้ง 6 ตัว ชื่อ field ตรงตามที่ออกแบบไว้ทั้งหมด
+
+| View | ผล |
+|---|---|
+| `I_CompanyCode` | `1000`, `2000` — **ทั้งคู่ `THB` / `TH`** → derive currency + bank country ได้จริง |
+| `I_GLAccountInCompanyCode` | ใช้ได้ · format บน tenant มี leading zero เต็ม 10 หลัก เช่น `0011001000` |
+| `I_Currency` | `THB` ✅ |
+| `I_PaymentMethod` | TH มี code `A B C E F I M N S T` (อย่างน้อย 10 ตัว) · **ยังไม่รู้ว่าตัวไหนคือ Cheque / Transfer** |
+| `I_Customer` | **มีแค่ 3 ราย**: `1000000002` `1000000003` `1000000004` |
+| `I_Bank_2` | key = `BankCountry` + `BankInternalID` · ค่าบน tenant เป็น **รหัส 3 หลัก**: `002 004 006 008 009 011 014 017 018 020` |
+
+⚠️ **`I_Customer` มีแค่ 3 ราย** แต่ sample data ของ Salesforce อ้างถึง customer อย่างน้อย 8 ราย
+(`1000000001` `1000000005` `1000000013` `1000000020` `1000000021` …) → ถ้าไม่โหลด customer เพิ่ม
+`validateCustomerCode` จะ reject sample แทบทุกใบ **ต้องเตรียม test data ก่อน Phase 7**

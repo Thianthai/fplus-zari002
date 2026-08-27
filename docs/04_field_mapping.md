@@ -193,3 +193,18 @@ description เป็น config text ที่ business user แก้ได้�
 
 > ตั้งใจให้ย้ายไป **constant table** ที่ maintain เองได้ในภายหลัง — เก็บ mapping ไว้ที่เดียว
 > และให้ determination เรียกผ่าน method เดียว เพื่อให้ย้ายแล้วกระทบจุดเดียว
+
+
+---
+
+## 7. 🔴 ที่เจอจาก sample data ของ Salesforce (2026-08-27)
+
+| # | เรื่อง | สถานะ |
+|---|--------|--------|
+| 7.1 | `partial_amount` ใน sample เป็น **flag `CHAR(1)` ค่า `X`** ไม่ใช่จำนวนเงิน แต่ table เป็น `curr(23,2)` | ⬜ รอตัดสินใจ |
+| 7.2 | `cheque_bankbranch` ตัวอย่าง `0040129` — ดูเหมือน **bank 3 หลัก + branch 4 หลัก** ไม่ใช่ `BankInternalID` ล้วน (`I_Bank_2` มีแต่ `004` ไม่มี `0040129`) | ⬜ รอตัดสินใจ |
+| 7.3 | `gl_account` Salesforce ส่ง `11011214` **ไม่มี leading zero** แต่ SAP เก็บ `0011011214` → ต้อง ALPHA conversion ก่อน validate | ⬜ รอตัดสินใจ |
+| 7.4 | `rounding_diff` และ `advance_payment` ใน sample **ติดลบได้** (`-1.00`, `-100.00`) → กฎ "ไม่ติดลบ" ใช้กับ 2 field นี้ไม่ได้ | ⬜ รอตัดสินใจ |
+| 7.5 | Mapping `Cheque` / `Transfer` → SAP code ยังเติมไม่ได้ ต้องรู้ description ของ payment method บน tenant ก่อน | ⬜ รอผล spike |
+
+`payment_method` **คง `char(8)` ตามเดิม** — sample มีแค่ `Cheque` (6) กับ `Transfer` (8) พอดีตัว
