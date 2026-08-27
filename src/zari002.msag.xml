@@ -1,0 +1,212 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<abapGit version="v1.0.0" serializer="LCL_OBJECT_MSAG" serializer_version="v1.0.0">
+ <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+   <T100A>
+    <ARBGB>ZARI002</ARBGB>
+    <MASTERLANG>E</MASTERLANG>
+    <STEXT>Incoming Payments - Message Class</STEXT>
+   </T100A>
+   <T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
+     <MSGNR>002</MSGNR>
+     <TEXT>Number of items &amp;1 does not match &amp;2 items sent</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
+     <MSGNR>003</MSGNR>
+     <TEXT>Due date &amp;1 is before issue date &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
+     <MSGNR>004</MSGNR>
+     <TEXT>Salesforce ID &amp;1 already exists</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
+     <MSGNR>005</MSGNR>
+     <TEXT>Duplicate Salesforce item ID &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
+     <MSGNR>006</MSGNR>
+     <TEXT>Item &amp;1: partial flag must be X or blank</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
+     <MSGNR>007</MSGNR>
+     <TEXT>Payment amount &amp;1 does not match item total &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
+     <MSGNR>008</MSGNR>
+     <TEXT>Bank/branch &amp;1 does not exist</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
+     <MSGNR>100</MSGNR>
+     <TEXT>Salesforce ID is required</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
+     <MSGNR>101</MSGNR>
+     <TEXT>Payment document number is required</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
+     <MSGNR>102</MSGNR>
+     <TEXT>Company code is required</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
+     <MSGNR>103</MSGNR>
+     <TEXT>Posting date is required</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
+     <MSGNR>104</MSGNR>
+     <TEXT>G/L account is required</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
+     <MSGNR>105</MSGNR>
+     <TEXT>Payment method is required</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
+     <MSGNR>106</MSGNR>
+     <TEXT>Payment amount is required</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
+     <MSGNR>107</MSGNR>
+     <TEXT>Cheque number is required for payment method &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
+     <MSGNR>108</MSGNR>
+     <TEXT>Issue date is required for payment method &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
+     <MSGNR>109</MSGNR>
+     <TEXT>Due date is required for payment method &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
+     <MSGNR>110</MSGNR>
+     <TEXT>Bank/branch is required for payment method &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
+     <MSGNR>111</MSGNR>
+     <TEXT>Every item must have a Salesforce item ID</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
+     <MSGNR>112</MSGNR>
+     <TEXT>Item &amp;1: customer code is required</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
+     <MSGNR>113</MSGNR>
+     <TEXT>Item &amp;1: accounting document is required</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
+     <MSGNR>114</MSGNR>
+     <TEXT>Item &amp;1: billing document is required</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
+     <MSGNR>115</MSGNR>
+     <TEXT>Item &amp;1: invoice posting date is required</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
+     <MSGNR>116</MSGNR>
+     <TEXT>Item &amp;1: invoice amount is required</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
+     <MSGNR>117</MSGNR>
+     <TEXT>Item &amp;1: amount paid is required</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
+     <MSGNR>118</MSGNR>
+     <TEXT>Item &amp;1: sale submit date is required</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
+     <MSGNR>200</MSGNR>
+     <TEXT>Company code &amp;1 does not exist</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
+     <MSGNR>201</MSGNR>
+     <TEXT>G/L account &amp;1 does not exist in company code &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
+     <MSGNR>202</MSGNR>
+     <TEXT>Payment method &amp;1 is not known to this interface</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
+     <MSGNR>203</MSGNR>
+     <TEXT>Payment method &amp;1 does not exist for country &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
+     <MSGNR>204</MSGNR>
+     <TEXT>Currency for company code &amp;1 cannot be determined</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
+     <MSGNR>205</MSGNR>
+     <TEXT>Item &amp;1: customer &amp;2 does not exist</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
+     <MSGNR>900</MSGNR>
+     <TEXT>Unexpected error: &amp;1</TEXT>
+    </T100>
+   </T100>
+  </asx:values>
+ </asx:abap>
+</abapGit>
