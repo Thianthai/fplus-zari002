@@ -211,11 +211,11 @@ API แปลงคำเป็น SAP payment method code ให้เอง
 ```json
 {
   "error": {
-    "code": "ZARI002/012",
+    "code": "ZARI002/200",
     "message": "Company code 9999 does not exist",
     "details": [
-      { "code": "ZARI002/012", "message": "Company code 9999 does not exist", "target": "CompanyCode" },
-      { "code": "ZARI002/031", "message": "Item a2yfd000000GRsHAAW: customer 1000000099 does not exist" }
+      { "code": "ZARI002/200", "message": "Company code 9999 does not exist", "target": "CompanyCode" },
+      { "code": "ZARI002/205", "message": "Item a2yfd000000GRsHAAW: customer 1000000099 does not exist" }
     ]
   }
 }
@@ -226,8 +226,8 @@ API แปลงคำเป็น SAP payment method code ให้เอง
 
 ### 8.3 Message code ทั้งหมด
 
-เลขจัดเป็นบล็อกและเว้นช่วงไว้ให้แทรกทีหลังได้ **โดยไม่ต้องเลื่อนเลขเดิม** — เลขที่ประกาศไปแล้ว
-จะไม่เปลี่ยนอีก ฝั่ง client จึงผูก logic กับ `code` ได้ปลอดภัย
+เลขในแต่ละกลุ่ม **run ต่อกันไม่เว้นช่วง** · message ที่เพิ่มใหม่ให้**ต่อท้ายกลุ่มของตัวเอง**
+เลขที่ประกาศไปแล้วจะไม่เปลี่ยนอีก ฝั่ง client จึงผูก logic กับ `code` ได้ปลอดภัย
 
 **`0xx` — โครงสร้างและความสอดคล้องของข้อมูล**
 
@@ -236,11 +236,11 @@ API แปลงคำเป็น SAP payment method code ให้เอง
 | `ZARI002/001` | Payment must have at least one item |
 | `ZARI002/002` | Number of items &1 does not match &2 items sent |
 | `ZARI002/003` | Due date &1 is before issue date &2 |
-| `ZARI002/010` | Salesforce ID &1 already exists |
-| `ZARI002/011` | Duplicate Salesforce item ID &1 |
-| `ZARI002/012` | Item &1: partial flag must be X or blank |
-| `ZARI002/090` | Payment amount &1 does not match item total &2 — ⬜ ยังไม่เปิดใช้ (OQ-05) |
-| `ZARI002/091` | Bank/branch &1 does not exist — ⬜ ยังไม่เปิดใช้ (OQ-01) |
+| `ZARI002/004` | Salesforce ID &1 already exists |
+| `ZARI002/005` | Duplicate Salesforce item ID &1 |
+| `ZARI002/006` | Item &1: partial flag must be X or blank |
+| `ZARI002/007` | Payment amount &1 does not match item total &2 — ⬜ ยังไม่เปิดใช้ (OQ-05) |
+| `ZARI002/008` | Bank/branch &1 does not exist — ⬜ ยังไม่เปิดใช้ (OQ-01) |
 
 **`1xx` — field ที่บังคับ**
 
@@ -253,20 +253,20 @@ API แปลงคำเป็น SAP payment method code ให้เอง
 | `ZARI002/104` | G/L account is required |
 | `ZARI002/105` | Payment method is required |
 | `ZARI002/106` | Payment amount is required |
-| `ZARI002/120` | Cheque number is required for payment method &1 |
-| `ZARI002/121` | Issue date is required for payment method &1 |
-| `ZARI002/122` | Due date is required for payment method &1 |
-| `ZARI002/123` | Bank/branch is required for payment method &1 |
-| `ZARI002/150` | Every item must have a Salesforce item ID |
-| `ZARI002/151` | Item &1: customer code is required |
-| `ZARI002/152` | Item &1: accounting document is required |
-| `ZARI002/153` | Item &1: billing document is required |
-| `ZARI002/154` | Item &1: invoice posting date is required |
-| `ZARI002/155` | Item &1: invoice amount is required |
-| `ZARI002/156` | Item &1: amount paid is required |
-| `ZARI002/157` | Item &1: sale submit date is required |
+| `ZARI002/107` | Cheque number is required for payment method &1 |
+| `ZARI002/108` | Issue date is required for payment method &1 |
+| `ZARI002/109` | Due date is required for payment method &1 |
+| `ZARI002/110` | Bank/branch is required for payment method &1 |
+| `ZARI002/111` | Every item must have a Salesforce item ID |
+| `ZARI002/112` | Item &1: customer code is required |
+| `ZARI002/113` | Item &1: accounting document is required |
+| `ZARI002/114` | Item &1: billing document is required |
+| `ZARI002/115` | Item &1: invoice posting date is required |
+| `ZARI002/116` | Item &1: invoice amount is required |
+| `ZARI002/117` | Item &1: amount paid is required |
+| `ZARI002/118` | Item &1: sale submit date is required |
 
-`120`–`123` เกิดเฉพาะเมื่อ `PaymentMethod` เป็นเช็ค
+`107`–`110` เกิดเฉพาะเมื่อ `PaymentMethod` เป็นเช็ค
 
 **`2xx` — ข้อมูลไม่มีอยู่จริงใน SAP**
 
@@ -277,7 +277,7 @@ API แปลงคำเป็น SAP payment method code ให้เอง
 | `ZARI002/202` | Payment method &1 is not known to this interface |
 | `ZARI002/203` | Payment method &1 does not exist for country &2 |
 | `ZARI002/204` | Currency for company code &1 cannot be determined |
-| `ZARI002/250` | Item &1: customer &2 does not exist |
+| `ZARI002/205` | Item &1: customer &2 does not exist |
 
 `202` = คำที่ส่งมาไม่อยู่ในรายการแปลง (ดู §6.2) · `203` = แปลงได้แต่ code ไม่มีใน SAP
 
@@ -288,7 +288,7 @@ API แปลงคำเป็น SAP payment method code ให้เอง
 | `ZARI002/900` | Unexpected error: &1 |
 
 > `&1` ของทุก message ที่เกี่ยวกับ item คือ **`SalesforceItemId`** เสมอ
-> ยกเว้น `150` ที่เกิดตอนไม่ได้ส่ง id มา จึงอ้างถึงไม่ได้
+> ยกเว้น `111` ที่เกิดตอนไม่ได้ส่ง id มา จึงอ้างถึงไม่ได้
 
 ## 9. ข้อจำกัด
 
