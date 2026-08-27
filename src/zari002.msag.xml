@@ -11,6 +11,12 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZARI002</ARBGB>
+     <MSGNR>001</MSGNR>
+     <TEXT>Payment must have at least one item</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
      <MSGNR>002</MSGNR>
      <TEXT>Number of items &amp;1 does not match &amp;2 items sent</TEXT>
     </T100>
