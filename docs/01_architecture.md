@@ -142,7 +142,7 @@ Salesforce จึงเห็นปัญหาทั้งหมดในคร
 |---|---|---|
 | `validateCompanyCode` | `company_code` | `I_CompanyCode` |
 | `validateGLAccount` | `gl_account` | `I_GLAccountInCompanyCode` |
-| `validatePaymentMethod` | `sap_payment_method` | `I_PaymentMethod` — ถ้าแปลงไม่ได้ (คำที่ไม่รู้จัก) ต้องแจ้งคำที่ส่งมาในข้อความด้วย |
+| `validatePaymentMethod` | `sap_payment_method` | `I_PaymentMethod` เช็คแค่ว่า code มีจริง · ถ้าแปลงไม่ได้ (คำที่ไม่รู้จัก) ต้องแจ้งคำที่ส่งมาในข้อความด้วย |
 | `validateCustomerCode` | `customer_code` (Item) | `I_Customer` |
 | `validateChequeBankBranch` | `cheque_bankbranch` | **ที่ว่างไว้ ยังไม่ใส่ logic** — โครงสร้างของ field ยังไม่ชัด (`0040129` ไม่มีใน `I_Bank_2`) ดู `04_field_mapping.md` §7.2 |
 
@@ -169,7 +169,7 @@ Salesforce ส่ง `gl_account` มาแบบ **ไม่มี leading zero
 | Determination | Entity | ทำอะไร |
 |---|---|---|
 | `setPaymentDefaults` | Payment | อ่าน `I_CompanyCode` ครั้งเดียวได้ `Currency` + `Country` → เติม `currency` ให้ header **และ push ลงทุก item** · `status = 'N'` · เคลียร์ `error_message` |
-| `setPaymentMethodCode` | Payment | แปลงคำจาก Salesforce (`payment_method`) → SAP code (`sap_payment_method`) ด้วย constant ใน `ZCL_ZARI002_VALIDATOR` |
+| `setPaymentMethodCode` | Payment | แปลงคำจาก Salesforce (`payment_method`) → SAP code (`sap_payment_method`) ด้วย constant ใน `ZCL_ZARI002_VALIDATOR` — `Cheque` → `A` · `Transfer` → `T` |
 | `setItemDefaults` | Item | `status = 'N'`, เคลียร์ `error_message` |
 
 ทั้งคู่เป็น `determination on save { create; }` — ทำงานก่อน validation ในลำดับ RAP save sequence
@@ -254,10 +254,15 @@ released CDS view ใช้ได้ครบทั้ง 6 ตัว ชื่�
 | `S` | Cash Payment | | |
 | `T` | Bank Transfer | | |
 
-⚠️ **`IsPaymentMethodForIncomingPayments` ติ๊กไว้แค่ `M` `N` `E`** — ไม่รวม cheque หรือ
-bank transfer ที่ Salesforce ส่งเข้ามาจริง ทั้งที่ ZARI002 เป็น interface ของ **incoming payment**
-ถ้า config นี้ถูกต้องตามที่ใช้งานจริง ZARE002 อาจ post ไม่ผ่านตอนใช้ `A`/`C`/`T`
-→ ต้องให้ทีม FI ยืนยันก่อน (ดู `04_field_mapping.md` §7.6)
+**Mapping ที่ใช้**: `Cheque` → `A` (Manual Cheque) · `Transfer` → `T` (Bank Transfer)
+
+⚠️ **`IsPaymentMethodForIncomingPayments` ติ๊กไว้แค่ `M` `N` `E`** — ไม่รวม `A` หรือ `T`
+ที่ Salesforce ส่งเข้ามาจริง ทั้งที่ ZARI002 เป็น interface ของ **incoming payment**
+
+ตกลงว่า **ZARI002 ไม่เช็ค flag นี้** (เช็คแค่ว่า code มีจริง) เพราะถ้าเช็คจะ reject ทุกใบ
+ตั้งแต่วันแรกและ Phase 7 เทสไม่ได้เลย — แต่ **ต้องแจ้งทีม FI ให้ตรวจ config ขนานกันไป**
+ถ้า config นี้ถูกต้องตามที่ใช้จริง **ZARE002 จะ post ไม่ผ่าน** และจะไปเจอตอนนั้นแทน
+เราแค่ย้ายจุดที่ปัญหาจะโผล่ ไม่ได้แก้มัน
 
 ### ยืนยันจาก spike รอบ 2
 

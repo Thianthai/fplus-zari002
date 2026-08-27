@@ -205,7 +205,8 @@ description เป็น config text ที่ business user แก้ได้�
 | 7.2 | `cheque_bankbranch` — **ยืนยันแล้วว่า `0040129` ไม่มีใน `I_Bank_2` ส่วน `004` มี** → เป็น bank + branch จริง · `validateChequeBankBranch` เป็นที่ว่าง ยังไม่ใส่ logic · คง `char(15)` | 🟨 รอยืนยันโครงสร้างจาก Salesforce/FI |
 | 7.3 | `gl_account` (และ `customer_code`) pad ซ้ายเป็น 10 หลักฝั่ง SAP — **พิสูจน์แล้ว: pad แล้วเจอครบ 3/3 บน company code 2000** | ✅ ยืนยัน 2026-08-27 |
 | 7.4 | **ไม่เช็คเครื่องหมายจำนวนเงินเลย** ทุก field — ปล่อยให้ ZARE002 ไปเจอเองตอน post | ✅ ตกลง 2026-08-27 |
-| 7.5 | Mapping `Cheque` / `Transfer` → SAP code — ได้ description แล้ว แต่ **`Cheque` แมตช์ได้ 2 ตัว** (`A` Manual Cheque / `C` Cheque Direct) | ⬜ รอเลือก |
-| 7.6 | payment method ที่ flag `IsPaymentMethodForIncomingPayments` มีแค่ `M` `N` `E` — ไม่รวม cheque/transfer ที่ Salesforce ส่งมา | ⬜ รอตัดสินใจ |
+| 7.5 | Mapping: `Cheque` → **`A`** (Manual Cheque) · `Transfer` → **`T`** (Bank Transfer) | ✅ ตกลง 2026-08-27 |
+| 7.6 | `validatePaymentMethod` **เช็คแค่ว่า code มีจริง ไม่เช็ค `IsPaymentMethodForIncomingPayments`** — ไม่งั้น reject ทุกใบ · แจ้ง FI ให้ไปตรวจ config ขนานไป | ✅ ตกลง 2026-08-27 |
+| 7.7 | Salesforce ส่งคำอะไรมาได้อีกบ้างนอกจาก `Cheque` / `Transfer` | ⬜ รอคำตอบ |
 
 `payment_method` **คง `char(8)` ตามเดิม** — sample มีแค่ `Cheque` (6) กับ `Transfer` (8) พอดีตัว

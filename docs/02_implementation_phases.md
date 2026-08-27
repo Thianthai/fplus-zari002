@@ -41,13 +41,22 @@ serialize ขึ้นมา แล้วค่อยเอาเอกสาร
 
 | # | งาน | Status |
 |---|-----|--------|
-| 1.1 | ยืนยัน mandatory field list ใน `04_field_mapping.md` (ตอนนี้เป็นข้อเสนอของ Claude) | ⬜ |
-| 1.2 | **Verify release state** ของ `I_CompanyCode`, `I_GLAccountInCompanyCode`, `I_Currency`, `I_PaymentMethod`, `I_Customer` บน tenant (C1 Released + Use in Cloud Development = Yes) | ⬜ |
-| 1.3 | ถ้า view ตัวไหนไม่ released → หาตัวแทน หรือถอด validation ข้อนั้นออก | ⬜ |
-| 1.4 | ยืนยัน format/ความหมายของ field ที่ยังคลุมเครือกับฝั่ง Salesforce: `payment_document_no`, `cheque_bankbranch`, `number_of_items` (char(3) — leading zero หรือไม่), ความสัมพันธ์ `payment_amount` กับผลรวม `amount_paid` ของ item | ⬜ |
-| 1.5 | Draft `docs/05_api_spec.md` ให้ทีม Salesforce เริ่มเขียน client ได้ | ⬜ |
+| 1.1 | ยืนยัน mandatory field list ใน `04_field_mapping.md` | ✅ |
+| 1.2 | **Verify release state** ของ `I_CompanyCode`, `I_GLAccountInCompanyCode`, `I_Currency`, `I_PaymentMethod`, `I_Customer`, `I_Bank_2` | ✅ ผ่านครบ ชื่อ field ตรงหมด |
+| 1.3 | ถ้า view ตัวไหนไม่ released → หาตัวแทน หรือถอด validation ข้อนั้นออก | ✅ ไม่ต้องใช้ |
+| 1.4 | ยืนยัน format/ความหมายของ field กับฝั่ง Salesforce | ✅ ปิดหมด ยกเว้น `cheque_bankbranch` (`04_field_mapping.md` §7.2) และรายการคำ payment method ทั้งชุด (§7.7) |
+| 1.5 | Draft `docs/05_api_spec.md` ให้ทีม Salesforce เริ่มเขียน client ได้ | ✅ |
 
-**Exit criteria**: field mapping + validation list นิ่ง และรู้แน่ว่า master data view ตัวไหนใช้ได้
+**Exit criteria**: field mapping + validation list นิ่ง และรู้แน่ว่า master data view ตัวไหนใช้ได้ ✅
+
+### ของที่ต้องส่งต่อทีมอื่น (ไม่บล็อก Phase 2)
+
+| # | เรื่อง | ส่งให้ใคร |
+|---|---|---|
+| 1.6 | `IsPaymentMethodForIncomingPayments` ติ๊กไว้แค่ `M` `N` `E` ไม่รวม `A`/`T` ที่ใช้จริง — ZARI002 ไม่เช็ค flag นี้ แต่ **ZARE002 จะ post ไม่ผ่านถ้า config ถูกต้องจริง** | ทีม FI |
+| 1.7 | `I_Customer` บน tenant มีแค่ 3 ราย แต่ sample อ้างถึงอย่างน้อย 8 ราย — **บล็อก Phase 7** | ทีม FI / ผู้ดูแล tenant |
+| 1.8 | โครงสร้างจริงของ `cheque_bankbranch` (bank 3 + branch 4?) | Salesforce / FI |
+| 1.9 | รายการคำ payment method ทั้งชุดที่ Salesforce จะส่ง | Salesforce |
 
 ---
 
