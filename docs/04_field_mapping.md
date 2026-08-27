@@ -155,7 +155,37 @@ message ที่เกี่ยวกับ item จะอ้างถึงด
 |---|--------|--------|
 | 5.1 | `Currency` optional — determination ดึงจาก company code | ✅ ตกลง 2026-08-27 |
 | 5.2 | `ChequeBankBranch` ขยายเป็น `char(15)` + validate กับ `I_Bank_2` | ✅ ตกลง 2026-08-27 · รอ activate |
-| 5.3 | ค่า code ของ payment method "เช็ค" ที่ใช้ตัดสิน conditional mandatory | ⬜ รอคำตอบ |
-| 5.4 | `BankCountry` ที่ใช้เป็น key คู่กับ `BankInternalID` ตอน validate `I_Bank_2` — Salesforce ส่งมา หรือ derive จาก country ของ company code | ⬜ รอคำตอบ |
+| 5.3 | `payment_method` — Salesforce ส่ง**คำ** ไม่ใช่ SAP code ต้องมี conversion | 🔴 ดู §6 |
+| 5.4 | `BankCountry` derive จาก `Country` ของ company code | ✅ ตกลง 2026-08-27 |
 | 5.5 | `NumberOfItems` เปลี่ยนเป็น `int4` | ✅ ตกลง 2026-08-27 · รอ activate |
 | 5.6 | รูปแบบ response ตอน error | ✅ คง reject ทั้ง request → 400 OData error payload |
+
+
+---
+
+## 6. 🔴 `payment_method` — ต้องมี conversion ก่อนเข้า Phase 4
+
+Salesforce ส่ง**คำ** (เช่น `"Cheque"`) ไม่ใช่ SAP payment method code
+ซึ่ง `I_PaymentMethod.PaymentMethod` เป็น **`CHAR 1`** → validate ตรง ๆ ไม่มีวันผ่าน
+
+**ปัญหา 2 ชั้น**
+
+1. **ความยาว** — field เป็น `char(8)` "Cheque" (6) พอดี แต่คำอย่าง `"Bank Transfer"` (13)
+   ไม่รอด ไม่ว่าจะโดนตัดหรือถูก OData deserializer reject ตั้งแต่ชั้นนอกก็ใช้ไม่ได้ทั้งคู่
+2. **ค่าไม่ตรงชนิด** — ต้องแปลงคำ → SAP code ก่อน validate และก่อนส่งต่อให้ ZARE002 post FI
+
+**ทางที่ตัดทิ้งแล้ว: match กับ description ของ `I_PaymentMethodText`**
+description เป็น config text ที่ business user แก้ได้ตลอด · ขึ้นกับภาษา · ไม่ unique
+ถ้าใครไปแก้ข้อความ interface พังเงียบ ๆ ทันที — เอาข้อความ config มาเป็น key ไม่ได้
+
+**ถ้าต้องแปลงฝั่ง SAP จริง ต้องเพิ่มของ**
+
+| ของที่ต้องเพิ่ม | ทำไม |
+|---|---|
+| ขยาย `payment_method` เป็น `char(30)` | รับคำเต็ม ๆ จาก Salesforce ได้ |
+| field ใหม่ `sap_payment_method : abap.char(1)` | เก็บ code ที่แปลงแล้ว ให้ ZARE002 ใช้ post FI · เก็บของเดิมไว้ด้วยเพื่อ audit ว่าต้นทางส่งอะไรมา |
+| `ZCL_ZARI002_PM_MAP` หรือ mapping table | ตัวแปลงเอง |
+| determination `setPaymentMethodCode` | แปลงก่อน validation ทำงาน |
+
+**ทางที่ดีที่สุดคือให้ Salesforce ส่ง SAP code มาเลย** — ไม่ต้องเพิ่มอะไรสักอย่าง
+และตัดจุดพังที่เกิดจาก mapping ไม่ตรงออกทั้งหมด

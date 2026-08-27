@@ -146,7 +146,7 @@ Salesforce จึงเห็นปัญหาทั้งหมดในคร
 | `validateCurrency` | `currency` | `I_Currency` |
 | `validatePaymentMethod` | `payment_method` | `I_PaymentMethod` |
 | `validateCustomerCode` | `customer_code` (Item) | `I_Customer` |
-| `validateChequeBankBranch` | `cheque_bankbranch` | `I_Bank_2` (key = `BankCountry` + `BankInternalID`) |
+| `validateChequeBankBranch` | `cheque_bankbranch` | `I_Bank_2` — `BankCountry` derive จาก `Country` ของ company code |
 
 **ไม่ validate**: `billing_document`, `accounting_document` — เป็นเลขอ้างอิงฝั่ง Salesforce
 ที่อาจยังไม่มีใน SAP ตอนส่งเข้ามา (ตกลง 2026-08-27 — ถ้าต้องการเพิ่มทีหลังบอกได้)
@@ -174,11 +174,13 @@ RAP **ไม่การันตีลำดับ**ของ determination ข
 
 ### Currency มาจากไหน
 
-1. Salesforce ส่ง `Currency` มา → ใช้ค่านั้น (validate กับ `I_Currency`)
-2. ไม่ส่งมา → ดึง currency ของ `CompanyCode` จาก `I_CompanyCode`
+**ธุรกิจใช้สกุลเงินเดียวตาม company code** (ยืนยัน 2026-08-27) → `setPaymentDefaults`
+ดึง `Currency` ของ `CompanyCode` จาก `I_CompanyCode` มาเติมเสมอ แล้ว push ลงทุก item
 
-⚠️ ข้อ 2 แปลว่า payment ที่เป็นสกุลต่างประเทศ **ต้องส่ง `Currency` มาเสมอ** ไม่งั้นจะได้
-สกุลเงินของ company code ไปเงียบ ๆ — ต้องเขียนเตือนไว้ใน `05_api_spec.md`
+การอ่าน `I_CompanyCode` ครั้งเดียวได้ทั้ง `Currency` และ `Country` (ตัวหลังใช้เป็น
+`BankCountry` ตอน validate `cheque_bankbranch`) — ไม่ต้องอ่านซ้ำ
+
+⚠️ ถ้าวันหน้ามีรับชำระสกุลต่างประเทศ ต้องกลับมาเปิด `Currency` เป็น input ใหม่
 
 ## 8. สิ่งที่จงใจไม่ทำในรอบนี้
 
