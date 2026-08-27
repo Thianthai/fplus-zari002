@@ -25,7 +25,7 @@ API field ↔ table field · CDS alias เป็น **CamelCase** · field ใ�
 | `NumberOfItems` | `number_of_items` | `int4` | `Edm.Int32` | in | ✔ | จำนวนนับ (`5` ไม่ใช่ `"005"`) · ต้องเท่ากับจำนวน `_Item` ที่ส่งมา — `validateNumberOfItems` |
 | `CompanyCode` | `company_code` | `char(4)` | `Edm.String(4)` | in | ✔ | `I_CompanyCode` |
 | `PostingDate` | `posting_date` | `dats` | `Edm.Date` | in | ✔ | |
-| `GLAccount` | `gl_account` | `char(10)` | `Edm.String(10)` | in | ✔ | `I_GLAccountInCompanyCode` (คู่กับ `CompanyCode`) |
+| `GLAccount` | `gl_account` | `char(10)` | `Edm.String(10)` | in | ✔ | Salesforce ส่งไม่มี leading zero (`11011214`) → **pad ซ้ายเป็น 10 หลักก่อน validate และก่อนบันทึก** · `I_GLAccountInCompanyCode` (คู่กับ `CompanyCode`) |
 | `PaymentMethod` | `payment_method` | `char(30)` | `Edm.String(30)` | in | ✔ | **คำจาก Salesforce** (เช่น `Cheque`) เก็บดิบไว้เพื่อ audit |
 | `SapPaymentMethod` | `sap_payment_method` | `char(1)` | `Edm.String(1)` | out | – | code ที่แปลงแล้ว — determination `setPaymentMethodCode` · validate กับ `I_PaymentMethod` · เป็นตัวตัดสิน conditional mandatory ของกลุ่มเช็ค · **ZARE002 ใช้ตัวนี้ post FI** |
 | `ChequeNo` | `cheque_no` | `char(8)` | `Edm.String(8)` | in | (✔) | บังคับเมื่อจ่ายด้วยเช็ค |
@@ -33,10 +33,10 @@ API field ↔ table field · CDS alias เป็น **CamelCase** · field ใ�
 | `DueOn` | `due_on` | `dats` | `Edm.Date` | in | (✔) | บังคับเมื่อจ่ายด้วยเช็ค · ต้องไม่ก่อน `IssueDate` |
 | `ChequeBankBranch` | `cheque_bankbranch` | `char(15)` | `Edm.String(15)` | in | (✔) | บังคับเมื่อจ่ายด้วยเช็ค · = `I_Bank_2.BankInternalID` · validate กับ `I_Bank_2` |
 | `Currency` | `currency` | `cuky` | `Edm.String(5)` | **out** | – | ไม่รับจาก payload — determination ดึง currency ของ `CompanyCode` จาก `I_CompanyCode` เสมอ (ธุรกิจใช้สกุลเดียว) · เป็น currency reference ของทุก amount ใน header **และของ item** |
-| `RoundingDiff` | `rounding_diff` | `curr(23,2)` | `Edm.Decimal` | in | – | |
-| `AdvancePayment` | `advance_payment` | `curr(23,2)` | `Edm.Decimal` | in | – | ไม่ติดลบ |
-| `Fees` | `fees` | `curr(23,2)` | `Edm.Decimal` | in | – | ไม่ติดลบ |
-| `PaymentAmount` | `payment_amount` | `curr(23,2)` | `Edm.Decimal` | in | ✔ | ไม่ติดลบ · มี validation `validatePaymentTotal` เป็นที่ว่างไว้ให้ ยังไม่ใส่ logic (ตกลง 2026-08-27) |
+| `RoundingDiff` | `rounding_diff` | `curr(23,2)` | `Edm.Decimal` | in | – | ติดลบได้ |
+| `AdvancePayment` | `advance_payment` | `curr(23,2)` | `Edm.Decimal` | in | – | ติดลบได้ |
+| `Fees` | `fees` | `curr(23,2)` | `Edm.Decimal` | in | – | |
+| `PaymentAmount` | `payment_amount` | `curr(23,2)` | `Edm.Decimal` | in | ✔ | มี validation `validatePaymentTotal` เป็นที่ว่างไว้ให้ ยังไม่ใส่ logic (ตกลง 2026-08-27) |
 | `Status` | `status` | `ze_status` | `Edm.String(1)` | out | – | ZARI002 set = `N` เสมอ |
 | `ErrorMessage` | `error_message` | `string` | `Edm.String` | out | – | ว่างเสมอตอน create (เป็นของ ZARE002) |
 | `CreatedBy` | `created_by` | `abp_creation_user` | `Edm.String` | out | – | managed |
@@ -57,15 +57,15 @@ API field ↔ table field · CDS alias เป็น **CamelCase** · field ใ�
 | `ItemUUID` | `item_uuid` | `sysuuid_x16` | `Edm.Guid` | out | – | Key — RAP gen |
 | `PaymentUUID` | `payment_uuid` | `sysuuid_x16` | `Edm.Guid` | out | – | RAP ผูกจาก composition ให้เอง |
 | `SalesforceItemId` | `salesforce_item_id` | `char(18)` | `Edm.String(18)` | in | ✔ | **Business key / item number** — ห้ามซ้ำภายใน payment เดียวกัน |
-| `CustomerCode` | `customer_code` | `char(10)` | `Edm.String(10)` | in | ✔ | `I_Customer` |
+| `CustomerCode` | `customer_code` | `char(10)` | `Edm.String(10)` | in | ✔ | pad ซ้ายเป็น 10 หลักเช่นเดียวกับ `GLAccount` · `I_Customer` |
 | `BillingNoteNo` | `billing_note_no` | `char(10)` | `Edm.String(10)` | in | – | |
 | `AccountingDocument` | `accounting_document` | `char(10)` | `Edm.String(10)` | in | ✔ | **ไม่ validate** กับ master data (ตกลง 2026-08-27) |
 | `BillingDocument` | `billing_document` | `char(10)` | `Edm.String(10)` | in | ✔ | **ไม่ validate** กับ master data |
 | `InvoicePostingDate` | `invoice_posting_date` | `dats` | `Edm.Date` | in | ✔ | |
 | `Currency` | `currency` | `cuky` | `Edm.String(5)` | **out** | ⚠️ | Determination `setItemDefaults` copy จาก header — ไม่รับจาก payload เพื่อไม่ให้ขัดกับ header |
-| `InvoiceAmount` | `invoice_amount` | `curr(23,2)` | `Edm.Decimal` | in | ✔ | ไม่ติดลบ |
-| `AmountPaid` | `amount_paid` | `curr(23,2)` | `Edm.Decimal` | in | ✔ | ไม่ติดลบ |
-| `PartialAmount` | `partial_amount` | `curr(23,2)` | `Edm.Decimal` | in | – | ไม่ติดลบ |
+| `InvoiceAmount` | `invoice_amount` | `curr(23,2)` | `Edm.Decimal` | in | ✔ | |
+| `AmountPaid` | `amount_paid` | `curr(23,2)` | `Edm.Decimal` | in | ✔ | |
+| `PartialFlag` | `partial_flag` | `char(1)` | `Edm.String(1)` | in | – | **flag ไม่ใช่จำนวนเงิน** — `X` = จ่ายบางส่วน · ว่าง = จ่ายเต็ม |
 | `SaleSubmitDate` | `sale_submit_date` | `dats` | `Edm.Date` | in | ✔ | |
 | `Status` | `status` | `ze_status` | `Edm.String(1)` | out | – | set = `N` |
 | `ErrorMessage` | `error_message` | `string` | `Edm.String` | out | – | ว่างเสมอตอน create |
@@ -75,7 +75,7 @@ API field ↔ table field · CDS alias เป็น **CamelCase** · field ใ�
 **Input field ที่ 3rd-party ส่งได้: 10 field**
 **Mandatory 8 ตัว**: `SalesforceItemId` `CustomerCode` `AccountingDocument` `BillingDocument`
 `InvoicePostingDate` `InvoiceAmount` `AmountPaid` `SaleSubmitDate`
-optional 2 ตัว: `BillingNoteNo` `PartialAmount`
+optional 2 ตัว: `BillingNoteNo` `PartialFlag`
 
 > `AccountingDocument` / `BillingDocument` **บังคับให้ส่ง แต่ไม่ validate กับ master data**
 > — เป็นคนละเรื่องกัน (ตกลง 2026-08-27)
@@ -201,10 +201,10 @@ description เป็น config text ที่ business user แก้ได้�
 
 | # | เรื่อง | สถานะ |
 |---|--------|--------|
-| 7.1 | `partial_amount` ใน sample เป็น **flag `CHAR(1)` ค่า `X`** ไม่ใช่จำนวนเงิน แต่ table เป็น `curr(23,2)` | ⬜ รอตัดสินใจ |
-| 7.2 | `cheque_bankbranch` ตัวอย่าง `0040129` — ดูเหมือน **bank 3 หลัก + branch 4 หลัก** ไม่ใช่ `BankInternalID` ล้วน (`I_Bank_2` มีแต่ `004` ไม่มี `0040129`) | ⬜ รอตัดสินใจ |
-| 7.3 | `gl_account` Salesforce ส่ง `11011214` **ไม่มี leading zero** แต่ SAP เก็บ `0011011214` → ต้อง ALPHA conversion ก่อน validate | ⬜ รอตัดสินใจ |
-| 7.4 | `rounding_diff` และ `advance_payment` ใน sample **ติดลบได้** (`-1.00`, `-100.00`) → กฎ "ไม่ติดลบ" ใช้กับ 2 field นี้ไม่ได้ | ⬜ รอตัดสินใจ |
+| 7.1 | `partial_amount` → **`partial_flag : abap.char(1)`** (เป็น flag ไม่ใช่จำนวนเงิน) | ✅ ตกลง · รอ convert table |
+| 7.2 | `cheque_bankbranch` โครงสร้างยังไม่ชัด — เปิด `validateChequeBankBranch` เป็นที่ว่างไว้ ยังไม่ใส่ logic · คง `char(15)` ไว้ก่อนเพราะยังไม่รู้ว่าต้องยาวเท่าไหร่ | 🟨 รอคำตอบจาก Salesforce/FI |
+| 7.3 | `gl_account` (และ `customer_code`) pad ซ้ายเป็น 10 หลักฝั่ง SAP ก่อน validate + ก่อนบันทึก | ✅ ตกลง 2026-08-27 |
+| 7.4 | **ไม่เช็คเครื่องหมายจำนวนเงินเลย** ทุก field — ปล่อยให้ ZARE002 ไปเจอเองตอน post | ✅ ตกลง 2026-08-27 |
 | 7.5 | Mapping `Cheque` / `Transfer` → SAP code ยังเติมไม่ได้ ต้องรู้ description ของ payment method บน tenant ก่อน | ⬜ รอผล spike |
 
 `payment_method` **คง `char(8)` ตามเดิม** — sample มีแค่ `Cheque` (6) กับ `Transfer` (8) พอดีตัว

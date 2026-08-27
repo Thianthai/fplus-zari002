@@ -132,10 +132,9 @@ Salesforce จึงเห็นปัญหาทั้งหมดในคร
 | `validateChequeFields` | Payment | ถ้า `sap_payment_method` = เช็ค → `cheque_no` `issue_date` `due_on` `cheque_bankbranch` ต้องครบ (ดูจาก code ที่แปลงแล้ว ไม่ใช่คำดิบ) |
 | `validatePaymentTotal` | Payment | **ที่ว่างไว้ ยังไม่ใส่ logic** — เผื่อภายหลังต้องเทียบ `payment_amount` กับผลรวม `amount_paid` |
 | `validateNumberOfItems` | Payment | ต้องเท่ากับจำนวน `_Item` ที่ส่งมาจริง |
-| `validateAmounts` | Payment | mandatory + ไม่ติดลบ |
-| `validateDates` | Payment | รูปแบบวันที่ + `due_on` ต้องไม่ก่อน `issue_date` |
+| `validateDates` | Payment | `due_on` ต้องไม่ก่อน `issue_date` |
 | `validateSalesforceItemId` | Item | mandatory + ไม่ซ้ำกันเองภายใน payment เดียวกัน |
-| `validateItemAmounts` | Item | mandatory + ไม่ติดลบ |
+| `validateItemMandatory` | Item | 8 field บังคับของ item ครบไหม |
 
 **กลุ่ม B — master data** ⚠️ ต้อง verify release state บน tenant ก่อน (Phase 1)
 
@@ -145,7 +144,19 @@ Salesforce จึงเห็นปัญหาทั้งหมดในคร
 | `validateGLAccount` | `gl_account` | `I_GLAccountInCompanyCode` |
 | `validatePaymentMethod` | `sap_payment_method` | `I_PaymentMethod` — ถ้าแปลงไม่ได้ (คำที่ไม่รู้จัก) ต้องแจ้งคำที่ส่งมาในข้อความด้วย |
 | `validateCustomerCode` | `customer_code` (Item) | `I_Customer` |
-| `validateChequeBankBranch` | `cheque_bankbranch` | `I_Bank_2` — `BankCountry` derive จาก `Country` ของ company code |
+| `validateChequeBankBranch` | `cheque_bankbranch` | **ที่ว่างไว้ ยังไม่ใส่ logic** — โครงสร้างของ field ยังไม่ชัด (`0040129` ไม่มีใน `I_Bank_2`) ดู `04_field_mapping.md` §7.2 |
+
+**ไม่เช็คเครื่องหมายจำนวนเงิน** — sample จริงมี `rounding_diff = -1.00` และ
+`advance_payment = -100.00` ซึ่งถูกต้องตามธุรกิจ · ปล่อยให้ ZARE002 ไปเจอเองตอน post
+
+### Normalize ก่อน validate
+
+Salesforce ส่ง `gl_account` มาแบบ **ไม่มี leading zero** (`11011214`) แต่ SAP เก็บเต็ม 10 หลัก
+(`0011011214`) → ถ้าเทียบตรง ๆ ไม่มีวันเจอ และ ZARE002 จะได้ GL account ที่ post ไม่ได้
+
+`setPaymentDefaults` / `setItemDefaults` จึง **pad ซ้ายด้วย `0` ให้ครบ 10 หลัก** ทั้ง
+`gl_account` และ `customer_code` ก่อน แล้ว validation ค่อยทำงานกับค่าที่ normalize แล้ว
+— กันเคสที่ต้นทางส่งมาบ้างไม่ส่งมาบ้างด้วย
 
 **ไม่ validate**: `billing_document`, `accounting_document` — เป็นเลขอ้างอิงฝั่ง Salesforce
 ที่อาจยังไม่มีใน SAP ตอนส่งเข้ามา (ตกลง 2026-08-27 — ถ้าต้องการเพิ่มทีหลังบอกได้)
