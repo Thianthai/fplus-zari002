@@ -290,12 +290,21 @@ released CDS view ใช้ได้ครบทั้ง 6 ตัว ชื่�
 | `I_GLAccountInCompanyCode` | ใช้ได้ · format บน tenant มี leading zero เต็ม 10 หลัก เช่น `0011001000` |
 | `I_Currency` | `THB` ✅ |
 | `I_PaymentMethod` | TH มี 10 code — ดูตารางข้างล่าง |
-| `I_Customer` | **มีแค่ 3 ราย**: `1000000002` `1000000003` `1000000004` |
+| `I_Customer` | **8 ราย** (2026-08-28 เพิ่มจากเดิม 3): `1000000002` `1000000003` `1000000004` `1000000006` `1100000002` `1200000001` `1200000002` `2000000002` |
 | `I_Bank_2` | key = `BankCountry` + `BankInternalID` · ค่าบน tenant เป็น **รหัส 3 หลัก**: `002 004 006 008 009 011 014 017 018 020` |
 
-⚠️ **`I_Customer` มีแค่ 3 ราย** แต่ sample data ของ Salesforce อ้างถึง customer อย่างน้อย 8 ราย
-(`1000000001` `1000000005` `1000000013` `1000000020` `1000000021` …) → ถ้าไม่โหลด customer เพิ่ม
-`validateCustomerCode` จะ reject sample แทบทุกใบ **ต้องเตรียม test data ก่อน Phase 7**
+⚠️ **customer ที่ sample ของ SFDC ใช้ยังไม่ครบ** — `1000000001` `1000000005` `1000000013`
+`1000000020` `1000000021` ยังไม่มีใน master data · `validateCustomerCode` จะ reject sample
+เหล่านี้ **ต้องเตรียม test data ให้ครบก่อน Phase 7**
+
+### ⚠️ ต้องรันเทสที่ client `100` เท่านั้น
+
+tenant มีหลาย client · **`080` ไม่มี master data** — `SELECT FROM I_CompanyCode` ที่นั่นคืน 0 row
+ทำให้ determination หา currency ไม่เจอและเขียนค่าว่างลง table โดยไม่มี error ใด ๆ
+
+repository object (class / CDS / BDEF) ใช้ร่วมกันข้าม client แต่ **ข้อมูลใน table แยกกันคนละ client**
+เจอจริง 2026-08-28: รัน `ZCL_ZARI002_SPIKE_EML` ที่ `080` แล้วไล่หาบั๊กใน `ZCL_ZARI002_MD_CHECK`
+อยู่นาน ทั้งที่ code ถูกต้องทั้งหมด — **ถ้าเจออาการ master data หาย ให้เช็ค client ก่อนเสมอ**
 
 
 ### Payment method บน tenant (TH)

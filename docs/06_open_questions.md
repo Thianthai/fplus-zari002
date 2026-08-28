@@ -12,7 +12,7 @@
 | OQ-01 | โครงสร้างจริงของ `cheque_bankbranch` — ตัวอย่าง `0040129` ไม่มีใน `I_Bank_2` แต่ `004` มี · น่าจะเป็น bank 3 หลัก + branch 4 หลัก | Salesforce / FI | Phase 1 | `validateChequeBankBranch` เป็นที่ว่างไว้ · field คง `char(15)` ไว้ก่อน | 🟨 |
 | OQ-02 | รายการคำ `payment_method` ทั้งชุดที่ Salesforce จะส่ง (ตอนนี้รู้แค่ `Cheque` / `Transfer`) · ⚠️ **`Transfer` ยาว 8 ตัวเต็ม `char(8)` พอดี ไม่เหลือที่ว่าง** — คำใหม่ที่ยาวกว่านี้จะส่งเข้ามาไม่ได้เลยตั้งแต่ชั้น OData ต้องขยาย field ก่อน (พิสูจน์จาก compiler 2026-08-28) | Salesforce | Phase 1 | mapping constant ไม่ครบ → คำที่ไม่รู้จักถูก reject · คำที่ยาวเกิน 8 ส่งไม่ได้เลย | 🟨 |
 | OQ-03 | `IsPaymentMethodForIncomingPayments` ติ๊กแค่ `M` `N` `E` ไม่รวม `A` / `T` ที่ใช้จริง | FI | Phase 1 | ZARI002 ไม่เช็ค flag นี้ แต่ **ZARE002 จะ post ไม่ผ่านถ้า config ถูกต้องจริง** | ⬜ |
-| OQ-04 | master data บน tenant ยังไม่ครบ — `I_Customer` มี 3 ราย, GL account / company code บางตัวใน sample อาจยังไม่มี | FI / ผู้ดูแล tenant | Phase 1 | **บล็อก Phase 7** — ยิง sample แล้วจะติด validation แทบทุกใบ | ⬜ |
+| OQ-04 | master data บน tenant ยังไม่ครบ — `I_Customer` ขึ้นเป็น **8 ราย** แล้ว (2026-08-28) แต่ customer ที่ sample ของ SFDC ใช้ (`1000000001` `1000000005` `1000000013` `1000000020` `1000000021`) ยังไม่มี | FI / ผู้ดูแล tenant | Phase 1 | **บล็อก Phase 7** — ยิง sample แล้วจะติด `validateCustomerCode` | 🟨 คืบหน้า |
 | OQ-05 | `payment_amount` ต้องเท่ากับผลรวม `amount_paid` ของทุก item หรือไม่ | Salesforce / FI | Phase 1 | `validatePaymentTotal` เป็นที่ว่างไว้แล้ว เพิ่ม logic ทีหลังได้ทันที | 🟨 |
 | OQ-06 | URL endpoint ตัวจริง | — | Phase 1 | `05_api_spec.md` §2 ยังเป็นค่าประมาณ · ได้จริงตอน Phase 5.4 | ⬜ |
 | OQ-07 | จำนวน item สูงสุดต่อ request | — | Phase 1 | กำหนดหลัง volume test Phase 7.7 | ⬜ |
