@@ -1,4 +1,4 @@
-INTERFACE zif_zari002_md_chk
+INTERFACE zif_zari002_master_data
   PUBLIC.
 
   TYPES:

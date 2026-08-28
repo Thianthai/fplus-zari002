@@ -3,9 +3,9 @@
  <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
   <asx:values>
    <VSEOINTERF>
-    <CLSNAME>ZIF_ZARI002_MD_CHK</CLSNAME>
+    <CLSNAME>ZIF_ZARI002_MASTER_DATA</CLSNAME>
     <LANGU>E</LANGU>
-    <DESCRIPT>Incoming Payments - Master Data Check</DESCRIPT>
+    <DESCRIPT>Incoming Payments - Master Data</DESCRIPT>
     <EXPOSURE>2</EXPOSURE>
     <STATE>1</STATE>
     <UNICODE>X</UNICODE>

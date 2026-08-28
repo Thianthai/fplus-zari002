@@ -1,21 +1,21 @@
-CLASS zcl_zari002_md_check DEFINITION
+CLASS zcl_zari002_master_data DEFINITION
   PUBLIC FINAL
   CREATE PUBLIC.
 
   PUBLIC SECTION.
-    INTERFACES zif_zari002_md_chk.
+    INTERFACES zif_zari002_master_data.
 ENDCLASS.
 
 
-CLASS zcl_zari002_md_check IMPLEMENTATION.
+CLASS zcl_zari002_master_data IMPLEMENTATION.
 
-  METHOD zif_zari002_md_chk~get_company_codes.
+  METHOD zif_zari002_master_data~get_company_codes.
 
     IF it_company_code IS INITIAL.
       RETURN.
     ENDIF.
 
-    DATA lr_company_code TYPE RANGE OF zif_zari002_md_chk=>ty_company_code.
+    DATA lr_company_code TYPE RANGE OF zif_zari002_master_data=>ty_company_code.
 
     lr_company_code = VALUE #( FOR <lfs_cc> IN it_company_code
                                ( sign = 'I' option = 'EQ' low = <lfs_cc> ) ).
@@ -30,14 +30,14 @@ CLASS zcl_zari002_md_check IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD zif_zari002_md_chk~find_unknown_gl_accounts.
+  METHOD zif_zari002_master_data~find_unknown_gl_accounts.
 
     IF it_gl_key IS INITIAL.
       RETURN.
     ENDIF.
 
-    DATA lr_company_code TYPE RANGE OF zif_zari002_md_chk=>ty_company_code.
-    DATA lr_gl_account   TYPE RANGE OF zif_zari002_md_chk=>ty_gl_account.
+    DATA lr_company_code TYPE RANGE OF zif_zari002_master_data=>ty_company_code.
+    DATA lr_gl_account   TYPE RANGE OF zif_zari002_master_data=>ty_gl_account.
 
 *   จำกัดขอบเขตด้วย 2 range แล้วค่อยจับคู่ในหน่วยความจำ
 *   เพราะ SQL เทียบคู่ (company_code, gl_account) พร้อมกันไม่ได้
@@ -72,14 +72,14 @@ CLASS zcl_zari002_md_check IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD zif_zari002_md_chk~find_unknown_pymt_methods.
+  METHOD zif_zari002_master_data~find_unknown_pymt_methods.
 
     IF it_payment_method_key IS INITIAL.
       RETURN.
     ENDIF.
 
-    DATA lr_country        TYPE RANGE OF zif_zari002_md_chk=>ty_country.
-    DATA lr_payment_method TYPE RANGE OF zif_zari002_md_chk=>ty_payment_method.
+    DATA lr_country        TYPE RANGE OF zif_zari002_master_data=>ty_country.
+    DATA lr_payment_method TYPE RANGE OF zif_zari002_master_data=>ty_payment_method.
 
     LOOP AT it_payment_method_key ASSIGNING FIELD-SYMBOL(<lfs_pm>).
 
@@ -112,13 +112,13 @@ CLASS zcl_zari002_md_check IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD zif_zari002_md_chk~find_unknown_customers.
+  METHOD zif_zari002_master_data~find_unknown_customers.
 
     IF it_customer IS INITIAL.
       RETURN.
     ENDIF.
 
-    DATA lr_customer TYPE RANGE OF zif_zari002_md_chk=>ty_customer.
+    DATA lr_customer TYPE RANGE OF zif_zari002_master_data=>ty_customer.
 
     lr_customer = VALUE #( FOR <lfs_cust> IN it_customer
                            ( sign = 'I' option = 'EQ' low = <lfs_cust> ) ).
