@@ -57,6 +57,9 @@
 - ไม่ใช้ `COMMIT WORK` ตรง ๆ ใน RAP — ใช้ `COMMIT ENTITIES` เท่านั้น
 - BDEF เป็น `managed;` + `strict ( 2 );` เสมอ
 - **Comment ใน BDEF (`.asbdef`) ใช้ `//` ไม่ใช่ `"`** — `"` เป็นของ ABAP ใช้ใน `.asbdef` ไม่ได้
+- **RAP derived type (`TYPE STRUCTURE FOR READ RESULT ...`) ใช้ตรง ๆ ใน method signature ไม่ได้**
+  parser จะกิน token ถัดไป (`RETURNING`, `EXPORTING`) เข้ามาเป็นส่วนหนึ่งของ type
+  → ประกาศเป็น `TYPES:` alias ก่อนเสมอ แล้วค่อยอ้าง alias ใน signature
 - **`total etag` ประกาศได้เฉพาะ BO ที่มี draft** — BO แบบ API ไม่มี draft ให้ใช้ `lock master`
   เปล่า ๆ + `etag master <LocalLastChangedAt>` เท่านั้น
 
