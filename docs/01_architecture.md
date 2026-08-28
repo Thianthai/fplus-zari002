@@ -178,7 +178,7 @@ Salesforce ส่ง `gl_account` มาแบบ **ไม่มี leading zero
 ⚠️ `accounting_document` **เคยตกลงว่าไม่ validate แล้วกลับคำ** (2026-08-27) — ตอนนี้ต้องตรวจว่า
 รายการยังเปิดอยู่ ผ่าน `validateArOpenItem`
 
-การอ่าน master data ทั้งหมดผ่าน **`ZIF_ZARI002_MD_CHECK`** เพื่อให้ unit test ใส่ test double ได้
+การอ่าน master data ทั้งหมดผ่าน **`ZIF_ZARI002_MD_CHK`** เพื่อให้ unit test ใส่ test double ได้
 ไม่ต้องพึ่งข้อมูลจริงบน tenant
 
 ## 7. Determination
@@ -215,7 +215,7 @@ RAP **ไม่การันตีลำดับ**ของ determination ข
 | ไม่ทำ | ถ้าจะเพิ่มทีหลังต้องทำอะไร |
 |---|---|
 | Read / Update / Delete operation | เปิดใน behavior projection + service definition — ไม่กระทบ table |
-| Validate `billing_document` / `accounting_document` | เพิ่ม validation + method ใน `ZIF_ZARI002_MD_CHECK` |
+| Validate `billing_document` / `accounting_document` | เพิ่ม validation + method ใน `ZIF_ZARI002_MD_CHK` |
 | Authorization object แยก (`Z_ZARI002`) | ตอนนี้ใช้ `authorization master ( global )` + คุมสิทธิ์ที่ communication arrangement |
 | Application log | ถ้าต้องการ audit trail ของ request ที่ถูก reject ต้องเพิ่ม log table (ตอนนี้ reject แล้วไม่เหลือร่องรอยฝั่ง SAP) |
 

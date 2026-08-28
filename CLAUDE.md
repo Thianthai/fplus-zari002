@@ -28,7 +28,7 @@
 | Service definition (Web API) | `ZAPI_<APP>` | `ZAPI_ZARI002` |
 | Service binding (OData V4) | `ZAPI_<APP>_O4` | `ZAPI_ZARI002_O4` |
 | Global class | `ZCL_<APP>_<PURPOSE>` | `ZCL_ZARI002_VALIDATOR` |
-| Global interface | `ZIF_<APP>_<PURPOSE>` | `ZIF_ZARI002_MD_CHECK` |
+| Global interface | `ZIF_<APP>_<PURPOSE>` | `ZIF_ZARI002_MD_CHK` |
 | Exception class | `ZCX_<APP>_<...>` | `ZCX_ZARI002_ERROR` |
 | Message class | `Z<APP>` | `ZARI002` |
 
@@ -51,7 +51,7 @@
 ## Coding rules
 
 - ทุก class ต้องมี ABAP Unit test (`*.clas.testclasses.abap`) — logic class ต้อง test ได้โดยไม่ต้องต่อ SAP จริง
-  (แยกการอ่าน master data ออกเป็น `ZIF_ZARI002_MD_CHECK` + test double)
+  (แยกการอ่าน master data ออกเป็น `ZIF_ZARI002_MD_CHK` + test double)
 - ทุก method มี ABAP Doc comment สั้น ๆ อธิบาย purpose
 - Error ทั้งหมดรวมศูนย์ที่ message class `ZARI002` + exception `ZCX_ZARI002_ERROR`
 - ไม่ใช้ `COMMIT WORK` ตรง ๆ ใน RAP — ใช้ `COMMIT ENTITIES` เท่านั้น

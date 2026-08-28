@@ -97,7 +97,7 @@ serialize ขึ้นมา แล้วค่อยเอาเอกสาร
 
 | # | Object | Status |
 |---|--------|--------|
-| 4.1 | `ZIF_ZARI002_MD_CHECK` + `ZCL_ZARI002_MD_CHECK` — อ่าน master data (mock ได้ใน test) | ⬜ |
+| 4.1 | `ZIF_ZARI002_MD_CHK` + `ZCL_ZARI002_MD_CHECK` — อ่าน master data (mock ได้ใน test) | ⬜ |
 | 4.2 | `ZCL_ZARI002_VALIDATOR` — logic กลุ่ม A (format/mandatory/consistency) ทั้งหมด | ⬜ |
 | 4.3 | Determination `setInitialStatus`, `setItemDefaults` ใน `ZBP_R_ZARI002` | ⬜ |
 | 4.4 | Validation กลุ่ม A + B ใน `ZBP_R_ZARI002` (เรียก class ข้างบน) | ⬜ |
