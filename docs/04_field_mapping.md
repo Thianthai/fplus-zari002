@@ -2,223 +2,146 @@
 
 API field ↔ table field · CDS alias เป็น **CamelCase** · field ใน DDIC table เป็น snake_case
 
-**I/O**: `in` = 3rd-party ส่งเข้ามาได้ · `out` = ระบบเติมให้ ไม่รับจาก payload (ส่งมาก็ถูกเมิน)
-
 **Mand.**: `✔` = บังคับเสมอ · `(✔)` = บังคับแบบมีเงื่อนไข · `–` = optional
-ยืนยัน mandatory list แล้ว 2026-08-27
+**I/O**: `in` = SFDC ส่งเข้ามาได้ · `out` = ระบบเติมให้ ไม่รับจาก payload (ส่งมาก็ถูกเมิน)
 
-### Conditional mandatory — payment แบบเช็ค
-
-`cheque_no` · `issue_date` · `due_on` · `cheque_bankbranch` **ไม่ใช่ mandatory ทั่วไป
-แต่บังคับเมื่อ `payment_method` = เช็ค** → validation `validateChequeFields`
-⚠️ ค่า code ของ "เช็ค" ยังไม่ล็อก (ดู §5)  <!-- open -->
+> ปรับใหญ่ 2026-08-28 ตามโครงสร้าง table ฉบับแก้ — ดู §6 สำหรับสรุปการเปลี่ยนแปลง
 
 ---
 
 ## 1. Header — entity set `Payment` ← `ZTAR_I002_PYMT`
 
-| CDS alias (OData) | Table field | Type | OData type | I/O | Mand. | Validation / หมายเหตุ |
+| CDS alias (OData) | Table field | Type | OData type | I/O | Mand. | หมายเหตุ |
 |---|---|---|---|---|---|---|
-| `PaymentUUID` | `payment_uuid` | `sysuuid_x16` | `Edm.Guid` | out | – | Key — RAP gen (early numbering) · คืนกลับใน response |
-| `SalesforceId` | `salesforce_id` | `char(18)` | `Edm.String(18)` | in | ✔ | **Unique** — `validateSalesforceId` + unique index |
-| `PaymentDocumentNo` | `payment_document_no` | `char(10)` | `Edm.String(10)` | in | ✔ | เลขที่เอกสารรับชำระเงินจากระบบ Salesforce |
-| `NumberOfItems` | `number_of_items` | `int4` | `Edm.Int32` | in | ✔ | จำนวนนับ (`5` ไม่ใช่ `"005"`) · ต้องเท่ากับจำนวน `_Item` ที่ส่งมา — `validateNumberOfItems` |
-| `CompanyCode` | `company_code` | `char(4)` | `Edm.String(4)` | in | ✔ | `I_CompanyCode` |
+| `PaymentUUID` | `payment_uuid` | `sysuuid_x16` | `Edm.Guid` | out | – | Key — RAP gen |
+| `BatchId` | `batch_id` | `char(20)` | `Edm.String(20)` | out | – | **SAP สร้างตอนรับ** รูปแบบ `YYYYMMDD_hhmmss` |
+| `SalesforceId` | `salesforce_id` | `char(18)` | `Edm.String(18)` | in | ✔ | key ฝั่ง SFDC · **ซ้ำได้** ไม่ใช่ตัวกัน duplicate |
+| `PaymentDocumentNo` | `payment_document_no` | `char(10)` | `Edm.String(10)` | in | ✔ | เลขที่เอกสารรับชำระเงินฝั่ง SFDC · **เป็นส่วนหนึ่งของ duplicate key** |
+| `NumberOfItemsInPayment` | `number_of_items_in_payment` | `int4` | `Edm.Int32` | in | ✔ | จำนวนนับ ส่งเป็นตัวเลข · ต้องเท่ากับจำนวน `_Item` |
+| `CompanyCode` | `company_code` | `char(4)` | `Edm.String(4)` | in | ✔ | ต้องมีจริงใน SAP |
 | `PostingDate` | `posting_date` | `dats` | `Edm.Date` | in | ✔ | |
-| `GLAccount` | `gl_account` | `char(10)` | `Edm.String(10)` | in | ✔ | Salesforce ส่งไม่มี leading zero (`11011214`) → **pad ซ้ายเป็น 10 หลักก่อน validate และก่อนบันทึก** · `I_GLAccountInCompanyCode` (คู่กับ `CompanyCode`) |
-| `PaymentMethod` | `payment_method` | `char(30)` | `Edm.String(30)` | in | ✔ | **คำจาก Salesforce** (เช่น `Cheque`) เก็บดิบไว้เพื่อ audit |
-| `SapPaymentMethod` | `sap_payment_method` | `char(1)` | `Edm.String(1)` | out | – | code ที่แปลงแล้ว — determination `setPaymentMethodCode` · validate กับ `I_PaymentMethod` · เป็นตัวตัดสิน conditional mandatory ของกลุ่มเช็ค · **ZARE002 ใช้ตัวนี้ post FI** |
+| `GLAccount` | `gl_account` | `char(10)` | `Edm.String(10)` | in | ✔ | ส่งแบบไม่มี leading zero ได้ — SAP pad ให้ (§4.1) |
+| `PaymentMethod` | `payment_method` | `char(8)` | `Edm.String(8)` | in | ✔ | ส่งเป็น**คำ** เช่น `Cheque` `Transfer` (§4.2) |
+| `SapPaymentMethod` | `sap_payment_method` | `char(1)` | `Edm.String(1)` | out | – | code ที่แปลงแล้ว — **ZARE002 ใช้ตัวนี้ post FI** |
 | `ChequeNo` | `cheque_no` | `char(8)` | `Edm.String(8)` | in | (✔) | บังคับเมื่อจ่ายด้วยเช็ค |
 | `IssueDate` | `issue_date` | `dats` | `Edm.Date` | in | (✔) | บังคับเมื่อจ่ายด้วยเช็ค |
 | `DueOn` | `due_on` | `dats` | `Edm.Date` | in | (✔) | บังคับเมื่อจ่ายด้วยเช็ค · ต้องไม่ก่อน `IssueDate` |
-| `ChequeBankBranch` | `cheque_bankbranch` | `char(15)` | `Edm.String(15)` | in | (✔) | บังคับเมื่อจ่ายด้วยเช็ค · = `I_Bank_2.BankInternalID` · validate กับ `I_Bank_2` |
-| `Currency` | `currency` | `cuky` | `Edm.String(5)` | **out** | – | ไม่รับจาก payload — determination ดึง currency ของ `CompanyCode` จาก `I_CompanyCode` เสมอ (ธุรกิจใช้สกุลเดียว) · เป็น currency reference ของทุก amount ใน header **และของ item** |
+| `ChequeBankBranch` | `cheque_bank_branch` | `char(15)` | `Edm.String(15)` | in | (✔) | บังคับเมื่อจ่ายด้วยเช็ค · ยังไม่ validate (OQ-01) |
+| `Currency` | `currency` | `cuky` | `Edm.String(5)` | out | – | ดึงจาก `I_CompanyCode` เสมอ (ธุรกิจใช้สกุลเดียว) |
 | `RoundingDiff` | `rounding_diff` | `curr(23,2)` | `Edm.Decimal` | in | – | ติดลบได้ |
 | `AdvancePayment` | `advance_payment` | `curr(23,2)` | `Edm.Decimal` | in | – | ติดลบได้ |
 | `Fees` | `fees` | `curr(23,2)` | `Edm.Decimal` | in | – | |
-| `PaymentAmount` | `payment_amount` | `curr(23,2)` | `Edm.Decimal` | in | ✔ | มี validation `validatePaymentTotal` เป็นที่ว่างไว้ให้ ยังไม่ใส่ logic (ตกลง 2026-08-27) |
-| `Status` | `status` | `ze_status` | `Edm.String(1)` | out | – | ZARI002 set = `N` เสมอ |
-| `ErrorMessage` | `error_message` | `string` | `Edm.String` | out | – | ว่างเสมอตอน create (เป็นของ ZARE002) |
-| `CreatedBy` | `created_by` | `abp_creation_user` | `Edm.String` | out | – | managed |
-| `CreatedAt` | `created_at` | `abp_creation_tstmpl` | `Edm.DateTimeOffset` | out | – | managed |
-| `LastChangedBy` | `last_changed_by` | `abp_lastchange_user` | `Edm.String` | out | – | managed |
-| `LastChangedAt` | `last_changed_at` | `abp_lastchange_tstmpl` | `Edm.DateTimeOffset` | out | – | **etag master** |
-| `LocalLastChangedAt` | `local_last_changed_at` | `abp_locinst_lastchange_tstmpl` | `Edm.DateTimeOffset` | out | – | total etag |
-| `_Item` | — | — | navigation | in | ✔ | Composition ไป `PaymentItem` — ต้องมีอย่างน้อย 1 |
+| `PaymentAmount` | `payment_amount` | `curr(23,2)` | `Edm.Decimal` | in | ✔ | มี `validatePaymentTotal` เป็นที่ว่างไว้ (OQ-05) |
+| `Status` | `status` | `ze_request_status` | `Edm.String(1)` | out | – | **transaction status** — ZARI002 set `N` เท่านั้น |
+| `SalesforceStatus` | `salesforce_status` | `ze_response_status` | `Edm.String(1)` | out | – | **result status ที่ส่งกลับ SFDC** — ZARI002 ปล่อยว่างเสมอ |
+| `SalesforceMessage` | `salesforce_message` | `char(200)` | `Edm.String(200)` | out | – | ข้อความคู่กับ `SalesforceStatus` — ZARI002 ปล่อยว่างเสมอ |
+| `CreatedBy` `CreatedAt` `LastChangedBy` `LastChangedAt` `LocalLastChangedAt` | admin fields | | | out | – | managed · `LocalLastChangedAt` = etag |
+| `_Item` | — | — | navigation | in | ✔ | ต้องมีอย่างน้อย 1 รายการ |
 
-**Input field ที่ 3rd-party ส่งได้: 15 field** — เดิม 16 ตัด `Currency` ออกเพราะ derive เสมอ
-**Mandatory 8 ตัว**: `SalesforceId` `PaymentDocumentNo` `NumberOfItems` `CompanyCode`
-`PostingDate` `GLAccount` `PaymentMethod` `PaymentAmount` · **conditional อีก 4 ตัว** (กรณีเช็ค)
+**Input field: 15** — `SalesforceId` `PaymentDocumentNo` `NumberOfItemsInPayment` `CompanyCode`
+`PostingDate` `GLAccount` `PaymentMethod` `ChequeNo` `IssueDate` `DueOn` `ChequeBankBranch`
+`RoundingDiff` `AdvancePayment` `Fees` `PaymentAmount`
+
+**Mandatory 8** · **conditional 4** (กรณีเช็ค) · **optional 3**
 
 ## 2. Item — entity set `PaymentItem` ← `ZTAR_I002_ITEM`
 
-| CDS alias (OData) | Table field | Type | OData type | I/O | Mand. | Validation / หมายเหตุ |
+| CDS alias (OData) | Table field | Type | OData type | I/O | Mand. | หมายเหตุ |
 |---|---|---|---|---|---|---|
 | `ItemUUID` | `item_uuid` | `sysuuid_x16` | `Edm.Guid` | out | – | Key — RAP gen |
-| `PaymentUUID` | `payment_uuid` | `sysuuid_x16` | `Edm.Guid` | out | – | RAP ผูกจาก composition ให้เอง |
-| `SalesforceItemId` | `salesforce_item_id` | `char(18)` | `Edm.String(18)` | in | ✔ | **Business key / item number** — ห้ามซ้ำภายใน payment เดียวกัน |
-| `CustomerCode` | `customer_code` | `char(10)` | `Edm.String(10)` | in | ✔ | pad ซ้ายเป็น 10 หลักเช่นเดียวกับ `GLAccount` · `I_Customer` |
+| `PaymentUUID` | `payment_uuid` | `sysuuid_x16` | `Edm.Guid` | out | – | RAP ผูกจาก composition |
+| `SalesforceItemId` | `salesforce_item_id` | `char(18)` | `Edm.String(18)` | in | ✔ | key ฝั่ง SFDC · **ซ้ำข้าม payment ได้** แต่ห้ามซ้ำกันเองใน payment เดียวกัน |
+| `CustomerCode` | `customer_code` | `char(10)` | `Edm.String(10)` | in | ✔ | ต้องมีจริง · SAP pad ให้ |
 | `BillingNoteNo` | `billing_note_no` | `char(10)` | `Edm.String(10)` | in | – | |
-| `AccountingDocument` | `accounting_document` | `char(10)` | `Edm.String(10)` | in | ✔ | ต้องยังไม่ถูกรับชำระ/reverse — `validateArOpenItem` (ที่ว่าง รอ OQ-08) |
-| `BillingDocument` | `billing_document` | `char(10)` | `Edm.String(10)` | in | ✔ | **ไม่ validate** กับ master data |
+| `AccountingDocument` | `accounting_document` | `char(10)` | `Edm.String(10)` | in | ✔ | ต้องยังไม่ถูกรับชำระ/reverse — ที่ว่าง (OQ-08) |
+| `BillingDocument` | `billing_document` | `char(10)` | `Edm.String(10)` | in | ✔ | **เป็นส่วนหนึ่งของ duplicate key** · ไม่ตรวจกับ master data |
 | `InvoicePostingDate` | `invoice_posting_date` | `dats` | `Edm.Date` | in | ✔ | |
-| `Currency` | `currency` | `cuky` | `Edm.String(5)` | **out** | ⚠️ | Determination `setItemDefaults` copy จาก header — ไม่รับจาก payload เพื่อไม่ให้ขัดกับ header |
+| `Currency` | `currency` | `cuky` | `Edm.String(5)` | out | – | copy จาก header |
 | `InvoiceAmount` | `invoice_amount` | `curr(23,2)` | `Edm.Decimal` | in | ✔ | |
-| `AmountPaid` | `amount_paid` | `curr(23,2)` | `Edm.Decimal` | in | ✔ | |
-| `PartialAmount` | `partial_amount` | `char(1)` | `Edm.String(1)` | in | – | **เป็น flag ไม่ใช่จำนวนเงิน** (คงชื่อเดิมไว้) — `X` = จ่ายบางส่วน · ว่าง = จ่ายเต็ม |
+| `AmountPaid` | `amount_paid` | `curr(23,2)` | `Edm.Decimal` | in | ✔ | ผลรวมทุก item ต้อง > 0 |
+| `PartialAmount` | `partial_amount` | `char(1)` | `Edm.String(1)` | in | – | **flag ไม่ใช่จำนวนเงิน** — `X` = จ่ายบางส่วน |
 | `SaleSubmitDate` | `sale_submit_date` | `dats` | `Edm.Date` | in | ✔ | |
-| `Status` | `status` | `ze_status` | `Edm.String(1)` | out | – | set = `N` |
-| `ErrorMessage` | `error_message` | `string` | `Edm.String` | out | – | ว่างเสมอตอน create |
-| `CreatedBy` / `CreatedAt` / `LastChangedBy` / `LastChangedAt` / `LocalLastChangedAt` | admin fields | | | out | – | managed · `LastChangedAt` = etag |
+| `RejectReason` | `reject_reason` | `char(200)` | `Edm.String(200)` | out | – | **ZARI002 ไม่เคยเขียน** — เป็นของ ZARE002 |
+| `CreatedBy` `CreatedAt` `LastChangedBy` `LocalLastChangedAt` | admin fields | | | out | – | managed · ไม่มี `LastChangedAt` (ดู `01_architecture.md` §3.4) |
 | `_Payment` | — | — | navigation | – | – | Association to parent |
 
-**Input field ที่ 3rd-party ส่งได้: 10 field**
-**Mandatory 8 ตัว**: `SalesforceItemId` `CustomerCode` `AccountingDocument` `BillingDocument`
-`InvoicePostingDate` `InvoiceAmount` `AmountPaid` `SaleSubmitDate`
-optional 2 ตัว: `BillingNoteNo` `PartialAmount`
+**Input field: 10** — mandatory 8 · optional 2 (`BillingNoteNo` `PartialAmount`)
 
-> `AccountingDocument` / `BillingDocument` **บังคับให้ส่ง แต่ไม่ validate กับ master data**
-> — เป็นคนละเรื่องกัน (ตกลง 2026-08-27)
+> item **ไม่มี `status` และ `error_message` แล้ว** — สถานะทั้งหมดอยู่ที่ระดับ header เท่านั้น
+> error อะไรก็ตามถือเป็น error ของ payment ทั้งใบ
 
-## 3. ตัวอย่าง payload
+## 3. Duplicate check
 
-```http
-POST /sap/opu/odata4/sap/zapi_zari002_o4/srvd_a2x/sap/zapi_zari002/0001/Payment
-Content-Type: application/json
+```
+ztar_i002_pymt-payment_document_no   +   ztar_i002_item-billing_document
 ```
 
-```json
-{
-  "SalesforceId": "a0X5g000004ABCDEAB",
-  "PaymentDocumentNo": "PAY0000123",
-  "NumberOfItems": "002",
-  "CompanyCode": "1000",
-  "PostingDate": "2026-08-27",
-  "GLAccount": "0011001000",
-  "PaymentMethod": "C",
-  "ChequeNo": "00123456",
-  "IssueDate": "2026-08-20",
-  "DueOn": "2026-09-20",
-  "ChequeBankBranch": "0011002",
-  "Currency": "THB",
-  "RoundingDiff": "0.00",
-  "AdvancePayment": "0.00",
-  "Fees": "50.00",
-  "PaymentAmount": "10000.00",
-  "_Item": [
-    {
-      "SalesforceItemId": "a0Y5g000004ITEM01A",
-      "CustomerCode": "0000100001",
-      "BillingNoteNo": "BN00000123",
-      "AccountingDocument": "1800000123",
-      "BillingDocument": "9000000123",
-      "InvoicePostingDate": "2026-08-15",
-      "InvoiceAmount": "6000.00",
-      "AmountPaid": "6000.00",
-      "PartialAmount": "0.00",
-      "SaleSubmitDate": "2026-08-16"
-    },
-    {
-      "SalesforceItemId": "a0Y5g000004ITEM02A",
-      "CustomerCode": "0000100001",
-      "BillingNoteNo": "BN00000124",
-      "AccountingDocument": "1800000124",
-      "BillingDocument": "9000000124",
-      "InvoicePostingDate": "2026-08-16",
-      "InvoiceAmount": "4000.00",
-      "AmountPaid": "4000.00",
-      "PartialAmount": "0.00",
-      "SaleSubmitDate": "2026-08-16"
-    }
-  ]
-}
-```
+ถ้าคู่นี้เคยมีอยู่แล้วใน table → reject ทั้ง request ด้วย `ZARI002/010` ไม่บันทึกอะไรเลย
 
-Response `201 Created` คืน `PaymentUUID` + `ItemUUID` ของทุก item + `Status = "N"`
+**เทียบทุก `status`** ไม่กรองตามสถานะ (ตกลง 2026-08-28: *"ห้ามส่งซ้ำถ้าเคยส่งมาแล้ว"*)
+→ `status` จึงอยู่ในนิยาม key แต่ไม่ได้ทำหน้าที่กรองในทางปฏิบัติ logic จริงคือเช็ค 2 field ข้างบน
 
-## 4. Error response
+⚠️ **ไม่มีตาข่ายระดับ DB** — key คร่อม 2 table ทำ unique index ไม่ได้ เหลือ validation ชั้นเดียว
+2 request เหมือนกันที่ยิงพร้อมกันจริง ๆ อาจหลุดเข้าไปทั้งคู่ (ยอมรับความเสี่ยงนี้แล้ว)
 
-validate ไม่ผ่าน → **`400 Bad Request` ไม่บันทึกอะไรลง table เลย** พร้อม message ครบทุกข้อในรอบเดียว
-message ที่เกี่ยวกับ item จะอ้างถึงด้วย `SalesforceItemId` เพราะ `ItemUUID` ยังไม่เกิด
+⚠️ **ผลที่ตามมา**: ถ้า ZARE002 post ไม่สำเร็จ **SFDC ส่งใบเดิมเข้ามาแก้ไม่ได้** เพราะจะโดนจับเป็น
+duplicate — การแก้ต้องทำฝั่ง SAP · ส่วนใบที่ถูก **reject ตั้งแต่ ZARI002** ส่งใหม่ได้ปกติ
+เพราะ reject-all ไม่ได้บันทึกอะไรลง table ตั้งแต่แรก
 
-รูปแบบ error body ตัวจริง + รายการ message code ทั้งหมด → `docs/05_api_spec.md` (Phase 5.6)
+## 4. กฎที่ client ต้องรู้
 
-⚠️ **`500` จากการยิงซ้ำพร้อมกัน**: ถ้า unique index เป็นตัวจับ duplicate (เคส race)
-จะออกมาเป็น 500 ไม่ใช่ 400 — ให้ถือว่า **อาจสร้างสำเร็จไปแล้ว ห้าม retry อัตโนมัติ**
-(เหตุผลเต็ม: `01_architecture.md` §5)
+### 4.1 Leading zero — ไม่ต้องเติมมา
 
+SAP pad `GLAccount` และ `CustomerCode` เป็น 10 หลักให้เอง ทั้งตอนตรวจและตอนบันทึก
+ส่งมาเต็มหรือไม่เต็มผลเหมือนกัน
 
----
+### 4.2 `PaymentMethod` ส่งเป็นคำ
 
-## 5. ข้อที่ยังไม่ปิด
-
-| # | เรื่อง | สถานะ |
-|---|--------|--------|
-| 5.1 | `Currency` ตัดออกจาก input — determination ดึงจาก company code เสมอ | ✅ ตกลง 2026-08-27 |
-| 5.2 | `ChequeBankBranch` ขยายเป็น `char(15)` + validate กับ `I_Bank_2` | ✅ ตกลง 2026-08-27 · รอ activate |
-| 5.3 | `payment_method` — แปลงคำ → SAP code ด้วย constant ใน `ZCL_ZARI002_VALIDATOR` | ✅ ตกลงวิธี · ⬜ รอค่าจริง ดู §6 |
-| 5.4 | `BankCountry` derive จาก `Country` ของ company code | ✅ ตกลง 2026-08-27 |
-| 5.5 | `NumberOfItems` เปลี่ยนเป็น `int4` | ✅ ตกลง 2026-08-27 · รอ activate |
-| 5.6 | รูปแบบ response ตอน error | ✅ คง reject ทั้ง request → 400 OData error payload |
-
-
----
-
-## 6. 🔴 `payment_method` — ต้องมี conversion ก่อนเข้า Phase 4
-
-Salesforce ส่ง**คำ** (เช่น `"Cheque"`) ไม่ใช่ SAP payment method code
-ซึ่ง `I_PaymentMethod.PaymentMethod` เป็น **`CHAR 1`** → validate ตรง ๆ ไม่มีวันผ่าน
-
-**ปัญหา 2 ชั้น**
-
-1. **ความยาว** — field เป็น `char(8)` "Cheque" (6) พอดี แต่คำอย่าง `"Bank Transfer"` (13)
-   ไม่รอด ไม่ว่าจะโดนตัดหรือถูก OData deserializer reject ตั้งแต่ชั้นนอกก็ใช้ไม่ได้ทั้งคู่
-2. **ค่าไม่ตรงชนิด** — ต้องแปลงคำ → SAP code ก่อน validate และก่อนส่งต่อให้ ZARE002 post FI
-
-**ทางที่ตัดทิ้งแล้ว: match กับ description ของ `I_PaymentMethodText`**
-description เป็น config text ที่ business user แก้ได้ตลอด · ขึ้นกับภาษา · ไม่ unique
-ถ้าใครไปแก้ข้อความ interface พังเงียบ ๆ ทันที — เอาข้อความ config มาเป็น key ไม่ได้
-
-**ทางที่เลือก (2026-08-27): แปลงฝั่ง SAP ด้วย constant**
-
-| ของที่เพิ่ม | ทำไม |
+| SFDC ส่ง | SAP code |
 |---|---|
-| ขยาย `payment_method` เป็น `char(30)` | รับคำเต็ม ๆ จาก Salesforce ได้ · เก็บค่าดิบไว้เพื่อ audit |
-| field ใหม่ `sap_payment_method : abap.char(1)` | code ที่แปลงแล้ว — ZARE002 ใช้ post FI |
-| constant `gc_payment_method_map` ใน `ZCL_ZARI002_VALIDATOR` | ตัวแปลง — **ไม่สร้าง class ใหม่** ตามที่ตกลง |
-| determination `setPaymentMethodCode` | แปลงก่อน validation ทำงาน |
+| `Cheque` | `A` (Manual Cheque) |
+| `Transfer` | `T` (Bank Transfer) |
 
-⬜ **ยังเติมค่าจริงไม่ได้** ต้องรู้ 2 อย่างก่อน: Salesforce ส่งคำอะไรมาบ้าง (ทั้งชุด ไม่ใช่แค่เช็ค)
-และ tenant มี payment method code อะไรให้แมตช์ (ผลบล็อก 8 ของ spike)
+`Cheque` ทำให้ `ChequeNo` `IssueDate` `DueOn` `ChequeBankBranch` กลายเป็นบังคับ
+⚠️ `Transfer` ยาว 8 ตัวเต็ม `char(8)` พอดี — คำใหม่ที่ยาวกว่านี้ส่งเข้ามาไม่ได้ (OQ-02)
 
-> ตั้งใจให้ย้ายไป **constant table** ที่ maintain เองได้ในภายหลัง — เก็บ mapping ไว้ที่เดียว
-> และให้ determination เรียกผ่าน method เดียว เพื่อให้ย้ายแล้วกระทบจุดเดียว
+### 4.3 ไม่เช็คเครื่องหมายจำนวนเงินรายบรรทัด
 
+CN ติดลบได้ · แต่ **ผลรวม `AmountPaid` ของทุก item ต้อง > 0**
 
----
-
-## 7. 🔴 ที่เจอจาก sample data ของ Salesforce (2026-08-27)
-
-| # | เรื่อง | สถานะ |
-|---|--------|--------|
-| 7.1 | `partial_amount` → **`abap.char(1)`** คงชื่อเดิม เป็น flag (`X` = จ่ายบางส่วน) | ✅ activate แล้ว |
-| 7.2 | `cheque_bankbranch` — **ยืนยันแล้วว่า `0040129` ไม่มีใน `I_Bank_2` ส่วน `004` มี** → เป็น bank + branch จริง · `validateChequeBankBranch` เป็นที่ว่าง ยังไม่ใส่ logic · คง `char(15)` | 🟨 รอยืนยันโครงสร้างจาก Salesforce/FI |
-| 7.3 | `gl_account` (และ `customer_code`) pad ซ้ายเป็น 10 หลักฝั่ง SAP — **พิสูจน์แล้ว: pad แล้วเจอครบ 3/3 บน company code 2000** | ✅ ยืนยัน 2026-08-27 |
-| 7.4 | **ไม่เช็คเครื่องหมายจำนวนเงินเลย** ทุก field — ปล่อยให้ ZARE002 ไปเจอเองตอน post | ✅ ตกลง 2026-08-27 |
-| 7.5 | Mapping: `Cheque` → **`A`** (Manual Cheque) · `Transfer` → **`T`** (Bank Transfer) | ✅ ตกลง 2026-08-27 |
-| 7.6 | `validatePaymentMethod` **เช็คแค่ว่า code มีจริง ไม่เช็ค `IsPaymentMethodForIncomingPayments`** — ไม่งั้น reject ทุกใบ · แจ้ง FI ให้ไปตรวจ config ขนานไป | ✅ ตกลง 2026-08-27 |
-| 7.7 | Salesforce ส่งคำอะไรมาได้อีกบ้างนอกจาก `Cheque` / `Transfer` | ⬜ รอคำตอบ |
-
-`payment_method` **คง `char(8)` ตามเดิม** — sample มีแค่ `Cheque` (6) กับ `Transfer` (8) พอดีตัว
-
-
----
-
-## 8. Validation เพิ่มจาก Salesforce (2026-08-27)
+## 5. Validation ทั้งหมด
 
 | Validation | Entity | Message | สถานะ |
 |---|---|---|---|
+| `validateMandatory` | Payment | `100`–`106` | ✅ |
+| `validateNumberOfItems` | Payment | `001` `002` | ✅ |
+| `validateDates` | Payment | `003` | ✅ |
+| `validateChequeFields` | Payment | `107`–`110` | ✅ |
+| `validateCompanyCode` | Payment | `200` | ✅ |
+| `validateGLAccount` | Payment | `201` | ✅ |
+| `validatePaymentMethod` | Payment | `202` `203` | ✅ |
+| `validateAmountPaidTotal` | Payment | `011` | ✅ |
+| `validateItemDuplicate` | Payment | `010` | ✅ นิยามชัดแล้ว |
 | `validateAmountFormat` | Payment | `009` | 🟨 ที่ว่าง — OQ-10 |
-| `validateItemDuplicate` | Payment | `010` | 🟨 ที่ว่าง — OQ-09 (พักไว้) |
-| `validateAmountPaidTotal` | Payment | `011` | ✅ ทำได้เลย |
+| `validateChequeBankBranch` | Payment | `008` | 🟨 ที่ว่าง — OQ-01 |
+| `validatePaymentTotal` | Payment | `007` | 🟨 ที่ว่าง — OQ-05 |
+| `validateSalesforceItemId` | Item | `005` `111` | ✅ |
+| `validateItemMandatory` | Item | `006` `112`–`118` | ✅ |
+| `validateCustomerCode` | Item | `205` | ✅ |
 | `validateArOpenItem` | Item | `206` | 🟨 ที่ว่าง — OQ-08 |
+
+**16 validation** (จากเดิม 17 — `validateSalesforceId` ถูกตัดออก ดู §6)
+
+## 6. สรุปการเปลี่ยนแปลง 2026-08-28
+
+| # | เปลี่ยนอะไร | ผลกับ API contract |
+|---|---|---|
+| 1 | `status` แยกเป็น 2 domain: `ZD_REQUEST_STATUS` (`N`/`C`/`R`/`E`) transaction status · `ZD_RESPONSE_STATUS` (`S`/`W`/`E`) result status ที่ส่งกลับ SFDC | ไม่กระทบ input |
+| 2 | +`batch_id` SAP สร้างตอนรับ | ไม่กระทบ input · โผล่ใน response |
+| 3 | +`salesforce_status` +`salesforce_message` · −`error_message` (header) | response เปลี่ยน |
+| 4 | `number_of_items` → `number_of_items_in_payment` | 🔴 **`NumberOfItems` → `NumberOfItemsInPayment` — SFDC ต้องแก้ client** |
+| 5 | `cheque_bankbranch` → `cheque_bank_branch` | ไม่กระทบ — CamelCase ยังเป็น `ChequeBankBranch` เหมือนเดิม |
+| 6 | item: −`status` −`error_message` +`reject_reason` | 🔴 **response รายบรรทัดที่เคยตกลงไว้ทำไม่ได้แล้ว** |
+| 7 | duplicate key = `payment_document_no` + `billing_document` | 🔴 `salesforce_id` ไม่ unique อีกต่อไป — **ถอด unique index** |
+| 8 | `validateSalesforceId` ถูกตัด | เดิมทำ 2 อย่าง: mandatory (`100`) กับ unique (`004`) · unique ไม่ใช้แล้ว ส่วน mandatory `validateMandatory` ทำอยู่แล้ว จึงเหลือ method เปล่า |
+| 9 | message `004 Salesforce ID already exists` เลิกใช้ | เลขไม่ถูกนำกลับมาใช้ซ้ำ เพื่อไม่ให้ client ที่ผูก logic ไว้แล้วสับสน |

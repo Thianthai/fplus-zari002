@@ -47,9 +47,31 @@ Table ทั้ง 2 ตัวออกแบบไว้ก่อนหน้�
 |---|-----------|--------|
 | 3.1 | `ztar_i002_item`: เพิ่ม field `currency : abap.cuky` และย้าย `@Semantics.amount.currencyCode` มาชี้ `'ztar_i002_item.currency'` | เดิมชี้ข้ามไป `ztar_i002_pymt.currency` — ระดับ DDIC ผ่าน แต่ **CDS view entity ต้องการ currency reference ที่เป็น element ในตัวเอง** ถ้าไปดึงผ่าน association path จะกลายเป็น element ที่ไม่มีที่เก็บจริง managed runtime เขียนกลับไม่ได้ · ค่าถูกเติมด้วย determination `setItemDefaults` ไม่ใช่ input จาก API |
 | 3.2 | `ztar_i002_item`: rename `salesforce_id` → `salesforce_item_id` | item เดิมไม่มี business key เลย มีแต่ `item_uuid` ที่ระบบ gen → error message อ้างกลับไม่ได้ว่าเป็น item ไหน · field นี้ทำหน้าที่เป็นทั้ง business key และ item number |
-| 3.3 | ทั้ง 2 table: `status : abap.char(1)` → `status : ze_status` (domain `ZD_STATUS`) | ได้ fixed value + label ฟรี ทั้งใน ADT และใน OData metadata · สำคัญกับ **ZARE002** ที่เป็น UI · ทำตอนนี้เพื่อไม่ต้อง convert table ซ้ำตอนมีข้อมูลจริงแล้ว |
+| 3.3 | ทั้ง 2 table: `status : abap.char(1)` → data element ที่มี domain | ได้ fixed value + label ฟรี ทั้งใน ADT และ OData metadata |
 
-`ZD_STATUS` เป็น domain กลาง **ไม่ใส่ RICEFW ID ในชื่อ** เพื่อให้ RICEFW อื่น reuse ได้
+### 3.3.1 โครงสร้าง status ฉบับปรับใหญ่ (2026-08-28)
+
+แยกเป็น **2 domain คนละหน้าที่** และ **ย้ายทั้งหมดไปอยู่ที่ระดับ header เท่านั้น**
+
+| Field (header) | Domain | หน้าที่ | ใครเขียน |
+|---|---|---|---|
+| `status` | `ZD_REQUEST_STATUS` | **transaction status** — payment ใบนี้อยู่ขั้นไหนของกระบวนการ | ZARI002 เขียน `N` · ZARE002 เขียนที่เหลือ |
+| `salesforce_status` | `ZD_RESPONSE_STATUS` | **result status** ที่ส่งกลับ SFDC | ZARE002 |
+| `salesforce_message` | `char(200)` | ข้อความคู่กับ `salesforce_status` | ZARE002 |
+
+`ZD_REQUEST_STATUS`: `N` New · `C` Complete · `R` Reject · `E` Error
+`ZD_RESPONSE_STATUS`: `S` Success · `W` Warning · `E` Error
+
+**item ไม่มี status และไม่มี message แล้ว** — error อะไรก็ตามถือเป็น error ของ payment ทั้งใบ
+item มีแค่ `reject_reason` (char 200) ซึ่ง **ZARI002 ไม่เคยเขียน** เป็นของ ZARE002 ที่อยากระบุว่า
+item ไหนมีปัญหา
+
+⚠️ **ZARI002 เขียนแค่ `status = 'N'` ตัวเดียว** — `salesforce_status`, `salesforce_message`
+และ `reject_reason` ปล่อยว่างเสมอ เพราะ reject-all แปลว่าใบที่มีปัญหาไม่ถูกบันทึกตั้งแต่แรก
+
+`ZD_STATUS` / `ZE_STATUS` ชุดเดิมไม่มี table ไหนใช้แล้ว — เก็บไว้ให้ RICEFW อื่น reuse
+
+| 3.4 | `batch_id` char(20) | SAP สร้างตอนรับ รูปแบบ `YYYYMMDD_hhmmss` — ไม่ใช่ input จาก SFDC |
 
 ### 3.4 Admin field ของ header กับ item ไม่เท่ากัน — **ตั้งใจ ไม่ใช่ของที่ตกหล่น**
 
@@ -112,23 +134,34 @@ validate ไม่ผ่านข้อไหนก็ตาม → **HTTP 400 +
 RAP `strict ( 2 )` รวบ message จากทุก validation ที่ fail ในรอบเดียวส่งกลับพร้อมกัน
 Salesforce จึงเห็นปัญหาทั้งหมดในครั้งเดียว ไม่ต้องยิงไล่แก้ทีละข้อ
 
-## 5. Idempotency — `salesforce_id` unique
+## 5. Duplicate check (เดิมคือ Idempotency)
 
-กันเคส Salesforce timeout แล้วยิงซ้ำจน payment ซ้ำใน SAP · ทำ **2 ชั้น**
+**key = `payment_document_no` (header) + `billing_document` (item)** — ถ้าคู่นี้เคยมีใน table
+แล้ว reject ทั้ง request ด้วย `ZARI002/010`
 
-1. **RAP validation `validateSalesforceId`** — `SELECT SINGLE` เช็คว่ามีอยู่แล้วไหม
-   ถ้ามี → 400 พร้อม message ที่อ่านรู้เรื่อง (จับได้ 99.9% ของเคสจริง)
-   · เคส **item เดิมโผล่มาใน payment ใบใหม่** (`salesforce_id` ไม่ซ้ำ จึงหลุด `004`)
-   ยัง**ไม่ถูกจับ** — `validateItemDuplicate` ประกาศไว้แล้วแต่เป็นที่ว่าง รอ OQ-09
-2. **Unique secondary index** บน `ZTAR_I002_PYMT` (`client` + `salesforce_id`)
-   จับเคส race ที่ validation จับไม่ได้ — request 2 ตัวยิงพร้อมกัน SELECT ไม่เจอกันเอง
-   ผ่าน validation ทั้งคู่ แล้วมา INSERT ชนกันตอน save
+ตรวจ **ทุกสถานะ** ไม่กรองตาม `status` (ตกลง 2026-08-28: *ห้ามส่งซ้ำถ้าเคยส่งมาแล้ว*)
+`status` จึงอยู่ในนิยาม key ตามที่ธุรกิจอธิบาย แต่ไม่ได้ทำหน้าที่กรองในทางปฏิบัติ
 
-⚠️ ชั้นที่ 2 ถ้า fire จะออกมาเป็น **HTTP 500** ไม่ใช่ 400 เพราะพังใน save phase
-เนื่องจากไม่ได้เปิด read operation ให้ Salesforce query กลับ ต้องระบุใน API spec ว่า
-**500 จากการยิงซ้ำ = ให้ถือว่าอาจสร้างสำเร็จไปแล้ว ห้าม retry ซ้ำอัตโนมัติ** ต้องให้คนตรวจสอบ
+### `salesforce_id` ไม่ใช่ key กันซ้ำอีกต่อไป
 
-> ถ้าภายหลังพบว่าเคสนี้เกิดบ่อย ทางแก้คือเปิด read operation เพิ่ม (ดู §8)
+SFDC ยืนยันว่าเมื่อถูก reject จะแก้ข้อมูลแล้วส่งกลับมาด้วย `salesforce_id` และ
+`salesforce_item_id` **เดิม** — เป็น key ฝั่งเขา ไม่ใช่ของเรา
+
+→ **unique index `ZTAR_I002_PYMT~SFI` ต้องถูกลบ** ไม่งั้นจะบล็อก flow นี้
+
+เคสที่ปลอดภัยอยู่แล้ว: ใบที่ถูก reject ไม่ได้ถูกบันทึกตั้งแต่แรก (reject-all) ส่งใหม่ด้วย id เดิมได้
+เคสที่ index จะพัง: ใบที่บันทึกสำเร็จแล้ว ZARE002 post ไม่ผ่าน แล้ว SFDC ส่งใบเดิมกลับเข้ามา
+
+### ⚠️ เสียตาข่ายระดับ DB
+
+key คร่อม 2 table จึงทำ unique index ไม่ได้ — เหลือ **validation ชั้นเดียว**
+2 request ที่เหมือนกันและยิงพร้อมกันจริง ๆ จะ SELECT ไม่เจอกันเอง ผ่าน validation ทั้งคู่
+แล้วเข้าไปทั้งคู่ · **ยอมรับความเสี่ยงนี้แล้ว (2026-08-28)**
+
+### ⚠️ ผลข้างเคียงที่ต้องรู้
+
+ใบที่บันทึกสำเร็จแล้วแต่ ZARE002 post ไม่ผ่าน **SFDC ส่งเข้ามาแก้ไม่ได้** เพราะจะโดนจับเป็น
+duplicate — การแก้ต้องทำฝั่ง SAP
 
 ## 6. Validation strategy
 
@@ -138,13 +171,12 @@ Salesforce จึงเห็นปัญหาทั้งหมดในคร
 
 | Validation | Entity | ตรวจอะไร |
 |---|---|---|
-| `validateSalesforceId` | Payment | mandatory + ไม่ซ้ำใน table |
 | `validateMandatory` | Payment | 8 field บังคับ ครบไหม (ดู `04_field_mapping.md`) |
 | `validateChequeFields` | Payment | ถ้า `sap_payment_method` = เช็ค → `cheque_no` `issue_date` `due_on` `cheque_bankbranch` ต้องครบ (ดูจาก code ที่แปลงแล้ว ไม่ใช่คำดิบ) |
 | `validatePaymentTotal` | Payment | **ที่ว่างไว้ ยังไม่ใส่ logic** — เผื่อภายหลังต้องเทียบ `payment_amount` กับผลรวม `amount_paid` |
 | `validateAmountPaidTotal` | Payment | ผลรวม `amount_paid` ของทุก item ต้อง **> 0** |
 | `validateAmountFormat` | Payment | **ที่ว่างไว้ ยังไม่ใส่ logic** — OData จับค่าที่ไม่ใช่ตัวเลขไปก่อนแล้ว รอนิยามเงื่อนไข (OQ-10) |
-| `validateItemDuplicate` | Payment | **ที่ว่างไว้ ยังไม่ใส่ logic** — รอสรุปว่า duplicate ตัดสินจากอะไร (OQ-09) |
+| `validateItemDuplicate` | Payment | `payment_document_no` + `billing_document` ต้องไม่เคยมีใน table |
 | `validateNumberOfItems` | Payment | ต้องเท่ากับจำนวน `_Item` ที่ส่งมาจริง |
 | `validateDates` | Payment | `due_on` ต้องไม่ก่อน `issue_date` |
 | `validateSalesforceItemId` | Item | mandatory + ไม่ซ้ำกันเองภายใน payment เดียวกัน |
@@ -185,9 +217,9 @@ Salesforce ส่ง `gl_account` มาแบบ **ไม่มี leading zero
 
 | Determination | Entity | ทำอะไร |
 |---|---|---|
-| `setPaymentDefaults` | Payment | อ่าน `I_CompanyCode` ครั้งเดียวได้ `Currency` + `Country` → เติม `currency` ให้ header **และ push ลงทุก item** · `status = 'N'` · เคลียร์ `error_message` |
+| `setPaymentDefaults` | Payment | อ่าน `I_CompanyCode` ครั้งเดียวได้ `Currency` + `Country` → เติม `currency` ให้ header **และ push ลงทุก item** · สร้าง `batch_id` · pad `gl_account` · `status = 'N'` |
 | `setPaymentMethodCode` | Payment | แปลงคำจาก Salesforce (`payment_method`) → SAP code (`sap_payment_method`) ด้วย constant ใน `ZCL_ZARI002_VALIDATOR` — `Cheque` → `A` · `Transfer` → `T` |
-| `setItemDefaults` | Item | `status = 'N'`, เคลียร์ `error_message` |
+| `setItemDefaults` | Item | pad `customer_code` (item ไม่มี status/error แล้ว) |
 
 ทั้งคู่เป็น `determination on save { create; }` — ทำงานก่อน validation ในลำดับ RAP save sequence
 

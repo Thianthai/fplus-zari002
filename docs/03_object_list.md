@@ -22,11 +22,15 @@
 
 | Object | Type | ไฟล์ | Phase | Status |
 |--------|------|------|-------|--------|
-| `ZD_STATUS` | Domain (`N`/`S`/`W`/`E`) | `src/zd_status.doma.xml` | 0 | ✅ |
-| `ZE_STATUS` | Data element | `src/ze_status.dtel.xml` | 0 | ✅ |
+| `ZD_REQUEST_STATUS` | Domain (`N`/`C`/`R`/`E`) — transaction status | `src/zd_request_status.doma.xml` | 4 | 🟨 |
+| `ZE_REQUEST_STATUS` | Data element | `src/ze_request_status.dtel.xml` | 4 | 🟨 |
+| `ZD_RESPONSE_STATUS` | Domain (`S`/`W`/`E`) — result status ส่งกลับ SFDC | `src/zd_response_status.doma.xml` | 4 | 🟨 |
+| `ZE_RESPONSE_STATUS` | Data element | `src/ze_response_status.dtel.xml` | 4 | 🟨 |
+| `ZD_STATUS` | Domain เดิม — **ไม่มี table ไหนใช้แล้ว** | `src/zd_status.doma.xml` | 0 | ⚠️ orphan |
+| `ZE_STATUS` | Data element เดิม — **ไม่มี table ไหนใช้แล้ว** | `src/ze_status.dtel.xml` | 0 | ⚠️ orphan |
 | `ZTAR_I002_PYMT` | Table — payment header | `src/ztar_i002_pymt.tabl.xml` | 0 | ✅ |
 | `ZTAR_I002_ITEM` | Table — payment item | `src/ztar_i002_item.tabl.xml` | 0 | ✅ |
-| `ZTAR_I002_PYMT~SFI` | Unique secondary index (`client` + `salesforce_id`) | **ฝังใน** `src/ztar_i002_pymt.tabl.xml` | 2 | ✅ |
+| ~~`ZTAR_I002_PYMT~SFI`~~ | ~~Unique secondary index~~ — **ต้องลบ** `salesforce_id` ซ้ำได้แล้ว (`01_architecture.md` §5) | — | 2 | 🔴 รอลบ |
 | `ZARI002` | Message class (34 messages) | `src/zari002.msag.xml` | 2 | ✅ |
 
 > **Behavior pool อยู่ที่ `.clas.locals_imp.abap`** ไม่ใช่ `.clas.abap` — ตัวหลังเป็นแค่ shell

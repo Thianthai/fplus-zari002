@@ -18,10 +18,14 @@
 | OQ-07 | จำนวน item สูงสุดต่อ request | — | Phase 1 | กำหนดหลัง volume test Phase 7.7 | ⬜ |
 
 | OQ-08 | released CDS view ตัวไหนบอกได้ว่า accounting document ถูกรับชำระ/reverse แล้ว (`I_OperationalAcctgDocItem` / กลุ่ม journal entry) | ผู้ใช้ + FI | Phase 3 | `validateArOpenItem` เป็นที่ว่างไว้ · ถ้าไม่มี view ที่ released จะเขียน logic ไม่ได้เลย | ⬜ |
-| OQ-09 | **พักไว้ (2026-08-27)** duplicate check แบบ 4-field AND จับได้เฉพาะเคสที่ `004` จับไปแล้ว และปล่อยเคส "จ่ายซ้ำใบแจ้งหนี้เดิมผ่าน payment ใบใหม่" หลุด · ต้องเลือกระหว่างเก็บ unique index ไว้ (จับ 2 ชั้น) กับถอด index แล้วใช้ 4-field ตาม spec | Salesforce / ผู้ใช้ | Phase 3 | `validateItemDuplicate` **ประกาศใน BDEF แล้วแต่เป็นที่ว่าง** · `004` + unique index ยังทำงานปกติ | 🟨 พัก |
+| OQ-09 | duplicate check — **ปิดแล้ว 2026-08-28**: key = `payment_document_no` + `billing_document` เทียบทุกสถานะ · `salesforce_id` ไม่ใช่ key กันซ้ำ | — | Phase 3 | — | ✅ |
 | OQ-10 | `validateAmountFormat` ควร fire ตอนไหน — OData จับค่าที่ไม่ใช่ตัวเลขไปก่อนแล้ว | Salesforce | Phase 3 | message `009` ประกาศไว้แล้ว แต่ยังไม่มี logic | 🟨 |
 
 | OQ-11 | interface ใช้ชื่อ **`ZIF_ZARI002_MD_CHK` เป็นการชั่วคราว** — ชื่อที่ตั้งใจคือ `ZIF_ZARI002_MD_CHECK` แต่ tenant ไม่ยอมให้สร้างซ้ำเพราะเคยสร้างเป็น class ชื่อเดียวกันแล้วลบไป (น่าจะมี cache ค้าง) | ผู้ใช้ | Phase 4 | ไม่บล็อกอะไร แต่ถ้าไม่ rename กลับ ชื่อจะหลุดกฎ naming ไปถาวรและขัดกับตัวอย่างใน `CLAUDE.md` | ⬜ |
+
+| OQ-12 | **ต้องแจ้ง SFDC ว่า API contract เปลี่ยน 2 จุด**: `NumberOfItems` → `NumberOfItemsInPayment` · response รายบรรทัดไม่มี `Status`/`ErrorMessage` แล้ว | ผู้ใช้ → Salesforce | Phase 4 | SFDC ถือ `05_api_spec.md` ฉบับเดิมไปเขียน client แล้ว ถ้าไม่แจ้งจะพังตอน integration test | ⬜ |
+| OQ-13 | `ZD_STATUS` / `ZE_STATUS` ไม่มี table ไหนใช้แล้ว — เก็บไว้ให้ RICEFW อื่น reuse หรือลบทิ้ง | ผู้ใช้ | Phase 4 | ไม่บล็อกอะไร แต่ object ที่ไม่มีคนใช้จะสร้างความสับสนตอน handover | ⬜ |
+| OQ-14 | ใบที่บันทึกสำเร็จแล้ว ZARE002 post ไม่ผ่าน → SFDC ส่งเข้ามาแก้ไม่ได้ (โดน duplicate) ต้องแก้ฝั่ง SAP · **ตกลงยอมรับแล้ว** แต่ต้องเขียนไว้ใน troubleshooting guide ให้ชัด | ผู้ใช้ | Phase 4 | Phase 8.3 | 🟨 |
 
 ## วิธีใช้
 
@@ -58,3 +62,11 @@
   ที่บอกสถานะ cleared/reversed จะเขียน logic ไม่ได้เลย ไม่ใช่แค่ "ยังไม่ได้เขียน"
 
 **เข้า Phase 4 ได้** — ไม่มีข้อไหนบล็อกการเขียน determination/validation ที่เหลือ
+
+
+### ทบทวนพิเศษ — table ปรับใหญ่ 2026-08-28
+
+- **ปิด** OQ-09 (duplicate key ชัดเจนแล้ว)
+- **เปิดใหม่** OQ-12 (แจ้ง SFDC) · OQ-13 (`ZD_STATUS` orphan) · OQ-14 (แก้ใบที่ post ไม่ผ่าน)
+- OQ-01 `cheque_bank_branch` **ยังเปิดอยู่** — เปลี่ยนแค่ชื่อ field ไม่ได้ตอบเรื่องโครงสร้าง
+- OQ-02 `payment_method` ยังเปิด · OQ-03 / OQ-04 ยังไม่มีใครถาม FI · OQ-05 / OQ-08 / OQ-10 / OQ-11 ไม่กระทบ

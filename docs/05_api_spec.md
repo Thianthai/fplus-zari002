@@ -35,7 +35,7 @@ POST /sap/opu/odata4/sap/zapi_zari002_o4/srvd_a2x/sap/zapi_zari002/0001/Payment
 **แนะนำให้ต่อท้าย URL ด้วย `$select` / `$expand`** เพื่อให้ response เล็กและคงที่:
 
 ```
-?$select=SalesforceId,Status,ErrorMessage&$expand=_Item($select=SalesforceItemId,Status,ErrorMessage)
+?$select=BatchId,SalesforceId,Status&$expand=_Item($select=SalesforceItemId)
 ```
 
 ## 3. Field ของ header (`Payment`)
@@ -46,7 +46,7 @@ POST /sap/opu/odata4/sap/zapi_zari002_o4/srvd_a2x/sap/zapi_zari002/0001/Payment
 |---|---|---|---|
 | `SalesforceId` | String(18) | ✔ | **ต้องไม่ซ้ำ** — ใช้กันการยิงซ้ำ (ดู §7) |
 | `PaymentDocumentNo` | String(10) | ✔ | เลขที่เอกสารรับชำระเงินฝั่ง Salesforce |
-| `NumberOfItems` | **Int32** | ✔ | จำนวนนับ ส่งเป็นตัวเลข `5` ไม่ใช่ `"5"` หรือ `"005"` · ต้องเท่ากับจำนวน `_Item` |
+| `NumberOfItemsInPayment` | **Int32** | ✔ | 🔴 **เปลี่ยนชื่อจาก `NumberOfItems` (2026-08-28)** · จำนวนนับ ส่งเป็นตัวเลข `5` ไม่ใช่ `"5"` · ต้องเท่ากับจำนวน `_Item` |
 | `CompanyCode` | String(4) | ✔ | ต้องมีจริงใน SAP |
 | `PostingDate` | Date | ✔ | `YYYY-MM-DD` |
 | `GLAccount` | String(10) | ✔ | **ส่งแบบไม่มี leading zero ได้** — SAP เติมให้เอง (ดู §6.1) |
@@ -61,8 +61,9 @@ POST /sap/opu/odata4/sap/zapi_zari002_o4/srvd_a2x/sap/zapi_zari002/0001/Payment
 | `PaymentAmount` | Decimal(23,2) | ✔ | |
 | `_Item` | array | ✔ | ต้องมีอย่างน้อย 1 รายการ |
 
-**ห้ามส่ง** (ระบบเติมเอง ส่งมาก็ถูกเมิน): `PaymentUUID` · `Currency` · `SapPaymentMethod` ·
-`Status` · `ErrorMessage` · field `Created*` / `LastChanged*` ทั้งหมด
+**ห้ามส่ง** (ระบบเติมเอง ส่งมาก็ถูกเมิน): `PaymentUUID` · `BatchId` · `Currency` ·
+`SapPaymentMethod` · `Status` · `SalesforceStatus` · `SalesforceMessage` ·
+field `Created*` / `LastChanged*` ทั้งหมด
 
 ## 4. Field ของ item (`_Item`)
 
@@ -80,8 +81,12 @@ POST /sap/opu/odata4/sap/zapi_zari002_o4/srvd_a2x/sap/zapi_zari002/0001/Payment
 | `AmountPaid` | Decimal(23,2) | ✔ | |
 | `PartialAmount` | **String(1)** | – | **เป็น flag ไม่ใช่จำนวนเงิน** — `"X"` = จ่ายบางส่วน · `""` = จ่ายเต็ม |
 | `SaleSubmitDate` | Date | ✔ | |
+| `BillingDocument` | String(10) | ✔ | **เป็นส่วนหนึ่งของ duplicate key** (ดู §7) |
 
-**ห้ามส่ง**: `ItemUUID` · `PaymentUUID` · `Currency` · `Status` · `ErrorMessage` · admin fields
+**ห้ามส่ง**: `ItemUUID` · `PaymentUUID` · `Currency` · `RejectReason` · admin fields
+
+> **item ไม่มี `Status` และ `ErrorMessage` แล้ว** (2026-08-28) — สถานะทั้งหมดอยู่ที่ระดับ
+> header เท่านั้น · error อะไรก็ตามถือเป็น error ของ payment ทั้งใบ
 
 ## 5. ตัวอย่าง request
 
@@ -89,7 +94,7 @@ POST /sap/opu/odata4/sap/zapi_zari002_o4/srvd_a2x/sap/zapi_zari002/0001/Payment
 {
   "SalesforceId": "b0yfd000000GRsHAAW",
   "PaymentDocumentNo": "1000000001",
-  "NumberOfItems": 2,
+  "NumberOfItemsInPayment": 2,
   "CompanyCode": "2000",
   "PostingDate": "2026-08-15",
   "GLAccount": "11011214",
@@ -174,17 +179,22 @@ API แปลงคำเป็น SAP payment method code ให้เอง
 **รายบรรทัด**รับค่าติดลบได้ (CN เป็นค่าติดลบตามปกติ) — แต่ **ผลรวม `AmountPaid` ของทุก item
 ในหนึ่ง payment ต้องมากกว่า 0** ไม่งั้นได้ `ZARI002/011`
 
-## 7. Idempotency — ห้ามยิงซ้ำ
+## 7. Duplicate check
 
-ตรวจ 2 ชั้น:
+`PaymentDocumentNo` (header) คู่กับ `BillingDocument` (item) **ต้องไม่เคยมีอยู่ใน SAP มาก่อน**
+ถ้าเคยมี → `400` พร้อม `ZARI002/010` และไม่บันทึกอะไรเลย
 
-1. **`SalesforceId` ต้องไม่ซ้ำ** ในระดับ payment — ยิง id เดิมเข้ามาอีกครั้งได้ `ZARI002/004`
-2. **`SalesforceItemId` ต้องไม่เคยเข้ามาใน payment ใบก่อนหน้า** — กันจ่ายซ้ำใบแจ้งหนี้เดิม
-   ผ่าน payment คนละใบ ได้ `ZARI002/010`
+ตรวจ **ทุกสถานะ** ไม่ว่าใบเดิมจะอยู่ในสถานะไหน — *ส่งซ้ำไม่ได้ถ้าเคยส่งมาแล้ว*
 
-⚠️ **ถ้าได้ `500` จากการยิงซ้ำพร้อมกัน 2 request ให้ถือว่าอาจสร้างสำเร็จไปแล้ว
-ห้าม retry อัตโนมัติ** — API นี้ไม่มี read operation ให้ query กลับมาเช็ค
-ต้องให้คนตรวจสอบ หรือรอผลจาก ZARI003
+**`SalesforceId` และ `SalesforceItemId` ซ้ำได้** — เป็น key ฝั่ง SFDC ไม่ได้ใช้กัน duplicate
+ถ้า request ถูก reject แล้วแก้ข้อมูลส่งใหม่ **ใช้ id เดิมได้ตามปกติ** เพราะใบที่ถูก reject
+ไม่ได้ถูกบันทึกลง SAP ตั้งแต่แรก
+
+⚠️ **แต่ถ้าใบนั้นถูกบันทึกสำเร็จไปแล้ว จะส่งซ้ำเข้ามาแก้ไม่ได้** แม้ ZARE002 จะ post ไม่ผ่าน
+— การแก้ต้องทำฝั่ง SAP
+
+⚠️ การตรวจนี้เป็น **validation ชั้นเดียว ไม่มีตาข่ายระดับฐานข้อมูล** (key คร่อม 2 table
+จึงทำ unique index ไม่ได้) · 2 request ที่เหมือนกันและยิงพร้อมกันจริง ๆ อาจเข้าไปทั้งคู่
 
 ## 8. Response
 
@@ -194,19 +204,24 @@ API แปลงคำเป็น SAP payment method code ให้เอง
 
 ```json
 {
+  "BatchId": "20260828_142530",
   "SalesforceId": "b0yfd000000GRsHAAW",
   "Status": "N",
-  "ErrorMessage": "",
   "_Item": [
-    { "SalesforceItemId": "a0yfd000000GRsHAAW", "Status": "N", "ErrorMessage": "" },
-    { "SalesforceItemId": "a2yfd000000GRsHAAW", "Status": "N", "ErrorMessage": "" }
+    { "SalesforceItemId": "a0yfd000000GRsHAAW" },
+    { "SalesforceItemId": "a2yfd000000GRsHAAW" }
   ]
 }
 ```
 
-`Status = "N"` และ `ErrorMessage = ""` **เสมอ** ตอนสร้างสำเร็จ — แปลว่า "รับเข้าคิวแล้ว
-รอ post" ไม่ใช่ผลการ post · ค่า `S` / `W` / `E` จะถูก stamp โดย ZARE002 ทีหลัง
-และส่งกลับมาให้ Salesforce ผ่าน **ZARI003**
+🔴 **เปลี่ยนจากที่ตกลงไว้เดิม (2026-08-28)** — item ไม่มี `Status` / `ErrorMessage` ให้ส่งกลับ
+อีกต่อไป เพราะสถานะย้ายไปอยู่ที่ระดับ header ทั้งหมด · response รายบรรทัดจึงเหลือแค่
+`SalesforceItemId` เป็นการยืนยันว่ารับ item นั้นแล้ว
+
+`Status = "N"` **เสมอ** ตอนสร้างสำเร็จ — แปลว่า "รับเข้าคิวแล้ว รอ post" ไม่ใช่ผลการ post
+
+ผลการ post จริงอยู่ที่ `SalesforceStatus` (`S`/`W`/`E`) + `SalesforceMessage` ซึ่ง **ZARE002
+เป็นคนเขียน** และส่งกลับมาให้ SFDC ผ่าน **ZARI003** — ตอน create ทั้งคู่ว่างเปล่าเสมอ
 
 ### 8.2 ไม่สำเร็จ — `400 Bad Request`
 
@@ -241,13 +256,13 @@ API แปลงคำเป็น SAP payment method code ให้เอง
 | `ZARI002/001` | Payment must have at least one item |
 | `ZARI002/002` | Number of items &1 does not match &2 items sent |
 | `ZARI002/003` | Due date &1 is before issue date &2 |
-| `ZARI002/004` | Salesforce ID &1 already exists |
+| ~~`ZARI002/004`~~ | ~~Salesforce ID &1 already exists~~ — **เลิกใช้ 2026-08-28** เลขนี้จะไม่ถูกนำกลับมาใช้ซ้ำ |
 | `ZARI002/005` | Duplicate Salesforce item ID &1 |
 | `ZARI002/006` | Item &1: partial flag must be X or blank |
 | `ZARI002/007` | Payment amount &1 does not match item total &2 — ⬜ ยังไม่เปิดใช้ (OQ-05) |
 | `ZARI002/008` | Bank/branch &1 does not exist — ⬜ ยังไม่เปิดใช้ (OQ-01) |
 | `ZARI002/009` | Invalid payment data for payment &1. Please verify — ⬜ ยังไม่เปิดใช้ (OQ-10) |
-| `ZARI002/010` | Duplicate record: item &1 already exists in SAP |
+| `ZARI002/010` | Duplicate: payment &1 with billing document &2 exists |
 | `ZARI002/011` | Payment &1: received amount must be greater than zero |
 
 **`1xx` — field ที่บังคับ**

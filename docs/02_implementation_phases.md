@@ -64,7 +64,7 @@ serialize ขึ้นมา แล้วค่อยเอาเอกสาร
 
 | # | Object | Status |
 |---|--------|--------|
-| 2.1 | Unique secondary index `ZTAR_I002_PYMT~SFI` (`client` + `salesforce_id`) | ✅ |
+| 2.1 | ~~Unique secondary index `ZTAR_I002_PYMT~SFI`~~ — **ต้องลบ (2026-08-28)** `salesforce_id` ซ้ำได้แล้ว | 🔴 |
 | 2.2 | Message class `ZARI002` — 34 messages (`0xx` โครงสร้าง · `1xx` mandatory · `2xx` master data · `900` technical) | ✅ |
 | 2.3 | Exception class `ZCX_ZARI002_ERROR` | ✅ |
 
@@ -99,7 +99,7 @@ serialize ขึ้นมา แล้วค่อยเอาเอกสาร
 |---|--------|--------|
 | 4.1 | `ZIF_ZARI002_MD_CHK` + `ZCL_ZARI002_MD_CHECK` — อ่าน master data (mock ได้ใน test) | ⬜ |
 | 4.2 | `ZCL_ZARI002_VALIDATOR` — logic กลุ่ม A (format/mandatory/consistency) ทั้งหมด | ⬜ |
-| 4.3 | Determination `setInitialStatus`, `setItemDefaults` ใน `ZBP_R_ZARI002` | ⬜ |
+| 4.3 | Determination `setPaymentDefaults` `setPaymentMethodCode` `setItemDefaults` ใน `ZBP_R_ZARI002` | 🟨 เขียนแล้ว รอ revise ตาม table ใหม่ |
 | 4.4 | Validation กลุ่ม A + B ใน `ZBP_R_ZARI002` (เรียก class ข้างบน) | ⬜ |
 | 4.5 | ABAP Unit — validator/md_check ครบทุก branch + BO test ด้วย `cl_abap_behv_test_environment` | ⬜ |
 
