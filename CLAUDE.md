@@ -60,6 +60,10 @@
 - **RAP derived type (`TYPE STRUCTURE FOR READ RESULT ...`) ใช้ตรง ๆ ใน method signature ไม่ได้**
   parser จะกิน token ถัดไป (`RETURNING`, `EXPORTING`) เข้ามาเป็นส่วนหนึ่งของ type
   → ประกาศเป็น `TYPES:` alias ก่อนเสมอ แล้วค่อยอ้าง alias ใน signature
+- **`FAILED` / `REPORTED` ต้องระบุ `LATE` ใน handler ของ save phase**
+  `FOR VALIDATE ON SAVE` และ `FOR DETERMINE ON SAVE` ได้ `failed`/`reported` แบบ **LATE**
+  (ไม่มี `%cid` เพราะทุก instance มี key แล้ว) ส่วน `EARLY` เป็นของ interaction phase
+  ถ้าประกาศ type ไม่ตรงจะได้ `The type "TABLE OF <flat>" ... is unsuitable for ... "TABLE OF <deep>"`
 - **`total etag` ประกาศได้เฉพาะ BO ที่มี draft** — BO แบบ API ไม่มี draft ให้ใช้ `lock master`
   เปล่า ๆ + `etag master <LocalLastChangedAt>` เท่านั้น
 
