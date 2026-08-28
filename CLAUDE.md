@@ -60,6 +60,9 @@
 - **RAP derived type (`TYPE STRUCTURE FOR READ RESULT ...`) ใช้ตรง ๆ ใน method signature ไม่ได้**
   parser จะกิน token ถัดไป (`RETURNING`, `EXPORTING`) เข้ามาเป็นส่วนหนึ่งของ type
   → ประกาศเป็น `TYPES:` alias ก่อนเสมอ แล้วค่อยอ้าง alias ใน signature
+- **RAP unit test ต้อง `ROLLBACK ENTITIES` ใน `setup`** — `COMMIT ENTITIES` ที่ fail
+  **ไม่ทิ้งข้อมูลใน transactional buffer** ของค้างจะถูก save ไปพร้อม test ถัดไป
+  ทำให้ได้ error ของ test ก่อนหน้าโดยหาสาเหตุไม่เจอ
 - **`FAILED` / `REPORTED` ต้องระบุ `LATE` ใน handler ของ save phase**
   `FOR VALIDATE ON SAVE` และ `FOR DETERMINE ON SAVE` ได้ `failed`/`reported` แบบ **LATE**
   (ไม่มี `%cid` เพราะทุก instance มี key แล้ว) ส่วน `EARLY` เป็นของ interaction phase

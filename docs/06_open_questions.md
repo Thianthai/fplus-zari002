@@ -21,7 +21,7 @@
 | OQ-09 | duplicate check — **ปิดแล้ว 2026-08-28**: key = `payment_document_no` + `billing_document` เทียบทุกสถานะ · `salesforce_id` ไม่ใช่ key กันซ้ำ | — | Phase 3 | — | ✅ |
 | OQ-10 | `validateAmountFormat` ควร fire ตอนไหน — OData จับค่าที่ไม่ใช่ตัวเลขไปก่อนแล้ว | Salesforce | Phase 3 | message `009` ประกาศไว้แล้ว แต่ยังไม่มี logic | 🟨 |
 
-| OQ-11 | interface ใช้ชื่อ **`ZIF_ZARI002_MD_CHK` เป็นการชั่วคราว** — ชื่อที่ตั้งใจคือ `ZIF_ZARI002_MD_CHECK` แต่ tenant ไม่ยอมให้สร้างซ้ำเพราะเคยสร้างเป็น class ชื่อเดียวกันแล้วลบไป (น่าจะมี cache ค้าง) | ผู้ใช้ | Phase 4 | ไม่บล็อกอะไร แต่ถ้าไม่ rename กลับ ชื่อจะหลุดกฎ naming ไปถาวรและขัดกับตัวอย่างใน `CLAUDE.md` | ⬜ |
+| OQ-11 | ชื่อชั่วคราวของ interface — **ปิดแล้ว 2026-08-28** rename เป็น `ZIF_ZARI002_MASTER_DATA` คู่กับ `ZCL_ZARI002_MASTER_DATA` (`MD_` อ่านเป็น manday) | — | Phase 4 | — | ✅ |
 
 | OQ-12 | **ต้องแจ้ง SFDC ว่า API contract เปลี่ยน 2 จุด**: `NumberOfItems` → `NumberOfItemsInPayment` · response รายบรรทัดไม่มี `Status`/`ErrorMessage` แล้ว | ผู้ใช้ → Salesforce | Phase 4 | SFDC ถือ `05_api_spec.md` ฉบับเดิมไปเขียน client แล้ว ถ้าไม่แจ้งจะพังตอน integration test | ⬜ |
 | OQ-13 | `ZD_STATUS` / `ZE_STATUS` — **ลบทิ้งแล้ว 2026-08-28** | — | Phase 4 | — | ✅ |

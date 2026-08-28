@@ -100,8 +100,8 @@ serialize ขึ้นมา แล้วค่อยเอาเอกสาร
 | 4.1 | `ZIF_ZARI002_MD_CHK` + `ZCL_ZARI002_MD_CHECK` — อ่าน master data (mock ได้ใน test) | ✅ |
 | 4.2 | `ZCL_ZARI002_VALIDATOR` — logic กลุ่ม format/mandatory/consistency + constant แปลง payment method · **31 unit test เขียวทั้งหมด** | ✅ |
 | 4.3 | Determination `setPaymentDefaults` `setPaymentMethodCode` `setItemDefaults` ใน `ZBP_R_ZARI002` | ✅ |
-| 4.4 | Validation 12 ตัวที่มี logic ใน `ZBP_R_ZARI002` (แปลง finding → RAP message + `%element`) · อีก 4 ตัวยังเป็นที่ว่าง | ⬜ |
-| 4.5 | ABAP Unit — validator/md_check ครบทุก branch + BO test ด้วย `cl_abap_behv_test_environment` | ⬜ |
+| 4.4 | Validation 12 ตัวที่มี logic ใน `ZBP_R_ZARI002` (แปลง finding → RAP message + `%element`) · อีก 4 ตัวยังเป็นที่ว่าง | ✅ |
+| 4.5 | ABAP Unit — validator 31 test + BO test 3 test ด้วย `cl_osql_test_environment` + master data double | ✅ |
 
 **Exit criteria**: unit test เขียวทั้งหมด · deep create ที่ข้อมูลผิดถูก reject พร้อม message ครบทุกข้อในรอบเดียว · rollback ไม่เหลือ row ค้าง
 

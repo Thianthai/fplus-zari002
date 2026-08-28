@@ -41,8 +41,8 @@
 | Object | Type | ไฟล์ | Phase | Status |
 |--------|------|------|-------|--------|
 | `ZCX_ZARI002_ERROR` | Exception class | `src/zcx_zari002_error.clas.abap` | 2 | ✅ |
-| `ZIF_ZARI002_MD_CHK` | Interface — อ่าน master data (mock ได้) · **ชื่อชั่วคราว ดู OQ-11** | `src/zif_zari002_md_chk.intf.abap` | 4 | ✅ |
-| `ZCL_ZARI002_MD_CHECK` | Class — implementation จริงบน released CDS view | `src/zcl_zari002_md_check.clas.abap` | 4 | ✅ |
+| `ZIF_ZARI002_MASTER_DATA` | Interface — อ่าน master data (mock ได้) | `src/zif_zari002_master_data.intf.abap` | 4 | ✅ |
+| `ZCL_ZARI002_MASTER_DATA` | Class — implementation จริงบน released CDS view | `src/zcl_zari002_master_data.clas.abap` | 4 | ✅ |
 | `ZCL_ZARI002_VALIDATOR` | Class — validation กลุ่ม format/mandatory/consistency **+ constant แปลง payment method** · 31 unit test | `src/zcl_zari002_validator.clas.abap` | 4 | ✅ |
 | `ZCL_ZARI002_SPIKE_MD` | Console class — spike ตรวจ released view (throwaway) | `src/zcl_zari002_spike_md.clas.abap` | 1 | ✅ |
 | `ZCL_ZARI002_SPIKE_EML` | Console class — spike ทดสอบ deep create (throwaway) | `src/zcl_zari002_spike_eml.clas.abap` | 3 | ✅ |
