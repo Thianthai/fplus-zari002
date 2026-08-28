@@ -27,7 +27,7 @@
 | OQ-13 | `ZD_STATUS` / `ZE_STATUS` — **ลบทิ้งแล้ว 2026-08-28** | — | Phase 4 | — | ✅ |
 | OQ-14 | ใบที่บันทึกสำเร็จแล้ว ZARE002 post ไม่ผ่าน → SFDC ส่งเข้ามาแก้ไม่ได้ (โดน duplicate) ต้องแก้ฝั่ง SAP · **ตกลงยอมรับแล้ว** แต่ต้องเขียนไว้ใน troubleshooting guide ให้ชัด | ผู้ใช้ | Phase 4 | Phase 8.3 | 🟨 |
 
-| OQ-15 | description ของ 4 object status เป็น `Status` เหมือนกันหมด แยกไม่ออกใน ADT · และ `ZIF_ZARI002_MD_CHK` ไม่มี prefix `Incoming Payments -` ต่างจาก class คู่ของมัน | ผู้ใช้ | Phase 4 | ไม่กระทบการทำงาน แต่กระทบคนอ่านตอน handover และตอน ZARE002 มา reuse domain | ⬜ |
+| OQ-15 | description ของ object status — **แก้แล้ว 2026-08-28** เป็น `Request Status` / `Response Status` (รวม field label `Req Status` / `Res Status`) · `ZIF_ZARI002_MD_CHK` ได้ prefix แล้ว | — | Phase 4 | — | ✅ |
 
 ## วิธีใช้
 
