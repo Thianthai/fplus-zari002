@@ -200,6 +200,16 @@ RAP **ไม่การันตีลำดับ**ของ determination ข
 `setPaymentDefaults` จึงหา currency ให้เสร็จในที่เดียว แล้วเขียนลง item ทั้งหมดด้วย EML
 ในจังหวะเดียวกัน — ลำดับถูกต้องแน่นอนเพราะอยู่ใน method เดียว
 
+### ทำไม BDEF ประกาศ `update;` ทั้งที่ API เปิดแค่ create
+
+determination เขียนค่ากลับเข้า entity ด้วย `MODIFY ENTITIES ... UPDATE ... IN LOCAL MODE`
+ซึ่งต้องการให้ BDEF ประกาศ `update;` ไว้ ไม่งั้น derived type `TABLE FOR UPDATE` ไม่มีตัวตน
+(`The operation "UPDATE" is not activated for entity "ZR_ZARI002"`)
+
+⚠️ **ตัวที่กัน `update` ไม่ให้รั่วออกไปหา Salesforce คือ behavior projection เท่านั้น**
+(`use create;` อย่างเดียว — Phase 5.2) · ถ้าพลาดตรงนั้น Salesforce จะแก้ข้อมูลที่ ZARE002
+post ไปแล้วได้
+
 ### Currency มาจากไหน
 
 **ธุรกิจใช้สกุลเงินเดียวตาม company code** (ยืนยัน 2026-08-27) → `setPaymentDefaults`

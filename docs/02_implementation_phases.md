@@ -112,7 +112,7 @@ serialize ขึ้นมา แล้วค่อยเอาเอกสาร
 | # | Object | Status |
 |---|--------|--------|
 | 5.1 | Projection view `ZC_ZARI002` / `ZC_ZARI002_ITEM` (เปิดเฉพาะ field ที่เป็น API contract) | ⬜ |
-| 5.2 | Behavior projection `ZC_ZARI002` — **`use create;` เท่านั้น** · ⚠️ BDEF ฝั่ง item มี `update;` (managed composition บังคับให้มี operation อย่างน้อยหนึ่งตัว) ถ้าลืมตรงนี้ Salesforce จะ update item ได้ | ⬜ |
+| 5.2 | Behavior projection `ZC_ZARI002` — **`use create;` เท่านั้น ทั้ง Payment และ Item** · ⚠️ BDEF ประกาศ `update;` ไว้ **ทั้ง 2 entity** เพราะ determination ต้องใช้ `MODIFY ENTITIES ... UPDATE` เขียนค่ากลับ ถ้าลืมคุมตรงนี้ Salesforce จะแก้ทั้ง header และ item ที่ post ไปแล้วได้ | ⬜ |
 | 5.3 | Service definition `ZAPI_ZARI002` — `expose ZC_ZARI002 as Payment; expose ZC_ZARI002_ITEM as PaymentItem;` | ⬜ |
 | 5.4 | Service binding `ZAPI_ZARI002_O4` (OData V4 Web API / A2X) + publish | ⬜ |
 | 5.5 | ทดสอบ `$metadata` + POST nested payload ผ่าน ADT preview ในระบบ | ⬜ |
