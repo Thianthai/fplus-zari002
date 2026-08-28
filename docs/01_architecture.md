@@ -83,7 +83,9 @@ etag master LocalLastChangedAt
 `@Semantics.systemDateTime.lastChangedAt` ใน CDS (คนละกลไกกับ etag) — **ZARE002 ใช้ได้ตามปกติ**
 และถ้าวันหน้าทำ draft ก็พร้อมใช้เป็น total etag ทันที
 
-⬜ ต้องยืนยันตอนทดสอบ EML deep create ปลาย Phase 3 ว่า `last_changed_at` มีค่าขึ้นจริง
+✅ **ยืนยันแล้ว (2026-08-28)** — ทดสอบ EML deep create จริง `last_changed_at` ถูกเติมค่า
+`20260828071522.850218` ตอน create ทั้งที่ไม่ได้ประกาศ `total etag` เลย
+→ การเติม admin field มาจาก annotation ใน CDS ล้วน ๆ ไม่ได้ผูกกับ etag **ZARE002 ใช้ได้ตามปกติ**
 
 item ยังมี optimistic concurrency ของตัวเองเต็มรูปแบบผ่าน `local_last_changed_at` —
 **ZARE002 แก้คนละ item ใน payment เดียวกันพร้อมกันได้ไม่ชนกัน**

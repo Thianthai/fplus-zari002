@@ -81,10 +81,15 @@ serialize ขึ้นมา แล้วค่อยเอาเอกสาร
 |---|--------|--------|
 | 3.1 | Root view entity `ZR_ZARI002` (บน `ztar_i002_pymt`) + composition `_Item` | ✅ |
 | 3.2 | Child view entity `ZI_ZARI002_ITEM` + `association to parent _Payment` | ✅ |
-| 3.3 | Behavior definition `ZR_ZARI002` — `managed; strict ( 2 ); persistent table; lock master / dependent by _Payment;` early numbering UUID, etag `last_changed_at`, total etag `local_last_changed_at`, `authorization master ( global )` | ⬜ |
-| 3.4 | Behavior pool `ZBP_R_ZARI002` — โครง `lhc_Payment` / `lhc_Item` เปล่า ๆ + `get_global_authorizations` | ⬜ |
+| 3.3 | Behavior definition `ZR_ZARI002` — `managed; strict ( 2 ); persistent table; lock master / dependent by _Payment;` early numbering UUID, `etag master LocalLastChangedAt`, `authorization master ( global )` · **ไม่มี `total etag`** เพราะไม่มี draft | ✅ |
+| 3.4 | Behavior pool `ZBP_R_ZARI002` — `lhc_Payment` (16 method) / `lhc_Item` (5 method) generate จาก BDEF | ✅ |
 
-**Exit criteria**: EML deep create จาก console class → row ลงครบทั้ง 2 table, `payment_uuid` ฝั่ง item ผูกถูก, admin field เติมเอง
+**Exit criteria**: EML deep create จาก console class → row ลงครบทั้ง 2 table, `payment_uuid` ฝั่ง item ผูกถูก, admin field เติมเอง ✅
+
+ผลทดสอบ 2026-08-28 (`ZCL_ZARI002_SPIKE_EML`): MODIFY + COMMIT ผ่าน · header 1 row + item 2 row
+· `payment_uuid` ของ item ทั้งสองตรงกับ header (`FA163E19…2234F`) · `item_uuid` ต่างกัน
+· admin field ครบทุกตัวรวม `last_changed_at` · `currency` / `sap_payment_method` / `status`
+ว่างเปล่าตามที่คาด เพราะ determination ยังไม่มี logic
 
 ---
 

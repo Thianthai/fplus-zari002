@@ -43,6 +43,7 @@
 | `ZCL_ZARI002_MD_CHECK` | Class — implementation จริงบน released CDS view | `src/zcl_zari002_md_check.clas.abap` | 4 | ⬜ |
 | `ZCL_ZARI002_VALIDATOR` | Class — validation กลุ่ม format/mandatory/consistency **+ constant แปลง payment method** | `src/zcl_zari002_validator.clas.abap` | 4 | ⬜ |
 | `ZCL_ZARI002_SPIKE_MD` | Console class — spike ตรวจ released view (throwaway) | `src/zcl_zari002_spike_md.clas.abap` | 1 | ✅ |
+| `ZCL_ZARI002_SPIKE_EML` | Console class — spike ทดสอบ deep create (throwaway) | `src/zcl_zari002_spike_eml.clas.abap` | 3 | 🟨 |
 
 ทุก class มีไฟล์คู่: `*.clas.xml` (metadata) + `*.clas.testclasses.abap` (ABAP Unit)
 
@@ -52,8 +53,8 @@
 |--------|------|------|-------|--------|
 | `ZR_ZARI002` | CDS root view entity (payment header) | `src/zr_zari002.ddls.asddls` | 3 | ✅ |
 | `ZI_ZARI002_ITEM` | CDS interface view entity (item) | `src/zi_zari002_item.ddls.asddls` | 3 | ✅ |
-| `ZR_ZARI002` | Behavior definition (managed, strict 2) | `src/zr_zari002.bdef.asbdef` | 3 | ⬜ |
-| `ZBP_R_ZARI002` | Behavior pool (`lhc_Payment`, `lhc_Item`) | `src/zbp_r_zari002.clas.abap` | 3 | ⬜ |
+| `ZR_ZARI002` | Behavior definition (managed, strict 2) | `src/zr_zari002.bdef.asbdef` | 3 | 🟨 |
+| `ZBP_R_ZARI002` | Behavior pool (`lhc_Payment`, `lhc_Item`) | `src/zbp_r_zari002.clas.abap` | 3 | 🟨 |
 | `ZC_ZARI002` | CDS projection view (payment header) | `src/zc_zari002.ddls.asddls` | 5 | ⬜ |
 | `ZC_ZARI002_ITEM` | CDS projection view (item) | `src/zc_zari002_item.ddls.asddls` | 5 | ⬜ |
 | `ZC_ZARI002` | Behavior projection (`use create;`) | `src/zc_zari002.bdef.asbdef` | 5 | ⬜ |
@@ -87,4 +88,4 @@ Entity set ที่ 3rd-party เห็น: **`Payment`** และ **`PaymentI
 | Data element ของ field อื่น ๆ | table ใช้ built-in type ตรง ๆ → label ไปอยู่ที่ `@EndUserText.label` ใน CDS |
 | Log table | reject ทั้ง request ไม่บันทึกอะไร → ถ้าต้องการ audit trail ค่อยพิจารณาเพิ่ม (`01_architecture.md` §8) |
 
-> `ZCL_ZARI002_SPIKE_MD` เป็น throwaway — **ลบทิ้งเมื่อจบ Phase 4** · ไม่มี unit test เพราะเป็น manual probe
+> `ZCL_ZARI002_SPIKE_MD` และ `ZCL_ZARI002_SPIKE_EML` เป็น throwaway — **ลบทิ้งเมื่อจบ Phase 4** · ไม่มี unit test เพราะเป็น manual probe
