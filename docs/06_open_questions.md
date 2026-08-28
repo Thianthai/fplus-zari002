@@ -24,8 +24,10 @@
 | OQ-11 | interface ใช้ชื่อ **`ZIF_ZARI002_MD_CHK` เป็นการชั่วคราว** — ชื่อที่ตั้งใจคือ `ZIF_ZARI002_MD_CHECK` แต่ tenant ไม่ยอมให้สร้างซ้ำเพราะเคยสร้างเป็น class ชื่อเดียวกันแล้วลบไป (น่าจะมี cache ค้าง) | ผู้ใช้ | Phase 4 | ไม่บล็อกอะไร แต่ถ้าไม่ rename กลับ ชื่อจะหลุดกฎ naming ไปถาวรและขัดกับตัวอย่างใน `CLAUDE.md` | ⬜ |
 
 | OQ-12 | **ต้องแจ้ง SFDC ว่า API contract เปลี่ยน 2 จุด**: `NumberOfItems` → `NumberOfItemsInPayment` · response รายบรรทัดไม่มี `Status`/`ErrorMessage` แล้ว | ผู้ใช้ → Salesforce | Phase 4 | SFDC ถือ `05_api_spec.md` ฉบับเดิมไปเขียน client แล้ว ถ้าไม่แจ้งจะพังตอน integration test | ⬜ |
-| OQ-13 | `ZD_STATUS` / `ZE_STATUS` ไม่มี table ไหนใช้แล้ว — เก็บไว้ให้ RICEFW อื่น reuse หรือลบทิ้ง | ผู้ใช้ | Phase 4 | ไม่บล็อกอะไร แต่ object ที่ไม่มีคนใช้จะสร้างความสับสนตอน handover | ⬜ |
+| OQ-13 | `ZD_STATUS` / `ZE_STATUS` — **ลบทิ้งแล้ว 2026-08-28** | — | Phase 4 | — | ✅ |
 | OQ-14 | ใบที่บันทึกสำเร็จแล้ว ZARE002 post ไม่ผ่าน → SFDC ส่งเข้ามาแก้ไม่ได้ (โดน duplicate) ต้องแก้ฝั่ง SAP · **ตกลงยอมรับแล้ว** แต่ต้องเขียนไว้ใน troubleshooting guide ให้ชัด | ผู้ใช้ | Phase 4 | Phase 8.3 | 🟨 |
+
+| OQ-15 | description ของ 4 object status เป็น `Status` เหมือนกันหมด แยกไม่ออกใน ADT · และ `ZIF_ZARI002_MD_CHK` ไม่มี prefix `Incoming Payments -` ต่างจาก class คู่ของมัน | ผู้ใช้ | Phase 4 | ไม่กระทบการทำงาน แต่กระทบคนอ่านตอน handover และตอน ZARE002 มา reuse domain | ⬜ |
 
 ## วิธีใช้
 

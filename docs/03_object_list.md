@@ -22,22 +22,18 @@
 
 | Object | Type | ไฟล์ | Phase | Status |
 |--------|------|------|-------|--------|
-| `ZD_REQUEST_STATUS` | Domain (`N`/`C`/`R`/`E`) — transaction status | `src/zd_request_status.doma.xml` | 4 | 🟨 |
-| `ZE_REQUEST_STATUS` | Data element | `src/ze_request_status.dtel.xml` | 4 | 🟨 |
-| `ZD_RESPONSE_STATUS` | Domain (`S`/`W`/`E`) — result status ส่งกลับ SFDC | `src/zd_response_status.doma.xml` | 4 | 🟨 |
-| `ZE_RESPONSE_STATUS` | Data element | `src/ze_response_status.dtel.xml` | 4 | 🟨 |
-| `ZD_STATUS` | Domain เดิม — **ไม่มี table ไหนใช้แล้ว** | `src/zd_status.doma.xml` | 0 | ⚠️ orphan |
-| `ZE_STATUS` | Data element เดิม — **ไม่มี table ไหนใช้แล้ว** | `src/ze_status.dtel.xml` | 0 | ⚠️ orphan |
-| `ZTAR_I002_PYMT` | Table — payment header | `src/ztar_i002_pymt.tabl.xml` | 0 | ✅ |
-| `ZTAR_I002_ITEM` | Table — payment item | `src/ztar_i002_item.tabl.xml` | 0 | ✅ |
-| ~~`ZTAR_I002_PYMT~SFI`~~ | ~~Unique secondary index~~ — **ต้องลบ** `salesforce_id` ซ้ำได้แล้ว (`01_architecture.md` §5) | — | 2 | 🔴 รอลบ |
+| `ZD_REQUEST_STATUS` | Domain (`N`/`C`/`R`/`E`) — transaction status | `src/zd_request_status.doma.xml` | 4 | ✅ |
+| `ZE_REQUEST_STATUS` | Data element | `src/ze_request_status.dtel.xml` | 4 | ✅ |
+| `ZD_RESPONSE_STATUS` | Domain (`S`/`W`/`E`) — result status ส่งกลับ SFDC | `src/zd_response_status.doma.xml` | 4 | ✅ |
+| `ZE_RESPONSE_STATUS` | Data element | `src/ze_response_status.dtel.xml` | 4 | ✅ |
 | `ZARI002` | Message class (34 messages) | `src/zari002.msag.xml` | 2 | ✅ |
 
 > **Behavior pool อยู่ที่ `.clas.locals_imp.abap`** ไม่ใช่ `.clas.abap` — ตัวหลังเป็นแค่ shell
 > ว่างเปล่า (`ABSTRACT FINAL FOR BEHAVIOR OF`) · `lhc_Payment` / `lhc_Item` ตัวจริงอยู่ใน locals
 > CDS view หนึ่งตัวได้ **3 ไฟล์**: `.ddls.asddls` (source) + `.ddls.xml` (metadata) + `.ddls.baseinfo`
 > **Index ไม่ใช่ไฟล์แยก** — abapGit ฝัง `DD12V` / `DD17V` ไว้ใน `.tabl.xml` ของ table เจ้าของ
-> `ZD_STATUS` / `ZE_STATUS` เป็น object กลาง **จงใจไม่ใส่ RICEFW ID ในชื่อ** เพื่อให้ RICEFW อื่น reuse ได้
+> `ZD_*` / `ZE_*` เป็น object กลาง **จงใจไม่ใส่ RICEFW ID ในชื่อ** เพื่อให้ RICEFW อื่น reuse ได้
+> `ZD_STATUS` / `ZE_STATUS` ชุดเดิมถูกลบไปแล้ว (2026-08-28) — ไม่มี object กำพร้าค้าง
 > `ZTAR_I002_*` ใช้ชื่อที่ผู้ใช้ออกแบบไว้เดิม ไม่เปลี่ยนตาม pattern `ZR_`/`ZC_` ของ project
 
 ## Core logic
@@ -45,9 +41,9 @@
 | Object | Type | ไฟล์ | Phase | Status |
 |--------|------|------|-------|--------|
 | `ZCX_ZARI002_ERROR` | Exception class | `src/zcx_zari002_error.clas.abap` | 2 | ✅ |
-| `ZIF_ZARI002_MD_CHK` | Interface — อ่าน master data (mock ได้) · **ชื่อชั่วคราว ดู OQ-11** | `src/zif_zari002_md_chk.intf.abap` | 4 | 🟨 |
-| `ZCL_ZARI002_MD_CHECK` | Class — implementation จริงบน released CDS view | `src/zcl_zari002_md_check.clas.abap` | 4 | 🟨 |
-| `ZCL_ZARI002_VALIDATOR` | Class — validation กลุ่ม format/mandatory/consistency **+ constant แปลง payment method** | `src/zcl_zari002_validator.clas.abap` | 4 | ⬜ |
+| `ZIF_ZARI002_MD_CHK` | Interface — อ่าน master data (mock ได้) · **ชื่อชั่วคราว ดู OQ-11** | `src/zif_zari002_md_chk.intf.abap` | 4 | ✅ |
+| `ZCL_ZARI002_MD_CHECK` | Class — implementation จริงบน released CDS view | `src/zcl_zari002_md_check.clas.abap` | 4 | ✅ |
+| `ZCL_ZARI002_VALIDATOR` | Class — validation กลุ่ม format/mandatory/consistency **+ constant แปลง payment method** · 31 unit test | `src/zcl_zari002_validator.clas.abap` | 4 | ✅ |
 | `ZCL_ZARI002_SPIKE_MD` | Console class — spike ตรวจ released view (throwaway) | `src/zcl_zari002_spike_md.clas.abap` | 1 | ✅ |
 | `ZCL_ZARI002_SPIKE_EML` | Console class — spike ทดสอบ deep create (throwaway) | `src/zcl_zari002_spike_eml.clas.abap` | 3 | ✅ |
 
