@@ -29,6 +29,8 @@
 | `ZTAR_I002_PYMT~SFI` | Unique secondary index (`client` + `salesforce_id`) | **ฝังใน** `src/ztar_i002_pymt.tabl.xml` | 2 | ✅ |
 | `ZARI002` | Message class (34 messages) | `src/zari002.msag.xml` | 2 | ✅ |
 
+> **Behavior pool อยู่ที่ `.clas.locals_imp.abap`** ไม่ใช่ `.clas.abap` — ตัวหลังเป็นแค่ shell
+> ว่างเปล่า (`ABSTRACT FINAL FOR BEHAVIOR OF`) · `lhc_Payment` / `lhc_Item` ตัวจริงอยู่ใน locals
 > CDS view หนึ่งตัวได้ **3 ไฟล์**: `.ddls.asddls` (source) + `.ddls.xml` (metadata) + `.ddls.baseinfo`
 > **Index ไม่ใช่ไฟล์แยก** — abapGit ฝัง `DD12V` / `DD17V` ไว้ใน `.tabl.xml` ของ table เจ้าของ
 > `ZD_STATUS` / `ZE_STATUS` เป็น object กลาง **จงใจไม่ใส่ RICEFW ID ในชื่อ** เพื่อให้ RICEFW อื่น reuse ได้
@@ -43,7 +45,7 @@
 | `ZCL_ZARI002_MD_CHECK` | Class — implementation จริงบน released CDS view | `src/zcl_zari002_md_check.clas.abap` | 4 | ⬜ |
 | `ZCL_ZARI002_VALIDATOR` | Class — validation กลุ่ม format/mandatory/consistency **+ constant แปลง payment method** | `src/zcl_zari002_validator.clas.abap` | 4 | ⬜ |
 | `ZCL_ZARI002_SPIKE_MD` | Console class — spike ตรวจ released view (throwaway) | `src/zcl_zari002_spike_md.clas.abap` | 1 | ✅ |
-| `ZCL_ZARI002_SPIKE_EML` | Console class — spike ทดสอบ deep create (throwaway) | `src/zcl_zari002_spike_eml.clas.abap` | 3 | 🟨 |
+| `ZCL_ZARI002_SPIKE_EML` | Console class — spike ทดสอบ deep create (throwaway) | `src/zcl_zari002_spike_eml.clas.abap` | 3 | ✅ |
 
 ทุก class มีไฟล์คู่: `*.clas.xml` (metadata) + `*.clas.testclasses.abap` (ABAP Unit)
 
@@ -53,8 +55,8 @@
 |--------|------|------|-------|--------|
 | `ZR_ZARI002` | CDS root view entity (payment header) | `src/zr_zari002.ddls.asddls` | 3 | ✅ |
 | `ZI_ZARI002_ITEM` | CDS interface view entity (item) | `src/zi_zari002_item.ddls.asddls` | 3 | ✅ |
-| `ZR_ZARI002` | Behavior definition (managed, strict 2) | `src/zr_zari002.bdef.asbdef` | 3 | 🟨 |
-| `ZBP_R_ZARI002` | Behavior pool (`lhc_Payment`, `lhc_Item`) | `src/zbp_r_zari002.clas.abap` | 3 | 🟨 |
+| `ZR_ZARI002` | Behavior definition (managed, strict 2) | `src/zr_zari002.bdef.asbdef` | 3 | ✅ |
+| `ZBP_R_ZARI002` | Behavior pool (`lhc_Payment` 16 method, `lhc_Item` 5 method) | `src/zbp_r_zari002.clas.locals_imp.abap` | 3 | ✅ |
 | `ZC_ZARI002` | CDS projection view (payment header) | `src/zc_zari002.ddls.asddls` | 5 | ⬜ |
 | `ZC_ZARI002_ITEM` | CDS projection view (item) | `src/zc_zari002_item.ddls.asddls` | 5 | ⬜ |
 | `ZC_ZARI002` | Behavior projection (`use create;`) | `src/zc_zari002.bdef.asbdef` | 5 | ⬜ |

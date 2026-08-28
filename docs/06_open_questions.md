@@ -41,3 +41,18 @@
 - OQ-06 / OQ-07 รอ Phase 5 กับ Phase 7 ตามแผน ไม่ต้องทำอะไรตอนนี้
 
 **เข้า Phase 3 ได้** — ไม่มีข้อไหนบล็อกการสร้าง RAP BO
+
+
+### จบ Phase 3 — 2026-08-28
+
+ไล่ครบทั้ง 10 ข้อ · **ไม่มีข้อใหม่ และไม่มีข้อไหนปิดได้**
+
+- **ที่ว่างทั้ง 5 ตัวประกาศใน BDEF ครบแล้ว** (`validateAmountFormat` `validateChequeBankBranch`
+  `validateItemDuplicate` `validatePaymentTotal` `validateArOpenItem`) → OQ-01 / 05 / 08 / 09 / 10
+  เติม logic ได้ทันทีที่ได้คำตอบ **โดยไม่ต้องแตะ BDEF หรือ activate BO ใหม่**
+- **OQ-03 และ OQ-04 ยังไม่มีใครไปถาม FI เลยตั้งแต่ Phase 1** — ผ่านมา 2 phase แล้ว
+  OQ-04 (master data ไม่ครบ) เป็นตัวเดียวที่จะบล็อกจริงและบล็อกที่ Phase 7
+- OQ-08 ไม่บล็อก Phase 4 เพราะ `validateArOpenItem` เป็นที่ว่าง — แต่ถ้าไม่มี released view
+  ที่บอกสถานะ cleared/reversed จะเขียน logic ไม่ได้เลย ไม่ใช่แค่ "ยังไม่ได้เขียน"
+
+**เข้า Phase 4 ได้** — ไม่มีข้อไหนบล็อกการเขียน determination/validation ที่เหลือ
