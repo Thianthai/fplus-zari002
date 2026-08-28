@@ -3,13 +3,15 @@
  <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
   <asx:values>
    <VSEOCLASS>
-    <CLSNAME>ZCL_ZARI002_SPIKE_MD</CLSNAME>
+    <CLSNAME>ZBP_R_ZARI002</CLSNAME>
     <LANGU>E</LANGU>
-    <DESCRIPT>Master Data Spike Class</DESCRIPT>
+    <DESCRIPT>Behavior Implementation for ZR_ZARI002</DESCRIPT>
+    <CATEGORY>06</CATEGORY>
     <STATE>1</STATE>
     <CLSCCINCL>X</CLSCCINCL>
     <FIXPT>X</FIXPT>
     <UNICODE>X</UNICODE>
+    <CLSDEFINT>ZR_ZARI002</CLSDEFINT>
    </VSEOCLASS>
   </asx:values>
  </asx:abap>

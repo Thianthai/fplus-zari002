@@ -1,0 +1,115 @@
+managed implementation in class zbp_r_zari002 unique;
+strict ( 2 );
+
+define behavior for ZR_ZARI002 alias Payment
+persistent table ztar_i002_pymt
+lock master
+authorization master ( global )
+etag master LocalLastChangedAt
+{
+  create;
+  association _Item { create; }
+
+  field ( numbering : managed, readonly ) PaymentUUID;
+
+  // ระบบเติมให้เอง ไม่รับจาก payload
+  field ( readonly ) Currency, SapPaymentMethod, Status, ErrorMessage;
+  field ( readonly ) CreatedBy, CreatedAt, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+
+  determination setPaymentDefaults    on save { create; }
+  determination setPaymentMethodCode  on save { create; }
+
+  validation validateSalesforceId     on save { create; }
+  validation validateMandatory        on save { create; }
+  validation validateNumberOfItems    on save { create; }
+  validation validateDates            on save { create; }
+  validation validateChequeFields     on save { create; }
+  validation validateCompanyCode      on save { create; }
+  validation validateGLAccount        on save { create; }
+  validation validatePaymentMethod    on save { create; }
+  validation validateAmountPaidTotal  on save { create; }
+
+  // ---- ที่ว่าง ยังไม่มี logic ----
+  validation validateAmountFormat     on save { create; }  // OQ-10
+  validation validateChequeBankBranch on save { create; }  // OQ-01
+  validation validateItemDuplicate    on save { create; }  // OQ-09
+  validation validatePaymentTotal     on save { create; }  // OQ-05
+
+  mapping for ztar_i002_pymt
+    {
+      PaymentUUID        = payment_uuid;
+      SalesforceId       = salesforce_id;
+      PaymentDocumentNo  = payment_document_no;
+      NumberOfItems      = number_of_items;
+      CompanyCode        = company_code;
+      PostingDate        = posting_date;
+      GLAccount          = gl_account;
+      PaymentMethod      = payment_method;
+      SapPaymentMethod   = sap_payment_method;
+      ChequeNo           = cheque_no;
+      IssueDate          = issue_date;
+      DueOn              = due_on;
+      ChequeBankBranch   = cheque_bankbranch;
+      Currency           = currency;
+      RoundingDiff       = rounding_diff;
+      AdvancePayment     = advance_payment;
+      Fees               = fees;
+      PaymentAmount      = payment_amount;
+      Status             = status;
+      ErrorMessage       = error_message;
+      CreatedBy          = created_by;
+      CreatedAt          = created_at;
+      LastChangedBy      = last_changed_by;
+      LastChangedAt      = last_changed_at;
+      LocalLastChangedAt = local_last_changed_at;
+    }
+}
+
+define behavior for ZI_ZARI002_ITEM alias Item
+persistent table ztar_i002_item
+lock dependent by _Payment
+authorization dependent by _Payment
+etag master LocalLastChangedAt
+{
+  update;
+  association _Payment;
+
+  field ( numbering : managed, readonly ) ItemUUID;
+  field ( readonly ) PaymentUUID;
+
+  // ระบบเติมให้เอง ไม่รับจาก payload
+  field ( readonly ) Currency, Status, ErrorMessage;
+  field ( readonly ) CreatedBy, CreatedAt, LastChangedBy, LocalLastChangedAt;
+
+  determination setItemDefaults on save { create; }
+
+  validation validateSalesforceItemId on save { create; }
+  validation validateItemMandatory    on save { create; }
+  validation validateCustomerCode     on save { create; }
+
+  // ---- ที่ว่าง ยังไม่มี logic ----
+  validation validateArOpenItem       on save { create; }  // OQ-08
+
+  mapping for ztar_i002_item
+    {
+      ItemUUID           = item_uuid;
+      PaymentUUID        = payment_uuid;
+      SalesforceItemId   = salesforce_item_id;
+      CustomerCode       = customer_code;
+      BillingNoteNo      = billing_note_no;
+      AccountingDocument = accounting_document;
+      BillingDocument    = billing_document;
+      InvoicePostingDate = invoice_posting_date;
+      Currency           = currency;
+      InvoiceAmount      = invoice_amount;
+      AmountPaid         = amount_paid;
+      PartialAmount      = partial_amount;
+      SaleSubmitDate     = sale_submit_date;
+      Status             = status;
+      ErrorMessage       = error_message;
+      CreatedBy          = created_by;
+      CreatedAt          = created_at;
+      LastChangedBy      = last_changed_by;
+      LocalLastChangedAt = local_last_changed_at;
+    }
+}

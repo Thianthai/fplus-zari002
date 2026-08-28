@@ -3,9 +3,9 @@
  <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
   <asx:values>
    <VSEOCLASS>
-    <CLSNAME>ZCL_ZARI002_SPIKE_MD</CLSNAME>
+    <CLSNAME>ZCL_ZARI002_SPIKE_EML</CLSNAME>
     <LANGU>E</LANGU>
-    <DESCRIPT>Master Data Spike Class</DESCRIPT>
+    <DESCRIPT>EML Spike Class</DESCRIPT>
     <STATE>1</STATE>
     <CLSCCINCL>X</CLSCCINCL>
     <FIXPT>X</FIXPT>
