@@ -3,14 +3,14 @@
  <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
   <asx:values>
    <VSEOCLASS>
-    <CLSNAME>ZCX_ZARI002_ERROR</CLSNAME>
+    <CLSNAME>ZCL_ZARI002_VALIDATOR</CLSNAME>
     <LANGU>E</LANGU>
-    <DESCRIPT>Incoming Payments - Exception</DESCRIPT>
-    <CATEGORY>40</CATEGORY>
+    <DESCRIPT>Incoming Payments - Validator</DESCRIPT>
     <STATE>1</STATE>
     <CLSCCINCL>X</CLSCCINCL>
     <FIXPT>X</FIXPT>
     <UNICODE>X</UNICODE>
+    <WITH_UNIT_TESTS>X</WITH_UNIT_TESTS>
    </VSEOCLASS>
   </asx:values>
  </asx:abap>

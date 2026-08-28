@@ -23,9 +23,7 @@ define view entity ZI_ZARI002_ITEM
 
       partial_amount        as PartialAmount,
       sale_submit_date      as SaleSubmitDate,
-
-      status                as Status,
-      error_message         as ErrorMessage,
+      reject_reason         as RejectReason,
 
       @Semantics.user.createdBy: true
       created_by            as CreatedBy,

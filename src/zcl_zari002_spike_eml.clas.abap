@@ -4,6 +4,7 @@ CLASS zcl_zari002_spike_eml DEFINITION
 
   PUBLIC SECTION.
     " ทดสอบ deep create ผ่าน EML ว่า managed runtime เขียนลง 2 table ถูกต้อง
+    " และ determination ทั้ง 3 ตัวทำงานครบ
     " throwaway — ลบทิ้งเมื่อจบ Phase 4
     INTERFACES if_oo_adt_classrun.
 ENDCLASS.
@@ -13,8 +14,9 @@ CLASS zcl_zari002_spike_eml IMPLEMENTATION.
 
   METHOD if_oo_adt_classrun~main.
 
-*   salesforce_id ห้ามซ้ำ (unique index) จึง gen ใหม่ทุกครั้งที่รัน
-    DATA(lv_sf_id) = |SFID{ cl_abap_context_info=>get_system_date( ) }| &&
+*   prefix สั้นแค่ 2 ตัว เพื่อให้ salesforce_id ยาว 16 แล้วต่อ -1 / -2 ได้ครบ 18
+*   ถ้ายาวเต็ม 18 อยู่แล้ว ส่วนที่ต่อท้ายจะถูกตัด แล้ว item ทั้งสองจะได้ id เดียวกัน
+    DATA(lv_sf_id) = |SP{ cl_abap_context_info=>get_system_date( ) }| &&
                      |{ cl_abap_context_info=>get_system_time( ) }|.
 
     out->write( |Salesforce ID ที่ใช้ทดสอบ: { lv_sf_id }| ).
@@ -22,25 +24,25 @@ CLASS zcl_zari002_spike_eml IMPLEMENTATION.
     MODIFY ENTITIES OF zr_zari002
       ENTITY Payment
         CREATE
-          FIELDS ( SalesforceId PaymentDocumentNo NumberOfItems CompanyCode
+          FIELDS ( SalesforceId PaymentDocumentNo NumberOfItemsInPayment CompanyCode
                    PostingDate GLAccount PaymentMethod ChequeNo IssueDate DueOn
                    ChequeBankBranch RoundingDiff AdvancePayment Fees PaymentAmount )
-          WITH VALUE #( ( %cid              = 'PAY1'
-                          SalesforceId      = lv_sf_id
-                          PaymentDocumentNo = '1000000001'
-                          NumberOfItems     = 2
-                          CompanyCode       = '2000'
-                          PostingDate       = '20260815'
-                          GLAccount         = '0011011214'
-                          PaymentMethod     = 'Cheque'
-                          ChequeNo          = '10020185'
-                          IssueDate         = '20260715'
-                          DueOn             = '20260831'
-                          ChequeBankBranch  = '0040129'
-                          RoundingDiff      = 0
-                          AdvancePayment    = '60.00'
-                          Fees              = '5.00'
-                          PaymentAmount     = '9650.00' ) )
+          WITH VALUE #( ( %cid                   = 'PAY1'
+                          SalesforceId           = lv_sf_id
+                          PaymentDocumentNo      = '1000000001'
+                          NumberOfItemsInPayment = 2
+                          CompanyCode            = '2000'
+                          PostingDate            = '20260815'
+                          GLAccount              = '11011214'
+                          PaymentMethod          = 'Cheque'
+                          ChequeNo               = '10020185'
+                          IssueDate              = '20260715'
+                          DueOn                  = '20260831'
+                          ChequeBankBranch       = '0040129'
+                          RoundingDiff           = 0
+                          AdvancePayment         = '60.00'
+                          Fees                   = '5.00'
+                          PaymentAmount          = '9650.00' ) )
 
       ENTITY Payment
         CREATE BY \_Item
@@ -99,12 +101,11 @@ CLASS zcl_zari002_spike_eml IMPLEMENTATION.
 
     out->write( 'COMMIT ผ่าน' ).
 
-*   อ่านกลับจาก table จริง เพื่อดูว่า managed runtime เขียนอะไรลงไปบ้าง
+*   อ่านกลับจาก table จริง เพื่อดูว่า determination เติมอะไรให้บ้าง
     SELECT SINGLE FROM ztar_i002_pymt
-      FIELDS payment_uuid, salesforce_id, number_of_items, currency,
-             sap_payment_method, status, error_message,
-             created_by, created_at, last_changed_by, last_changed_at,
-             local_last_changed_at
+      FIELDS payment_uuid, batch_id, salesforce_id, number_of_items_in_payment,
+             company_code, gl_account, payment_method, sap_payment_method, currency,
+             status, salesforce_status, salesforce_message
       WHERE salesforce_id = @lv_sf_id
       INTO @DATA(ls_pymt).
 
@@ -112,9 +113,8 @@ CLASS zcl_zari002_spike_eml IMPLEMENTATION.
     out->write( ls_pymt ).
 
     SELECT FROM ztar_i002_item
-      FIELDS item_uuid, payment_uuid, salesforce_item_id, currency,
-             partial_amount, status, created_by, created_at,
-             last_changed_by, local_last_changed_at
+      FIELDS item_uuid, payment_uuid, salesforce_item_id, customer_code,
+             billing_document, currency, partial_amount, reject_reason
       WHERE payment_uuid = @ls_pymt-payment_uuid
       ORDER BY salesforce_item_id
       INTO TABLE @DATA(lt_item).

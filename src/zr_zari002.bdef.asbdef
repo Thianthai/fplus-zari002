@@ -8,18 +8,18 @@ authorization master ( global )
 etag master LocalLastChangedAt
 {
   create;
+  update;
   association _Item { create; }
 
   field ( numbering : managed, readonly ) PaymentUUID;
 
   // ระบบเติมให้เอง ไม่รับจาก payload
-  field ( readonly ) Currency, SapPaymentMethod, Status, ErrorMessage;
+  field ( readonly ) BatchId, Currency, SapPaymentMethod, Status, SalesforceStatus, SalesforceMessage;
   field ( readonly ) CreatedBy, CreatedAt, LastChangedBy, LastChangedAt, LocalLastChangedAt;
 
   determination setPaymentDefaults    on save { create; }
   determination setPaymentMethodCode  on save { create; }
 
-  validation validateSalesforceId     on save { create; }
   validation validateMandatory        on save { create; }
   validation validateNumberOfItems    on save { create; }
   validation validateDates            on save { create; }
@@ -37,31 +37,33 @@ etag master LocalLastChangedAt
 
   mapping for ztar_i002_pymt
     {
-      PaymentUUID        = payment_uuid;
-      SalesforceId       = salesforce_id;
-      PaymentDocumentNo  = payment_document_no;
-      NumberOfItems      = number_of_items;
-      CompanyCode        = company_code;
-      PostingDate        = posting_date;
-      GLAccount          = gl_account;
-      PaymentMethod      = payment_method;
-      SapPaymentMethod   = sap_payment_method;
-      ChequeNo           = cheque_no;
-      IssueDate          = issue_date;
-      DueOn              = due_on;
-      ChequeBankBranch   = cheque_bankbranch;
-      Currency           = currency;
-      RoundingDiff       = rounding_diff;
-      AdvancePayment     = advance_payment;
-      Fees               = fees;
-      PaymentAmount      = payment_amount;
-      Status             = status;
-      ErrorMessage       = error_message;
-      CreatedBy          = created_by;
-      CreatedAt          = created_at;
-      LastChangedBy      = last_changed_by;
-      LastChangedAt      = last_changed_at;
-      LocalLastChangedAt = local_last_changed_at;
+      PaymentUUID            = payment_uuid;
+      BatchId                = batch_id;
+      SalesforceId           = salesforce_id;
+      PaymentDocumentNo      = payment_document_no;
+      NumberOfItemsInPayment = number_of_items_in_payment;
+      CompanyCode            = company_code;
+      PostingDate            = posting_date;
+      GLAccount              = gl_account;
+      PaymentMethod          = payment_method;
+      SapPaymentMethod       = sap_payment_method;
+      ChequeNo               = cheque_no;
+      IssueDate              = issue_date;
+      DueOn                  = due_on;
+      ChequeBankBranch       = cheque_bank_branch;
+      Currency               = currency;
+      RoundingDiff           = rounding_diff;
+      AdvancePayment         = advance_payment;
+      Fees                   = fees;
+      PaymentAmount          = payment_amount;
+      Status                 = status;
+      SalesforceStatus       = salesforce_status;
+      SalesforceMessage      = salesforce_message;
+      CreatedBy              = created_by;
+      CreatedAt              = created_at;
+      LastChangedBy          = last_changed_by;
+      LastChangedAt          = last_changed_at;
+      LocalLastChangedAt     = local_last_changed_at;
     }
 }
 
@@ -78,7 +80,7 @@ etag master LocalLastChangedAt
   field ( readonly ) PaymentUUID;
 
   // ระบบเติมให้เอง ไม่รับจาก payload
-  field ( readonly ) Currency, Status, ErrorMessage;
+  field ( readonly ) Currency, RejectReason;
   field ( readonly ) CreatedBy, CreatedAt, LastChangedBy, LocalLastChangedAt;
 
   determination setItemDefaults on save { create; }
@@ -105,8 +107,7 @@ etag master LocalLastChangedAt
       AmountPaid         = amount_paid;
       PartialAmount      = partial_amount;
       SaleSubmitDate     = sale_submit_date;
-      Status             = status;
-      ErrorMessage       = error_message;
+      RejectReason       = reject_reason;
       CreatedBy          = created_by;
       CreatedAt          = created_at;
       LastChangedBy      = last_changed_by;

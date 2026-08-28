@@ -11,6 +11,12 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZARI002</ARBGB>
+     <MSGNR>000</MSGNR>
+     <TEXT>&amp;1 &amp;2 &amp;3 &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
      <MSGNR>001</MSGNR>
      <TEXT>Payment must have at least one item</TEXT>
     </T100>
@@ -66,7 +72,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZARI002</ARBGB>
      <MSGNR>010</MSGNR>
-     <TEXT>Duplicate record item &amp;1 already exists in SAP</TEXT>
+     <TEXT>Duplicate: payment &amp;1 with billing document &amp;2 exists</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>

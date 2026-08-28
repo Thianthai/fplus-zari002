@@ -3,10 +3,9 @@
  <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
   <asx:values>
    <VSEOCLASS>
-    <CLSNAME>ZCX_ZARI002_ERROR</CLSNAME>
+    <CLSNAME>ZCL_ZARI002_MD_CHECK</CLSNAME>
     <LANGU>E</LANGU>
-    <DESCRIPT>Incoming Payments - Exception</DESCRIPT>
-    <CATEGORY>40</CATEGORY>
+    <DESCRIPT>Incoming Payments - Master Data Check</DESCRIPT>
     <STATE>1</STATE>
     <CLSCCINCL>X</CLSCCINCL>
     <FIXPT>X</FIXPT>
