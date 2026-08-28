@@ -97,13 +97,18 @@ serialize ขึ้นมา แล้วค่อยเอาเอกสาร
 
 | # | Object | Status |
 |---|--------|--------|
-| 4.1 | `ZIF_ZARI002_MD_CHK` + `ZCL_ZARI002_MD_CHECK` — อ่าน master data (mock ได้ใน test) | ⬜ |
-| 4.2 | `ZCL_ZARI002_VALIDATOR` — logic กลุ่ม A (format/mandatory/consistency) ทั้งหมด | ⬜ |
-| 4.3 | Determination `setPaymentDefaults` `setPaymentMethodCode` `setItemDefaults` ใน `ZBP_R_ZARI002` | 🟨 เขียนแล้ว รอ revise ตาม table ใหม่ |
-| 4.4 | Validation กลุ่ม A + B ใน `ZBP_R_ZARI002` (เรียก class ข้างบน) | ⬜ |
+| 4.1 | `ZIF_ZARI002_MD_CHK` + `ZCL_ZARI002_MD_CHECK` — อ่าน master data (mock ได้ใน test) | ✅ |
+| 4.2 | `ZCL_ZARI002_VALIDATOR` — logic กลุ่ม format/mandatory/consistency + constant แปลง payment method · **31 unit test เขียวทั้งหมด** | ✅ |
+| 4.3 | Determination `setPaymentDefaults` `setPaymentMethodCode` `setItemDefaults` ใน `ZBP_R_ZARI002` | ✅ |
+| 4.4 | Validation 12 ตัวที่มี logic ใน `ZBP_R_ZARI002` (แปลง finding → RAP message + `%element`) · อีก 4 ตัวยังเป็นที่ว่าง | ⬜ |
 | 4.5 | ABAP Unit — validator/md_check ครบทุก branch + BO test ด้วย `cl_abap_behv_test_environment` | ⬜ |
 
 **Exit criteria**: unit test เขียวทั้งหมด · deep create ที่ข้อมูลผิดถูก reject พร้อม message ครบทุกข้อในรอบเดียว · rollback ไม่เหลือ row ค้าง
+
+ผลทดสอบ determination 2026-08-28 (`ZCL_ZARI002_SPIKE_EML` บน client `100`):
+`batch_id` = `20260828_125639` · `gl_account` `11011214` → `0011011214` · `sap_payment_method`
+`Cheque` → `A` · `currency` = `THB` **ทั้ง header และทุก item** · `status` = `N` ·
+`salesforce_status` / `salesforce_message` / `reject_reason` ว่างเปล่าตามที่ออกแบบ
 
 ---
 
