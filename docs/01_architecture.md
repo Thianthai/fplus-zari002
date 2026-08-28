@@ -232,6 +232,22 @@ RAP **ไม่การันตีลำดับ**ของ determination ข
 `setPaymentDefaults` จึงหา currency ให้เสร็จในที่เดียว แล้วเขียนลง item ทั้งหมดด้วย EML
 ในจังหวะเดียวกัน — ลำดับถูกต้องแน่นอนเพราะอยู่ใน method เดียว
 
+**ลำดับที่สังเกตได้จริงตอน debug (2026-08-28)** — ยืนยันว่าตัดสินใจถูก:
+
+```
+1) determination ฝั่ง item      เรียงตามตัวอักษร
+2) determination ฝั่ง payment   เรียงตามตัวอักษร
+3) validation ฝั่ง item         เรียงตามตัวอักษร
+4) validation ฝั่ง payment      เรียงตามตัวอักษร
+```
+
+item วิ่ง**ก่อน** header → ถ้าให้ `setItemDefaults` ไปอ่าน currency ของ parent เอง
+จะอ่านตอน parent ยังไม่ได้เติมค่า ได้ค่าว่างทุกครั้งโดยไม่มี error ให้จับ
+
+⚠️ **ห้ามเขียน logic ที่พึ่งลำดับนี้** — SAP รับประกันแค่ *"determination ทั้งหมดจบก่อน
+validation เริ่ม"* ส่วนลำดับระหว่าง entity และการเรียงตามตัวอักษรเป็นพฤติกรรมที่สังเกตได้
+ไม่ใช่ contract เปลี่ยนได้เมื่อ upgrade release
+
 ### ทำไม BDEF ประกาศ `update;` ทั้งที่ API เปิดแค่ create
 
 determination เขียนค่ากลับเข้า entity ด้วย `MODIFY ENTITIES ... UPDATE ... IN LOCAL MODE`
