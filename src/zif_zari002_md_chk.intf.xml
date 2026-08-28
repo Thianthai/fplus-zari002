@@ -5,7 +5,7 @@
    <VSEOINTERF>
     <CLSNAME>ZIF_ZARI002_MD_CHK</CLSNAME>
     <LANGU>E</LANGU>
-    <DESCRIPT>Master Data Check</DESCRIPT>
+    <DESCRIPT>Incoming Payments - Master Data Check</DESCRIPT>
     <EXPOSURE>2</EXPOSURE>
     <STATE>1</STATE>
     <UNICODE>X</UNICODE>
