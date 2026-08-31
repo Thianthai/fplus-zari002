@@ -78,30 +78,30 @@ CLASS ltc_validator IMPLEMENTATION.
 * =====================================================================
 
   METHOD valid_payment.
-    rs_result = VALUE #( SalesforceId           = 'SF0000000000000001'
-                         PaymentDocumentNo      = '1000000001'
-                         NumberOfItemsInPayment = 2
-                         CompanyCode            = '2000'
-                         PostingDate            = '20260815'
-                         GLAccount              = '0011011214'
-                         PaymentMethod          = 'Cheque'
-                         SapPaymentMethod       = 'A'
-                         ChequeNo               = '10020185'
-                         IssueDate              = '20260715'
-                         DueOn                  = '20260831'
-                         ChequeBankBranch       = '0040129'
-                         PaymentAmount          = '9650.00' ).
+    rs_result = VALUE #( salesforce_id        = 'SF0000000000000001'
+                         payment_document_no  = '1000000001'
+                         number_of_items_in_payment = 2
+                         company_code         = '2000'
+                         posting_date         = '20260815'
+                         gl_account           = '0011011214'
+                         payment_method       = 'Cheque'
+                         sap_payment_method   = 'A'
+                         cheque_no            = '10020185'
+                         issue_date           = '20260715'
+                         due_on               = '20260831'
+                         cheque_bank_branch   = '0040129'
+                         payment_amount       = '9650.00' ).
   ENDMETHOD.
 
   METHOD valid_item.
-    rs_result = VALUE #( SalesforceItemId   = 'IT0000000000000001'
-                         CustomerCode       = '1000000002'
-                         AccountingDocument = '6000000001'
-                         BillingDocument    = '0090000000'
-                         InvoicePostingDate = '20260701'
-                         InvoiceAmount      = '1070.00'
-                         AmountPaid         = '1070.00'
-                         SaleSubmitDate     = '20260815' ).
+    rs_result = VALUE #( salesforce_item_id   = 'IT0000000000000001'
+                         customer_code        = '1000000002'
+                         accounting_document  = '6000000001'
+                         billing_document     = '0090000000'
+                         invoice_posting_date = '20260701'
+                         invoice_amount       = '1070.00'
+                         amount_paid          = '1070.00'
+                         sale_submit_date     = '20260815' ).
   ENDMETHOD.
 
   METHOD assert_has.
@@ -135,13 +135,13 @@ CLASS ltc_validator IMPLEMENTATION.
   METHOD mapping_ignores_case.
     cl_abap_unit_assert=>assert_equals(
       exp = 'A'
-      act = zcl_zari002_validator=>convert_payment_method( ' cheque' ) ).
+      act = zcl_zari002_validator=>convert_payment_method( 'cheque' ) ).
   ENDMETHOD.
 
   METHOD mapping_ignores_spaces.
     cl_abap_unit_assert=>assert_equals(
-      exp = 'T'
-      act = zcl_zari002_validator=>convert_payment_method( 'Transfer' ) ).
+      exp = 'A'
+      act = zcl_zari002_validator=>convert_payment_method( ' Cheque' ) ).
   ENDMETHOD.
 
   METHOD unknown_word_maps_to_none.
@@ -164,7 +164,7 @@ CLASS ltc_validator IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals(
       exp = '0011011214'
       act = zcl_zari002_validator=>to_internal_key( '0011011214' )
-      msg = 'pad ซ้ำต้องได้ผลเท่าเดิม (API spec §6.1)' ).
+      msg = 'pad ซ้ำต้องได้ผลเท่าเดิม (API spec §4.1)' ).
   ENDMETHOD.
 
   METHOD blank_key_stays_blank.
@@ -191,13 +191,13 @@ CLASS ltc_validator IMPLEMENTATION.
 
   METHOD missing_gl_reports_104.
     DATA(ls_payment) = valid_payment( ).
-    CLEAR ls_payment-GLAccount.
+    CLEAR ls_payment-gl_account.
 
     DATA(lt_finding) = zcl_zari002_validator=>check_mandatory( ls_payment ).
 
     cl_abap_unit_assert=>assert_equals( exp = 1 act = lines( lt_finding ) ).
     cl_abap_unit_assert=>assert_equals( exp = '104' act = lt_finding[ 1 ]-msgno ).
-    cl_abap_unit_assert=>assert_equals( exp = 'GLAccount' act = lt_finding[ 1 ]-field ).
+    cl_abap_unit_assert=>assert_equals( exp = 'gl_account' act = lt_finding[ 1 ]-field ).
   ENDMETHOD.
 
 * =====================================================================
@@ -239,7 +239,7 @@ CLASS ltc_validator IMPLEMENTATION.
 
   METHOD due_before_issue_rep_003.
     DATA(ls_payment) = valid_payment( ).
-    ls_payment-DueOn = '20260701'.
+    ls_payment-due_on = '20260701'.
 
     assert_has( it_finding = zcl_zari002_validator=>check_dates( ls_payment )
                 iv_msgno   = '003' ).
@@ -247,7 +247,7 @@ CLASS ltc_validator IMPLEMENTATION.
 
   METHOD no_issue_date_is_ok.
     DATA(ls_payment) = valid_payment( ).
-    CLEAR ls_payment-IssueDate.
+    CLEAR ls_payment-issue_date.
 
     assert_clean( zcl_zari002_validator=>check_dates( ls_payment ) ).
   ENDMETHOD.
@@ -258,9 +258,9 @@ CLASS ltc_validator IMPLEMENTATION.
 
   METHOD transfer_skips_cheque_chk.
     DATA(ls_payment) = valid_payment( ).
-    ls_payment-SapPaymentMethod = 'T'.
-    CLEAR: ls_payment-ChequeNo, ls_payment-IssueDate,
-           ls_payment-DueOn,    ls_payment-ChequeBankBranch.
+    ls_payment-sap_payment_method = 'T'.
+    CLEAR: ls_payment-cheque_no, ls_payment-issue_date,
+           ls_payment-due_on,    ls_payment-cheque_bank_branch.
 
     assert_clean( zcl_zari002_validator=>check_cheque_fields( ls_payment ) ).
   ENDMETHOD.
@@ -271,8 +271,8 @@ CLASS ltc_validator IMPLEMENTATION.
 
   METHOD cheque_empty_reports_4.
     DATA(ls_payment) = valid_payment( ).
-    CLEAR: ls_payment-ChequeNo, ls_payment-IssueDate,
-           ls_payment-DueOn,    ls_payment-ChequeBankBranch.
+    CLEAR: ls_payment-cheque_no, ls_payment-issue_date,
+           ls_payment-due_on,    ls_payment-cheque_bank_branch.
 
     DATA(lt_finding) = zcl_zari002_validator=>check_cheque_fields( ls_payment ).
 
@@ -288,16 +288,16 @@ CLASS ltc_validator IMPLEMENTATION.
   METHOD positive_total_is_ok.
     assert_clean( zcl_zari002_validator=>check_amount_paid_total(
                     iv_salesforce_id = 'SF01'
-                    it_item          = VALUE #( ( AmountPaid = '100.00' )
-                                                ( AmountPaid = '50.00' ) ) ) ).
+                    it_item          = VALUE #( ( amount_paid = '100.00' )
+                                                ( amount_paid = '50.00' ) ) ) ).
   ENDMETHOD.
 
   METHOD zero_total_reports_011.
     assert_has(
       it_finding = zcl_zari002_validator=>check_amount_paid_total(
                      iv_salesforce_id = 'SF01'
-                     it_item          = VALUE #( ( AmountPaid = '100.00' )
-                                                 ( AmountPaid = '100.00-' ) ) )
+                     it_item          = VALUE #( ( amount_paid = '100.00' )
+                                                 ( amount_paid = '100.00-' ) ) )
       iv_msgno   = '011' ).
   ENDMETHOD.
 
@@ -305,7 +305,7 @@ CLASS ltc_validator IMPLEMENTATION.
     assert_has(
       it_finding = zcl_zari002_validator=>check_amount_paid_total(
                      iv_salesforce_id = 'SF01'
-                     it_item          = VALUE #( ( AmountPaid = '50.00-' ) ) )
+                     it_item          = VALUE #( ( amount_paid = '50.00-' ) ) )
       iv_msgno   = '011' ).
   ENDMETHOD.
 
@@ -313,8 +313,8 @@ CLASS ltc_validator IMPLEMENTATION.
     " CN ติดลบได้ ตราบใดที่ผลรวมยังเป็นบวก
     assert_clean( zcl_zari002_validator=>check_amount_paid_total(
                     iv_salesforce_id = 'SF01'
-                    it_item          = VALUE #( ( AmountPaid = '1000.00' )
-                                                ( AmountPaid = '200.00-' ) ) ) ).
+                    it_item          = VALUE #( ( amount_paid = '1000.00' )
+                                                ( amount_paid = '200.00-' ) ) ) ).
   ENDMETHOD.
 
 * =====================================================================
@@ -323,14 +323,14 @@ CLASS ltc_validator IMPLEMENTATION.
 
   METHOD distinct_item_ids_are_ok.
     assert_clean( zcl_zari002_validator=>check_item_ids(
-                    VALUE #( ( SalesforceItemId = 'IT01' )
-                             ( SalesforceItemId = 'IT02' ) ) ) ).
+                    VALUE #( ( salesforce_item_id = 'IT01' )
+                             ( salesforce_item_id = 'IT02' ) ) ) ).
   ENDMETHOD.
 
   METHOD duplicate_id_reports_005.
     DATA(lt_finding) = zcl_zari002_validator=>check_item_ids(
-                         VALUE #( ( SalesforceItemId = 'IT01' )
-                                  ( SalesforceItemId = 'IT01' ) ) ).
+                         VALUE #( ( salesforce_item_id = 'IT01' )
+                                  ( salesforce_item_id = 'IT01' ) ) ).
 
     cl_abap_unit_assert=>assert_equals( exp = 1 act = lines( lt_finding ) ).
     assert_has( it_finding = lt_finding iv_msgno = '005' ).
@@ -338,8 +338,8 @@ CLASS ltc_validator IMPLEMENTATION.
 
   METHOD blank_id_reported_once.
     DATA(lt_finding) = zcl_zari002_validator=>check_item_ids(
-                         VALUE #( ( SalesforceItemId = space )
-                                  ( SalesforceItemId = space ) ) ).
+                         VALUE #( ( salesforce_item_id = space )
+                                  ( salesforce_item_id = space ) ) ).
 
     cl_abap_unit_assert=>assert_equals(
       exp = 1
@@ -366,7 +366,7 @@ CLASS ltc_validator IMPLEMENTATION.
 
   METHOD bad_partial_flag_rep_006.
     DATA(ls_item) = valid_item( ).
-    ls_item-PartialAmount = 'Y'.
+    ls_item-partial_amount = 'Y'.
 
     assert_has( it_finding = zcl_zari002_validator=>check_item_mandatory( ls_item )
                 iv_msgno   = '006' ).
@@ -374,7 +374,7 @@ CLASS ltc_validator IMPLEMENTATION.
 
   METHOD partial_flag_x_is_ok.
     DATA(ls_item) = valid_item( ).
-    ls_item-PartialAmount = 'X'.
+    ls_item-partial_amount = 'X'.
 
     assert_clean( zcl_zari002_validator=>check_item_mandatory( ls_item ) ).
   ENDMETHOD.

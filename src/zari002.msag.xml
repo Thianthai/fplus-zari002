@@ -84,7 +84,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZARI002</ARBGB>
      <MSGNR>012</MSGNR>
-     <TEXT>Item &amp;1 document &amp;2 already cleared or reversed</TEXT>
+     <TEXT>Request body is not valid JSON</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>

@@ -4,14 +4,13 @@ CLASS zcl_zari002_validator DEFINITION
 
   PUBLIC SECTION.
 
-    "! RAP derived type ต้องผ่าน alias ก่อน ใช้ตรง ๆ ใน signature ไม่ได้
     TYPES:
-      ty_payment TYPE STRUCTURE FOR READ RESULT zr_zari002,
-      ty_item    TYPE STRUCTURE FOR READ RESULT zr_zari002\_Item,
-      tt_item    TYPE TABLE FOR READ RESULT zr_zari002\_Item.
+      ty_payment TYPE ztar_i002_pymt,
+      ty_item    TYPE ztar_i002_item,
+      tt_item    TYPE STANDARD TABLE OF ztar_i002_item WITH EMPTY KEY.
 
     TYPES:
-      "! ผลการตรวจ 1 ข้อ — behavior pool แปลงเป็น RAP message ต่อ
+      "! ผลการตรวจ 1 ข้อ — ผู้เรียกแปลงเป็น message ต่อ
       BEGIN OF ty_finding,
         msgno TYPE symsgno,
         msgv1 TYPE string,
@@ -102,32 +101,32 @@ CLASS zcl_zari002_validator IMPLEMENTATION.
 
   METHOD check_mandatory.
 
-    IF is_payment-SalesforceId IS INITIAL.
-      APPEND VALUE #( msgno = '100' field = 'SalesforceId' ) TO rt_result.
+    IF is_payment-salesforce_id IS INITIAL.
+      APPEND VALUE #( msgno = '100' field = 'salesforce_id' ) TO rt_result.
     ENDIF.
 
-    IF is_payment-PaymentDocumentNo IS INITIAL.
-      APPEND VALUE #( msgno = '101' field = 'PaymentDocumentNo' ) TO rt_result.
+    IF is_payment-payment_document_no IS INITIAL.
+      APPEND VALUE #( msgno = '101' field = 'payment_document_no' ) TO rt_result.
     ENDIF.
 
-    IF is_payment-CompanyCode IS INITIAL.
-      APPEND VALUE #( msgno = '102' field = 'CompanyCode' ) TO rt_result.
+    IF is_payment-company_code IS INITIAL.
+      APPEND VALUE #( msgno = '102' field = 'company_code' ) TO rt_result.
     ENDIF.
 
-    IF is_payment-PostingDate IS INITIAL.
-      APPEND VALUE #( msgno = '103' field = 'PostingDate' ) TO rt_result.
+    IF is_payment-posting_date IS INITIAL.
+      APPEND VALUE #( msgno = '103' field = 'posting_date' ) TO rt_result.
     ENDIF.
 
-    IF is_payment-GLAccount IS INITIAL.
-      APPEND VALUE #( msgno = '104' field = 'GLAccount' ) TO rt_result.
+    IF is_payment-gl_account IS INITIAL.
+      APPEND VALUE #( msgno = '104' field = 'gl_account' ) TO rt_result.
     ENDIF.
 
-    IF is_payment-PaymentMethod IS INITIAL.
-      APPEND VALUE #( msgno = '105' field = 'PaymentMethod' ) TO rt_result.
+    IF is_payment-payment_method IS INITIAL.
+      APPEND VALUE #( msgno = '105' field = 'payment_method' ) TO rt_result.
     ENDIF.
 
-    IF is_payment-PaymentAmount IS INITIAL.
-      APPEND VALUE #( msgno = '106' field = 'PaymentAmount' ) TO rt_result.
+    IF is_payment-payment_amount IS INITIAL.
+      APPEND VALUE #( msgno = '106' field = 'payment_amount' ) TO rt_result.
     ENDIF.
 
   ENDMETHOD.
@@ -144,7 +143,7 @@ CLASS zcl_zari002_validator IMPLEMENTATION.
       APPEND VALUE #( msgno = '002'
                       msgv1 = |{ iv_number_of_items }|
                       msgv2 = |{ iv_item_count }|
-                      field = 'NumberOfItems' ) TO rt_result.
+                      field = 'number_of_items_in_payment' ) TO rt_result.
     ENDIF.
 
   ENDMETHOD.
@@ -153,14 +152,14 @@ CLASS zcl_zari002_validator IMPLEMENTATION.
   METHOD check_dates.
 
 *   เช็คเฉพาะเมื่อส่งมาทั้งคู่ — ความบังคับเป็นหน้าที่ check_cheque_fields
-    IF is_payment-IssueDate IS NOT INITIAL
-   AND is_payment-DueOn     IS NOT INITIAL
-   AND is_payment-DueOn     < is_payment-IssueDate.
+    IF is_payment-issue_date IS NOT INITIAL
+   AND is_payment-due_on     IS NOT INITIAL
+   AND is_payment-due_on     < is_payment-issue_date.
 
       APPEND VALUE #( msgno = '003'
-                      msgv1 = |{ is_payment-DueOn DATE = ISO }|
-                      msgv2 = |{ is_payment-IssueDate DATE = ISO }|
-                      field = 'DueOn' ) TO rt_result.
+                      msgv1 = |{ is_payment-due_on DATE = ISO }|
+                      msgv2 = |{ is_payment-issue_date DATE = ISO }|
+                      field = 'due_on' ) TO rt_result.
     ENDIF.
 
   ENDMETHOD.
@@ -168,26 +167,26 @@ CLASS zcl_zari002_validator IMPLEMENTATION.
 
   METHOD check_cheque_fields.
 
-    IF is_payment-SapPaymentMethod <> gc_pymt_method_cheque.
+    IF is_payment-sap_payment_method <> gc_pymt_method_cheque.
       RETURN.
     ENDIF.
 
-    DATA(lv_method) = CONV string( is_payment-PaymentMethod ).
+    DATA(lv_method) = CONV string( is_payment-payment_method ).
 
-    IF is_payment-ChequeNo IS INITIAL.
-      APPEND VALUE #( msgno = '107' msgv1 = lv_method field = 'ChequeNo' ) TO rt_result.
+    IF is_payment-cheque_no IS INITIAL.
+      APPEND VALUE #( msgno = '107' msgv1 = lv_method field = 'cheque_no' ) TO rt_result.
     ENDIF.
 
-    IF is_payment-IssueDate IS INITIAL.
-      APPEND VALUE #( msgno = '108' msgv1 = lv_method field = 'IssueDate' ) TO rt_result.
+    IF is_payment-issue_date IS INITIAL.
+      APPEND VALUE #( msgno = '108' msgv1 = lv_method field = 'issue_date' ) TO rt_result.
     ENDIF.
 
-    IF is_payment-DueOn IS INITIAL.
-      APPEND VALUE #( msgno = '109' msgv1 = lv_method field = 'DueOn' ) TO rt_result.
+    IF is_payment-due_on IS INITIAL.
+      APPEND VALUE #( msgno = '109' msgv1 = lv_method field = 'due_on' ) TO rt_result.
     ENDIF.
 
-    IF is_payment-ChequeBankBranch IS INITIAL.
-      APPEND VALUE #( msgno = '110' msgv1 = lv_method field = 'ChequeBankBranch' ) TO rt_result.
+    IF is_payment-cheque_bank_branch IS INITIAL.
+      APPEND VALUE #( msgno = '110' msgv1 = lv_method field = 'cheque_bank_branch' ) TO rt_result.
     ENDIF.
 
   ENDMETHOD.
@@ -198,7 +197,7 @@ CLASS zcl_zari002_validator IMPLEMENTATION.
     DATA lv_total TYPE ztar_i002_item-amount_paid.
 
     LOOP AT it_item ASSIGNING FIELD-SYMBOL(<lfs_item>).
-      lv_total = lv_total + <lfs_item>-AmountPaid.
+      lv_total = lv_total + <lfs_item>-amount_paid.
     ENDLOOP.
 
     IF lv_total <= 0.
@@ -216,19 +215,19 @@ CLASS zcl_zari002_validator IMPLEMENTATION.
 
     LOOP AT it_item ASSIGNING FIELD-SYMBOL(<lfs_item>).
 
-      IF <lfs_item>-SalesforceItemId IS INITIAL.
+      IF <lfs_item>-salesforce_item_id IS INITIAL.
 *       ไม่มี id ให้อ้างถึง จึงออก message ที่ไม่ระบุรายการ แล้วข้ามการเช็คซ้ำ
         IF NOT line_exists( rt_result[ msgno = '111' ] ).
-          APPEND VALUE #( msgno = '111' field = 'SalesforceItemId' ) TO rt_result.
+          APPEND VALUE #( msgno = '111' field = 'salesforce_item_id' ) TO rt_result.
         ENDIF.
         CONTINUE.
       ENDIF.
 
-      INSERT <lfs_item>-SalesforceItemId INTO TABLE lt_seen.
+      INSERT <lfs_item>-salesforce_item_id INTO TABLE lt_seen.
       IF sy-subrc <> 0.
         APPEND VALUE #( msgno = '005'
-                        msgv1 = |{ <lfs_item>-SalesforceItemId }|
-                        field = 'SalesforceItemId' ) TO rt_result.
+                        msgv1 = |{ <lfs_item>-salesforce_item_id }|
+                        field = 'salesforce_item_id' ) TO rt_result.
       ENDIF.
 
     ENDLOOP.
@@ -238,38 +237,38 @@ CLASS zcl_zari002_validator IMPLEMENTATION.
 
   METHOD check_item_mandatory.
 
-    DATA(lv_id) = CONV string( is_item-SalesforceItemId ).
+    DATA(lv_id) = CONV string( is_item-salesforce_item_id ).
 
-    IF is_item-CustomerCode IS INITIAL.
-      APPEND VALUE #( msgno = '112' msgv1 = lv_id field = 'CustomerCode' ) TO rt_result.
+    IF is_item-customer_code IS INITIAL.
+      APPEND VALUE #( msgno = '112' msgv1 = lv_id field = 'customer_code' ) TO rt_result.
     ENDIF.
 
-    IF is_item-AccountingDocument IS INITIAL.
-      APPEND VALUE #( msgno = '113' msgv1 = lv_id field = 'AccountingDocument' ) TO rt_result.
+    IF is_item-accounting_document IS INITIAL.
+      APPEND VALUE #( msgno = '113' msgv1 = lv_id field = 'accounting_document' ) TO rt_result.
     ENDIF.
 
-    IF is_item-BillingDocument IS INITIAL.
-      APPEND VALUE #( msgno = '114' msgv1 = lv_id field = 'BillingDocument' ) TO rt_result.
+    IF is_item-billing_document IS INITIAL.
+      APPEND VALUE #( msgno = '114' msgv1 = lv_id field = 'billing_document' ) TO rt_result.
     ENDIF.
 
-    IF is_item-InvoicePostingDate IS INITIAL.
-      APPEND VALUE #( msgno = '115' msgv1 = lv_id field = 'InvoicePostingDate' ) TO rt_result.
+    IF is_item-invoice_posting_date IS INITIAL.
+      APPEND VALUE #( msgno = '115' msgv1 = lv_id field = 'invoice_posting_date' ) TO rt_result.
     ENDIF.
 
-    IF is_item-InvoiceAmount IS INITIAL.
-      APPEND VALUE #( msgno = '116' msgv1 = lv_id field = 'InvoiceAmount' ) TO rt_result.
+    IF is_item-invoice_amount IS INITIAL.
+      APPEND VALUE #( msgno = '116' msgv1 = lv_id field = 'invoice_amount' ) TO rt_result.
     ENDIF.
 
-    IF is_item-AmountPaid IS INITIAL.
-      APPEND VALUE #( msgno = '117' msgv1 = lv_id field = 'AmountPaid' ) TO rt_result.
+    IF is_item-amount_paid IS INITIAL.
+      APPEND VALUE #( msgno = '117' msgv1 = lv_id field = 'amount_paid' ) TO rt_result.
     ENDIF.
 
-    IF is_item-SaleSubmitDate IS INITIAL.
-      APPEND VALUE #( msgno = '118' msgv1 = lv_id field = 'SaleSubmitDate' ) TO rt_result.
+    IF is_item-sale_submit_date IS INITIAL.
+      APPEND VALUE #( msgno = '118' msgv1 = lv_id field = 'sale_submit_date' ) TO rt_result.
     ENDIF.
 
-    IF is_item-PartialAmount IS NOT INITIAL AND is_item-PartialAmount <> 'X'.
-      APPEND VALUE #( msgno = '006' msgv1 = lv_id field = 'PartialAmount' ) TO rt_result.
+    IF is_item-partial_amount IS NOT INITIAL AND is_item-partial_amount <> 'X'.
+      APPEND VALUE #( msgno = '006' msgv1 = lv_id field = 'partial_amount' ) TO rt_result.
     ENDIF.
 
   ENDMETHOD.
