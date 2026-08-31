@@ -99,7 +99,7 @@ reject แล้วไม่เหลือ row · duplicate ถูกจับ 
 | 4.1 | `ZCL_ZARI002_HTTP` — handler ที่ implement `IF_HTTP_SERVICE_EXTENSION` · บางที่สุด | ✅ |
 | 4.2 | HTTP Service repository object `ZARI002_INCOMING_PYMT` ผูกกับ handler + publish | ✅ |
 | 4.3 | Smoke test — เปิด URL ด้วย browser (GET) **ต้องได้ `405`** พิสูจน์ว่า routing + handler ต่อกันถูก · POST จริงย้ายไป 5.4 เพราะต้องมี comm arrangement ก่อน | ✅ |
-| 4.4 | บันทึก URL จริงลง `05_api_spec.md` §2 (ปิด OQ-06) | 🟨 รอ path |
+| 4.4 | บันทึก path ลง `05_api_spec.md` §2 · host + client ยังรอ Phase 5.3 (OQ-06 ยังเปิด) | ✅ |
 
 **Exit criteria**: service ตอบสนองที่ URL ของตัวเอง ✅ (`405` จาก GET = handler ถูกเรียกจริง)
 · การยิง POST จริงต้องรอ Phase 5.4 เพราะ S/4HANA Cloud เข้าถึง HTTP service จากภายนอก
@@ -113,7 +113,7 @@ reject แล้วไม่เหลือ row · duplicate ถูกจับ 
 |---|-----|------|--------|
 | 5.1 | Communication Scenario **inbound** ผูก HTTP service | Claude + ผู้ใช้ | ⬜ |
 | 5.2 | Communication Scenario **outbound** สำหรับยิง callback ไป SFDC | Claude + ผู้ใช้ | ⬜ |
-| 5.3 | Communication System / User / Arrangement ทั้ง 2 ทาง | ผู้ใช้ (Fiori) | ⬜ |
+| 5.3 | Communication System / User / Arrangement ทั้ง 2 ทาง · 🔴 **inbound ต้องผูก client `100`** ไม่ใช่ `080` | ผู้ใช้ (Fiori) | ⬜ |
 | 5.4 | ทดสอบ inbound จาก Postman นอก tenant | ร่วมกัน | ⬜ |
 | 5.5 | ทดสอบ outbound callback ไปปลายทางจริง (รอ SFDC ทำ API) | ร่วมกัน | ⬜ |
 

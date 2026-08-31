@@ -22,11 +22,19 @@
 ## 2. Endpoint
 
 ```
-POST  <host>/<path ของ HTTP service>
+POST  https://<host>/sap/bc/http/sap/ZARI002_INCOMING_PYMT
 Content-Type: application/json
 ```
 
-⬜ **ยังไม่ final** — ได้ path จริงตอน Phase 4.2 · auth ได้ตอน Phase 5.3
+**path ยืนยันแล้ว** (2026-08-31) — GET ที่ URL นี้ตอบ `405` ตามที่ออกแบบ
+
+⬜ **`<host>` ยังไม่ final** — ที่ทดสอบใช้ `my442202.s4hana.cloud.sap` ซึ่งเป็น **UI/dev host**
+ส่วน API host ของ tenant คือ `my442202-api.s4hana.cloud.sap` · **URL ตัวจริงที่ SFDC ใช้
+จะมาจาก communication arrangement ใน Phase 5.3** ไม่ใช่จากที่เราเปิดใน browser
+
+🔴 **ต้องผูกกับ client `100`** — client `080` ไม่มี master data เลย ถ้าผูกผิด client
+ทุก request จะถูก reject ด้วย `ZARI002/200` (company code ไม่มีจริง) และจะดูเหมือนบั๊กของ
+interface ทั้งที่เป็นเรื่อง client (เจอมาแล้ว 2026-08-28 — `01_architecture.md` §10)
 
 ## 3. Field ของ header (`Payment`)
 
