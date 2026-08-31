@@ -114,8 +114,23 @@ reject แล้วไม่เหลือ row · duplicate ถูกจับ 
 | 5.1 | Communication Scenario **inbound** `ZCS_INCOMING_PYMT` ผูก inbound service `ZARI002_INCOMING_PYMT_HTTP` | ผู้ใช้ | ✅ |
 | 5.2 | Communication Scenario **outbound** สำหรับยิง callback ไป SFDC · ⚠️ `SBPA_DEV` ตั้งเป็น **Inbound Only** จึงใช้ตัวเดิมไม่ได้ ต้องมี communication system ใหม่ | Claude + ผู้ใช้ | ⬜ พักไว้ (OQ-17) |
 | 5.3 | Communication System `SBPA_DEV` / User `SBPA_DEV` / Arrangement `ZCS_INCOMING_PYMT` บน **IA5/100** ✅ | ผู้ใช้ (Fiori) | ✅ inbound · ⬜ outbound |
-| 5.4 | ทดสอบ inbound จาก Postman นอก tenant | ร่วมกัน | ⬜ |
-| 5.5 | ทดสอบ outbound callback ไปปลายทางจริง (รอ SFDC ทำ API) | ร่วมกัน | ⬜ |
+| 5.4 | 🔴 **Business role ให้ communication user `SBPA_DEV`** — ต้องมีสิทธิ์อ่าน GL account master และ customer · ไม่งั้นทุก request ติด `201` + `205` | ผู้ใช้ (Fiori) | ⬜ |
+| 5.5 | ทดสอบ inbound จาก Postman นอก tenant | ร่วมกัน | 🟨 ยิงถึงแล้ว รอ 5.4 |
+| 5.6 | ทดสอบ outbound callback ไปปลายทางจริง (รอ SFDC ทำ API) | ร่วมกัน | ⬜ |
+
+### ผลทดสอบครั้งแรกจาก Postman — 2026-08-31
+
+`400` พร้อม error 3 ข้อ · **ทุกชั้นทำงานถูกหมด** — auth, routing, parse, validation,
+serialize response (`Field` / `Item` / ข้อความจาก message class)
+
+| Error | ความหมาย |
+|---|---|
+| `010` | ✅ **ถูกต้อง** — เจอ row จาก `ZCL_ZARI002_SPIKE_EML` ที่ค้างอยู่บน client 100 (`1000000001` / `0090000000`) |
+| `201` `205` | 🔴 **สิทธิ์ของ `SBPA_DEV`** ไม่ใช่ข้อมูลไม่มี — spike ยืนยันแล้วว่าทั้งคู่มีจริงบน client 100 |
+
+**หลักฐานว่าเป็นเรื่องสิทธิ์**: ไม่มี error `200` แปลว่า `I_CompanyCode` อ่านได้ (currency ถูก derive)
+แต่ `I_GLAccountInCompanyCode` กับ `I_Customer` คืนค่าว่าง — ถ้าเป็นปัญหา client หรือการเชื่อมต่อ
+ทั้ง 3 view จะพังพร้อมกัน
 
 ⚠️ **งานนี้มี 2 ทิศทาง** ต่างจากตอนเป็น OData ที่มีแค่ขาเข้า — outbound ต้องมี destination
 ของตัวเองเพื่อให้ `cl_http_destination_provider` หาปลายทางเจอ

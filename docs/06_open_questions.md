@@ -34,6 +34,9 @@
 | OQ-17 | callback ไป SFDC — endpoint, auth, รูปแบบ JSON ตัวจริง ยังไม่มี (SFDC ยังไม่ได้ทำ API) · payload ตอนนี้เป็น array ล้วน อาจต้องมี wrapper | Salesforce | Phase 3 | `ZCL_ZARI002_SFDC_NOTIFY` เป็น **draft ไม่มี unit test** (ตกลง 2026-08-31 ว่าเขียน test ตอนนี้จะต้องรื้อทิ้ง) · แก้ `build_payload( )` จุดเดียวเมื่อรู้รูปแบบจริง | ⬜ |
 | OQ-18 | response ของ API เราเองควรมีอะไร ในเมื่อผลจริงส่งผ่าน callback แล้ว | Salesforce | Phase 4 | `05_api_spec.md` §8 ยังเปิดไว้ | ⬜ |
 
+| OQ-19 | business role ที่ `SBPA_DEV` ต้องมี เพื่ออ่าน `I_GLAccountInCompanyCode` และ `I_Customer` — catalog ไหนบ้าง และจะจำกัด company code แค่ `2000` ได้ไหม | ผู้ใช้ + FI | Phase 5 | **บล็อกการเทสทั้งหมด** — ทุก request ติด `201` + `205` จนกว่าจะแก้ | ⬜ |
+| OQ-20 | test data จาก `ZCL_ZARI002_SPIKE_EML` ค้างอยู่บน client 100 (`payment_document_no = 1000000001`) — เคลียร์ทิ้งหรือเปลี่ยนเลขที่ใช้เทส | ผู้ใช้ | Phase 6 | ทำให้เทส duplicate ปนกับของเก่า | ⬜ |
+
 ## วิธีใช้
 
 - เจอข้อสงสัยใหม่ระหว่างทำ → **เพิ่มแถวที่นี่ทันที** อย่าเก็บไว้ในหัวหรือใน commit message
