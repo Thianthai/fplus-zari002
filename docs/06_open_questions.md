@@ -31,7 +31,7 @@
 
 | OQ-16 | payload เดียวที่มี 2 item ใช้ `billing_document` ตัวเดียวกัน — `validateItemDuplicate` ปล่อยผ่าน เพราะตอน validate ยังไม่มีอะไรใน table ให้ชน · **ต้องรู้ก่อนว่าธุรกิจมีเคสที่ 1 ใบแจ้งหนี้ถูกแบ่งจ่าย 2 บรรทัดในใบเดียวกันไหม** ถ้ามีจริงการกันไว้จะไปบล็อกของที่ถูกต้อง | Salesforce / business | Phase 4 | ไม่บล็อกอะไร — เป็น defensive check ไม่ใช่ requirement · ถ้าจะเพิ่มก็แค่เช็คภายใน `lt_item` ก่อนยิง SELECT | ⬜ |
 
-| OQ-17 | callback ไป SFDC — endpoint, auth, รูปแบบ JSON ตัวจริง ยังไม่มี (SFDC ยังไม่ได้ทำ API) | Salesforce | Phase 3 | `ZCL_ZARI002_SFDC_NOTIFY` เขียนได้แต่ยิงจริงไม่ได้จนกว่าจะมีปลายทาง | ⬜ |
+| OQ-17 | callback ไป SFDC — endpoint, auth, รูปแบบ JSON ตัวจริง ยังไม่มี (SFDC ยังไม่ได้ทำ API) · payload ตอนนี้เป็น array ล้วน อาจต้องมี wrapper | Salesforce | Phase 3 | `ZCL_ZARI002_SFDC_NOTIFY` เป็น **draft ไม่มี unit test** (ตกลง 2026-08-31 ว่าเขียน test ตอนนี้จะต้องรื้อทิ้ง) · แก้ `build_payload( )` จุดเดียวเมื่อรู้รูปแบบจริง | ⬜ |
 | OQ-18 | response ของ API เราเองควรมีอะไร ในเมื่อผลจริงส่งผ่าน callback แล้ว | Salesforce | Phase 4 | `05_api_spec.md` §8 ยังเปิดไว้ | ⬜ |
 
 ## วิธีใช้
