@@ -6,11 +6,11 @@
 | Description | Incoming Payments (API) |
 | Type | Interface (Inbound, API) |
 | Platform | SAP S/4HANA Cloud **Public Edition** |
-| Development model | **ABAP Cloud** (Developer Extensibility) + RAP **managed** |
-| Protocol | OData **V4** (Web API / A2X) |
+| Development model | **ABAP Cloud** (Developer Extensibility) — HTTP Service |
+| Protocol | **HTTP Service (REST/JSON)** |
 | UI | ไม่มี (headless API) |
 | Consumer | Salesforce (non-SAP HTTP client) |
-| Operation ที่เปิด | **Create อย่างเดียว** (deep insert header + items) |
+| Operation ที่เปิด | **POST อย่างเดียว** (header + items ใน payload เดียว) |
 | Repo sync | abapGit (local ⇄ GitHub ⇄ S/4HANA Cloud) |
 | Package | **`ZARI002`** — package เดียว ไม่มี sub-package |
 | งานต่อเนื่อง | **ZARE002** (RAP UI → post FI) · **ZARI003** (ส่งผลกลับ Salesforce) — คนละรหัส ทำทีหลัง |
@@ -79,9 +79,10 @@ fplus-zari002/
 
 | หัวข้อ | เลือก |
 |--------|-------|
-| RAP flavour | **Managed** BO บน custom table 2 ตัว (ไม่มี draft — เป็น API ไม่มี UI) |
-| รูปแบบ OData | **Deep insert** — `POST /Payment` พร้อม `_Item[]` nested ในชุดเดียว |
-| Operation | **Create อย่างเดียว** — ไม่เปิด read/update/delete |
+| สถาปัตยกรรม | **HTTP Service** (`IF_HTTP_SERVICE_EXTENSION`) — ถอด RAP ออกทั้งหมด 2026-08-31 |
+| รูปแบบ payload | nested JSON — 1 header + N items |
+| Operation | **POST อย่างเดียว** |
+| แจ้งผลกลับ | **callback ไป API ของ Salesforce** รายบรรทัด (`S`/`E`) — ไม่ได้ตอบใน response |
 | Error handling | **Reject ทั้ง request** → HTTP 400 + message list · ไม่บันทึกอะไรลง table เลย |
 | Validation | format + mandatory + **master data จริง** (company code, GL account, currency, payment method, customer) |
 | Idempotency | `salesforce_id` **unique** — RAP validation + unique secondary index กัน race |

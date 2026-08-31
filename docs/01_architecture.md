@@ -22,22 +22,57 @@ POST /Payment
 }
 ```
 
-## 2. ทำไมถึงเป็น RAP managed BO
+## 2. สถาปัตยกรรม — HTTP Service (เปลี่ยนจาก RAP OData V4 เมื่อ 2026-08-31)
 
-ข้อมูลลง **custom table ของเราเอง** ทั้งหมด ไม่ได้ไปยุ่งกับ BO มาตรฐานของ SAP
-→ managed runtime จัดการ INSERT, UUID generation, admin field, locking, LUW ให้หมด
-เราเขียนแค่ determination + validation
+```
+SFDC ──POST JSON──▶ HTTP Service
+                         │
+                    ZCL_ZARI002_HTTP          IF_HTTP_SERVICE_EXTENSION
+                         │                     บางที่สุด — อ่าน body, เรียก processor, เขียน response
+                         ▼
+                    ZCL_ZARI002_PROCESSOR     flow เส้นตรง 5 ขั้น
+                         │
+                         ├─ 1. parse JSON → ztar_i002_pymt + ztar_i002_item[]
+                         ├─ 2. normalize    UUID · batch_id · currency · pad key
+                         │                  แปลง payment method · admin field · status = N
+                         ├─ 3. validate     ZCL_ZARI002_VALIDATOR + ZIF_ZARI002_MASTER_DATA
+                         ├─ 4. save         ผ่าน → INSERT 2 table + COMMIT
+                         │                  ไม่ผ่าน → ไม่ INSERT อะไรเลย
+                         └─ 5. callback     ZCL_ZARI002_SFDC_NOTIFY → S/E รายบรรทัด
+                         ▼
+                    HTTP response
+```
 
-| | ผล |
+### ทำไมถึงเลิกใช้ RAP
+
+RAP BO มีอยู่เพื่อรองรับ OData V4 พอ SFDC ต้องการให้เรา **push ผลกลับไปที่ API ของเขา**
+แทนที่จะอ่านจาก response ของเรา RAP ก็ไม่มีจุดที่เห็นทั้ง 2 กรณีให้แขวน callback:
+
+| กรณี | RAP มี hook ไหม |
 |---|---|
-| Deep insert | managed composition รองรับ `_Item[]` ใน payload เดียว out-of-the-box |
-| UUID key | `field ( numbering : managed )` — RAP gen `payment_uuid` / `item_uuid` และผูก parent ให้เอง |
-| Admin field | `created_by/at`, `last_changed_by/at`, `local_last_changed_at` เติมอัตโนมัติผ่าน BDEF |
-| Transaction | 1 request = 1 LUW → validation ไม่ผ่านข้อเดียว rollback ทั้งชุด ตรงกับ requirement |
-| ไม่มี draft | เป็น API ล้วน ไม่มี UI ที่ต้องเซฟค้าง → ไม่ต้องมี draft table |
+| save สำเร็จ | มี — `lsc_` saver |
+| validation ไม่ผ่าน | **ไม่มี** — save ไม่เกิดขึ้น saver ไม่ถูกเรียก |
 
-ทางเลือกที่ตัดทิ้ง — **unmanaged BO**: ต้องเขียน INSERT / lock / numbering เองทั้งหมด
-ได้อิสระที่ไม่จำเป็นต้องใช้ในงานนี้เลย
+HTTP handler เป็นจุดเดียวที่เห็นทั้งสองอย่าง
+
+**สิ่งที่ RAP ให้** คือ OData integration, draft, ETag — งานนี้ไม่ได้ใช้สักอย่าง
+**สิ่งที่ RAP เก็บค่าตอบแทน** คือ save sequence ที่ต้องไล่ทำความเข้าใจ: ลำดับ handler ข้าม entity,
+transactional buffer ที่ค้างข้ามการทดสอบ, EARLY/LATE, `%element`
+→ **flow เส้นตรง support ง่ายกว่ามาก** ซึ่งเป็นเหตุผลหลักของการเปลี่ยน
+
+### สิ่งที่ต้องเขียนเองแทนที่ RAP เคยทำให้
+
+| เดิม RAP ทำให้ | ตอนนี้ |
+|---|---|
+| generate UUID (early numbering) | `ZCL_ZARI002_PROCESSOR` สร้างเอง |
+| เติม admin field จาก annotation ใน CDS | เซ็ตเองในขั้น normalize |
+| `COMMIT ENTITIES` + rollback อัตโนมัติ | `INSERT` + `COMMIT WORK` · ไม่ผ่าน validation ก็ไม่ INSERT ตั้งแต่แรก |
+| ลำดับ determination → validation | เรียกเป็นลำดับใน code ตรง ๆ เห็นได้ด้วยตา |
+
+### สิ่งที่ไม่เปลี่ยนเลย
+
+data model · กฎ validation ทั้ง 16 ข้อ · message class 34 ตัว · การอ่าน master data ผ่าน
+interface · กฎ reject-all · duplicate key · การ pad leading zero · mapping payment method
 
 ## 3. การปรับ table (2026-08-27)
 
@@ -213,21 +248,21 @@ Salesforce ส่ง `gl_account` มาแบบ **ไม่มี leading zero
 การอ่าน master data ทั้งหมดผ่าน **`ZIF_ZARI002_MD_CHK`** เพื่อให้ unit test ใส่ test double ได้
 ไม่ต้องพึ่งข้อมูลจริงบน tenant
 
-## 7. Determination
+## 7. Normalize (เดิมคือ determination)
 
-| Determination | Entity | ทำอะไร |
+| ขั้น | ระดับ | ทำอะไร |
 |---|---|---|
-| `setPaymentDefaults` | Payment | อ่าน `I_CompanyCode` ครั้งเดียวได้ `Currency` + `Country` → เติม `currency` ให้ header **และ push ลงทุก item** · สร้าง `batch_id` · pad `gl_account` · `status = 'N'` |
-| `setPaymentMethodCode` | Payment | แปลงคำจาก Salesforce (`payment_method`) → SAP code (`sap_payment_method`) ด้วย constant ใน `ZCL_ZARI002_VALIDATOR` — `Cheque` → `A` · `Transfer` → `T` |
-| `setItemDefaults` | Item | pad `customer_code` (item ไม่มี status/error แล้ว) |
+| `set_payment_defaults` | header | อ่าน `I_CompanyCode` ครั้งเดียวได้ `Currency` + `Country` → เติม `currency` ให้ header **และ push ลงทุก item** · สร้าง `batch_id` · pad `gl_account` · `status = 'N'` |
+| `set_payment_method_code` | header | แปลงคำจาก Salesforce (`payment_method`) → SAP code (`sap_payment_method`) ด้วย constant ใน `ZCL_ZARI002_VALIDATOR` — `Cheque` → `A` · `Transfer` → `T` |
+| `set_item_defaults` | item | pad `customer_code` |
 
-ทั้งคู่เป็น `determination on save { create; }` — ทำงานก่อน validation ในลำดับ RAP save sequence
+ทั้งหมดรันเป็นลำดับใน `ZCL_ZARI002_PROCESSOR` ก่อนเข้าขั้น validate — **ลำดับชัดเจนอ่านได้จาก code**
+ไม่ต้องพึ่งกลไกของ framework อีกต่อไป
 
-### ทำไม `currency` ของ item ถึงเติมจาก determination ฝั่ง header ไม่ใช่ฝั่ง item
+### `currency` ของ item ยังเติมจาก header เหมือนเดิม
 
-RAP **ไม่การันตีลำดับ**ของ determination ข้าม entity — ถ้าให้ item ไปอ่าน `currency`
-ของ parent เอง อาจอ่านตอนที่ header ยังไม่ได้เติมค่า (กรณี Salesforce ไม่ส่ง currency มา
-แล้วต้อง derive จาก company code) แล้วได้ค่าว่างแบบเงียบ ๆ
+เหตุผลเดิมคือ RAP ไม่การันตีลำดับ determination ข้าม entity — ตอนนี้ไม่มีปัญหานั้นแล้ว
+แต่ยังทำแบบเดิมเพราะถูกอยู่แล้ว: currency เป็นค่าระดับ payment อ่านครั้งเดียวแล้วแจกลงทุก item
 
 `setPaymentDefaults` จึงหา currency ให้เสร็จในที่เดียว แล้วเขียนลง item ทั้งหมดด้วย EML
 ในจังหวะเดียวกัน — ลำดับถูกต้องแน่นอนเพราะอยู่ใน method เดียว

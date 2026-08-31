@@ -10,33 +10,23 @@
 | | |
 |---|---|
 | ทำอะไร | รับข้อมูล incoming payment จาก Salesforce มาเก็บใน SAP |
-| Protocol | OData **V4** (A2X / Web API) |
-| Operation | **Create อย่างเดียว** — ไม่มี read / update / delete |
-| โครงสร้าง | **Deep insert** — 1 request = 1 payment header + N items |
+| Protocol | **HTTP Service (REST/JSON)** — เปลี่ยนจาก OData V4 เมื่อ 2026-08-31 |
+| Operation | **POST อย่างเดียว** |
+| โครงสร้าง | nested JSON — 1 header + N items |
 | Transaction | **All-or-nothing** — ผิดข้อเดียว ไม่บันทึกอะไรเลยทั้ง request |
-| Entity set | `Payment` (header) · `PaymentItem` (item ผ่าน navigation `_Item`) |
+| แจ้งผล | **SAP ยิง callback กลับไปที่ API ของ Salesforce** รายบรรทัด (ดู §9) |
 
 **สิ่งที่ API นี้ไม่ทำ**: ไม่ post FI · ไม่ตอบผลการ post
-การ post เป็นงานของ **ZARE002** และการส่งผลกลับ Salesforce เป็นงานของ **ZARI003**
+การ post เป็นงานของ **ZARE002** และการส่งผล post กลับเป็นงานของ **ZARI003**
 
 ## 2. Endpoint
 
 ```
-POST /sap/opu/odata4/sap/zapi_zari002_o4/srvd_a2x/sap/zapi_zari002/0001/Payment
+POST  <host>/<path ของ HTTP service>
+Content-Type: application/json
 ```
 
-⬜ **ยังไม่ final** — ยืนยันอีกครั้งหลัง Phase 5.4 (publish service binding)
-
-| Header | ค่า |
-|---|---|
-| `Content-Type` | `application/json` |
-| `Authorization` | Basic auth ด้วย communication user (⬜ ได้จาก Phase 6) |
-
-**แนะนำให้ต่อท้าย URL ด้วย `$select` / `$expand`** เพื่อให้ response เล็กและคงที่:
-
-```
-?$select=BatchId,SalesforceId,Status&$expand=_Item($select=SalesforceItemId)
-```
+⬜ **ยังไม่ final** — ได้ path จริงตอน Phase 4.2 · auth ได้ตอน Phase 5.3
 
 ## 3. Field ของ header (`Payment`)
 
@@ -196,53 +186,12 @@ API แปลงคำเป็น SAP payment method code ให้เอง
 ⚠️ การตรวจนี้เป็น **validation ชั้นเดียว ไม่มีตาข่ายระดับฐานข้อมูล** (key คร่อม 2 table
 จึงทำ unique index ไม่ได้) · 2 request ที่เหมือนกันและยิงพร้อมกันจริง ๆ อาจเข้าไปทั้งคู่
 
-## 8. Response
+## 8. Response ของ API นี้
 
-### 8.1 สำเร็จ — `201 Created`
+⬜ **รูปแบบยังไม่สรุป (OQ-18)** — ผลจริงถูกส่งผ่าน callback (§9) แล้ว response ตัวนี้จึงเหลือ
+หน้าที่แค่บอกว่า "รับเรื่องแล้ว" หรือ "ไม่รับเพราะอะไร"
 
-เมื่อยิงพร้อม `$select` / `$expand` ตาม §2:
-
-```json
-{
-  "BatchId": "20260828_142530",
-  "SalesforceId": "b0yfd000000GRsHAAW",
-  "Status": "N",
-  "_Item": [
-    { "SalesforceItemId": "a0yfd000000GRsHAAW" },
-    { "SalesforceItemId": "a2yfd000000GRsHAAW" }
-  ]
-}
-```
-
-🔴 **เปลี่ยนจากที่ตกลงไว้เดิม (2026-08-28)** — item ไม่มี `Status` / `ErrorMessage` ให้ส่งกลับ
-อีกต่อไป เพราะสถานะย้ายไปอยู่ที่ระดับ header ทั้งหมด · response รายบรรทัดจึงเหลือแค่
-`SalesforceItemId` เป็นการยืนยันว่ารับ item นั้นแล้ว
-
-`Status = "N"` **เสมอ** ตอนสร้างสำเร็จ — แปลว่า "รับเข้าคิวแล้ว รอ post" ไม่ใช่ผลการ post
-
-ผลการ post จริงอยู่ที่ `SalesforceStatus` (`S`/`W`/`E`) + `SalesforceMessage` ซึ่ง **ZARE002
-เป็นคนเขียน** และส่งกลับมาให้ SFDC ผ่าน **ZARI003** — ตอน create ทั้งคู่ว่างเปล่าเสมอ
-
-### 8.2 ไม่สำเร็จ — `400 Bad Request`
-
-**ไม่มีอะไรถูกบันทึกเลย** ทั้ง header และทุก item · message มาครบทุกข้อในรอบเดียว
-ไม่ต้องยิงไล่แก้ทีละข้อ
-
-```json
-{
-  "error": {
-    "code": "ZARI002/200",
-    "message": "Company code 9999 does not exist",
-    "details": [
-      { "code": "ZARI002/200", "message": "Company code 9999 does not exist", "target": "CompanyCode" },
-      { "code": "ZARI002/205", "message": "Item a2yfd000000GRsHAAW: customer 1000000099 does not exist" }
-    ]
-  }
-}
-```
-
-**message ที่เกี่ยวกับ item จะขึ้นต้นด้วย `SalesforceItemId` เสมอ** เพราะตอน reject
-ยังไม่มี `ItemUUID` ให้อ้างถึง
+ข้อเสนอ: `200` + จำนวนที่บันทึก · `400` + รายการ error ครบทุกข้อ (รูปแบบเดียวกับ §8.3)
 
 ### 8.3 Message code ทั้งหมด
 
@@ -328,3 +277,26 @@ API แปลงคำเป็น SAP payment method code ให้เอง
 2. รายการคำ `PaymentMethod` ทั้งชุดที่จะส่ง (ตอนนี้รู้แค่ `Cheque` / `Transfer`)
 3. `PaymentAmount` ต้องเท่ากับผลรวม `AmountPaid` ของทุก item หรือไม่ —
    ตอนนี้**ไม่ตรวจ** แต่เว้นที่ไว้ให้เพิ่มทีหลังแล้ว
+
+
+---
+
+## 9. Callback ไปหา Salesforce
+
+หลังจบการประมวลผล **SAP ยิง POST ไปที่ API ของ Salesforce** เพื่อแจ้งผล **รายบรรทัด**
+
+| Field | Type | | ที่มา |
+|---|---|---|---|
+| Salesforce ID (Header) | CHAR(18) | R | `salesforce_id` |
+| Salesforce ID (Item) | CHAR(18) | R | `salesforce_item_id` — key ที่ SFDC ใช้จับคู่ |
+| Status | CHAR(1) | R | `S` = บันทึกสำเร็จ · `E` = ไม่บันทึก |
+| Error Message | CHAR(200) | C | มีเมื่อ `E` |
+
+**ยิงทั้งกรณีสำเร็จและไม่สำเร็จ** — เคส error ต้องยิงระหว่าง request เพราะ reject-all
+ไม่ได้บันทึก row ไว้ให้ตามไปแจ้งทีหลัง
+
+⚠️ **fire and forget** — ไม่เก็บสถานะว่าแจ้งไปแล้วหรือยัง (ตกลง 2026-08-31) ·
+ถ้า callback ล้ม ข้อมูลจะอยู่ใน SAP โดยที่ SFDC ไม่รู้ และ **retry ไม่ได้**
+
+⚠️ `Status` ตัวนี้เป็นคนละตัวกับ `status` (`N`/`C`/`R`/`E`) และ `salesforce_status` (`S`/`W`/`E`)
+ที่เก็บใน table — ตัวนี้ตอบแค่ว่า "SAP รับข้อมูลได้ไหม"

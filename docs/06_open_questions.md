@@ -31,6 +31,9 @@
 
 | OQ-16 | payload เดียวที่มี 2 item ใช้ `billing_document` ตัวเดียวกัน — `validateItemDuplicate` ปล่อยผ่าน เพราะตอน validate ยังไม่มีอะไรใน table ให้ชน · **ต้องรู้ก่อนว่าธุรกิจมีเคสที่ 1 ใบแจ้งหนี้ถูกแบ่งจ่าย 2 บรรทัดในใบเดียวกันไหม** ถ้ามีจริงการกันไว้จะไปบล็อกของที่ถูกต้อง | Salesforce / business | Phase 4 | ไม่บล็อกอะไร — เป็น defensive check ไม่ใช่ requirement · ถ้าจะเพิ่มก็แค่เช็คภายใน `lt_item` ก่อนยิง SELECT | ⬜ |
 
+| OQ-17 | callback ไป SFDC — endpoint, auth, รูปแบบ JSON ตัวจริง ยังไม่มี (SFDC ยังไม่ได้ทำ API) | Salesforce | Phase 3 | `ZCL_ZARI002_SFDC_NOTIFY` เขียนได้แต่ยิงจริงไม่ได้จนกว่าจะมีปลายทาง | ⬜ |
+| OQ-18 | response ของ API เราเองควรมีอะไร ในเมื่อผลจริงส่งผ่าน callback แล้ว | Salesforce | Phase 4 | `05_api_spec.md` §8 ยังเปิดไว้ | ⬜ |
+
 ## วิธีใช้
 
 - เจอข้อสงสัยใหม่ระหว่างทำ → **เพิ่มแถวที่นี่ทันที** อย่าเก็บไว้ในหัวหรือใน commit message
@@ -95,3 +98,13 @@ OQ-04 บล็อก Phase 7 ซึ่งห่างจากตอนนี�
 **ที่ว่างใน BDEF 4 ตัวยังรอคำตอบตามเดิม** — OQ-01 `validateChequeBankBranch` ·
 OQ-05 `validatePaymentTotal` · OQ-08 `validateArOpenItem` · OQ-10 `validateAmountFormat`
 ทุกตัวประกาศไว้แล้ว เติม logic ได้โดยไม่ต้องแตะ BDEF
+
+
+### เปลี่ยนสถาปัตยกรรม — 2026-08-31
+
+ถอด RAP ออกทั้งหมด เปลี่ยนเป็น HTTP Service · **ไม่มีข้อสงสัยข้อไหนถูกยกเลิก**
+เพราะทุกข้อเป็นเรื่อง business rule กับ master data ไม่ได้ผูกกับ transport
+
+- OQ-06 (URL endpoint) ยังเปิดอยู่ แต่ตอนนี้จะได้คำตอบจาก **Phase 4.2** แทน Phase 5.4
+- เปิดใหม่ OQ-17 (ปลายทาง callback) · OQ-18 (response ของ API เรา)
+- OQ-12 ที่ปิดไปแล้วยิ่งชัดว่าปิดถูก — response รายบรรทัดที่เคยกังวลถูกแทนด้วย callback

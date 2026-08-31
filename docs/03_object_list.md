@@ -28,9 +28,6 @@
 | `ZE_RESPONSE_STATUS` | Data element | `src/ze_response_status.dtel.xml` | 4 | ✅ |
 | `ZARI002` | Message class (34 messages) | `src/zari002.msag.xml` | 2 | ✅ |
 
-> **Behavior pool อยู่ที่ `.clas.locals_imp.abap`** ไม่ใช่ `.clas.abap` — ตัวหลังเป็นแค่ shell
-> ว่างเปล่า (`ABSTRACT FINAL FOR BEHAVIOR OF`) · `lhc_Payment` / `lhc_Item` ตัวจริงอยู่ใน locals
-> CDS view หนึ่งตัวได้ **3 ไฟล์**: `.ddls.asddls` (source) + `.ddls.xml` (metadata) + `.ddls.baseinfo`
 > **Index ไม่ใช่ไฟล์แยก** — abapGit ฝัง `DD12V` / `DD17V` ไว้ใน `.tabl.xml` ของ table เจ้าของ
 > `ZD_*` / `ZE_*` เป็น object กลาง **จงใจไม่ใส่ RICEFW ID ในชื่อ** เพื่อให้ RICEFW อื่น reuse ได้
 > `ZD_STATUS` / `ZE_STATUS` ชุดเดิมถูกลบไปแล้ว (2026-08-28) — ไม่มี object กำพร้าค้าง
@@ -41,35 +38,23 @@
 | Object | Type | ไฟล์ | Phase | Status |
 |--------|------|------|-------|--------|
 | `ZCX_ZARI002_ERROR` | Exception class | `src/zcx_zari002_error.clas.abap` | 2 | ✅ |
-| `ZIF_ZARI002_MASTER_DATA` | Interface — อ่าน master data (mock ได้) | `src/zif_zari002_master_data.intf.abap` | 4 | ✅ |
-| `ZCL_ZARI002_MASTER_DATA` | Class — implementation จริงบน released CDS view | `src/zcl_zari002_master_data.clas.abap` | 4 | ✅ |
-| `ZCL_ZARI002_VALIDATOR` | Class — validation กลุ่ม format/mandatory/consistency **+ constant แปลง payment method** · 31 unit test | `src/zcl_zari002_validator.clas.abap` | 4 | ✅ |
-| `ZCL_ZARI002_SPIKE_MD` | Console class — spike ตรวจ released view (throwaway) | `src/zcl_zari002_spike_md.clas.abap` | 1 | ✅ |
-| `ZCL_ZARI002_SPIKE_EML` | Console class — spike ทดสอบ deep create (throwaway) | `src/zcl_zari002_spike_eml.clas.abap` | 3 | ✅ |
+| `ZIF_ZARI002_MASTER_DATA` | Interface — อ่าน master data (mock ได้) | `src/zif_zari002_master_data.intf.abap` | 3 | ✅ |
+| `ZCL_ZARI002_MASTER_DATA` | Class — implementation จริงบน released CDS view | `src/zcl_zari002_master_data.clas.abap` | 3 | ✅ |
+| `ZCL_ZARI002_VALIDATOR` | Class — validation format/mandatory/consistency + constant แปลง payment method · 31 unit test | `src/zcl_zari002_validator.clas.abap` | 3 | 🟨 รอเปลี่ยน signature |
+| `ZCL_ZARI002_SFDC_NOTIFY` | Class — ยิง callback ไป SFDC | `src/zcl_zari002_sfdc_notify.clas.abap` | 3 | ⬜ |
+| `ZCL_ZARI002_PROCESSOR` | Class — flow 5 ขั้น (parse → normalize → validate → save → callback) | `src/zcl_zari002_processor.clas.abap` | 3 | ⬜ |
 
 ทุก class มีไฟล์คู่: `*.clas.xml` (metadata) + `*.clas.testclasses.abap` (ABAP Unit)
 
-## RAP business object
+## HTTP service
 
 | Object | Type | ไฟล์ | Phase | Status |
 |--------|------|------|-------|--------|
-| `ZR_ZARI002` | CDS root view entity (payment header) | `src/zr_zari002.ddls.asddls` | 3 | ✅ |
-| `ZI_ZARI002_ITEM` | CDS interface view entity (item) | `src/zi_zari002_item.ddls.asddls` | 3 | ✅ |
-| `ZR_ZARI002` | Behavior definition (managed, strict 2) | `src/zr_zari002.bdef.asbdef` | 3 | ✅ |
-| `ZBP_R_ZARI002` | Behavior pool (`lhc_Payment` 16 method, `lhc_Item` 5 method) | `src/zbp_r_zari002.clas.locals_imp.abap` | 3 | ✅ |
-| `ZC_ZARI002` | CDS projection view (payment header) | `src/zc_zari002.ddls.asddls` | 5 | ⬜ |
-| `ZC_ZARI002_ITEM` | CDS projection view (item) | `src/zc_zari002_item.ddls.asddls` | 5 | ⬜ |
-| `ZC_ZARI002` | Behavior projection (`use create;`) | `src/zc_zari002.bdef.asbdef` | 5 | ⬜ |
+| `ZCL_ZARI002_HTTP` | Handler — `IF_HTTP_SERVICE_EXTENSION` | `src/zcl_zari002_http.clas.abap` | 4 | ⬜ |
+| `ZARI002_HTTP` | HTTP Service repository object | รอดูจากของจริง | 4 | ⬜ |
 
-## Service
-
-| Object | Type | ไฟล์ | Phase | Status |
-|--------|------|------|-------|--------|
-| `ZAPI_ZARI002` | Service definition (Web API) | `src/zapi_zari002.srvd.srvdsrv` | 5 | ⬜ |
-| `ZAPI_ZARI002_O4` | Service binding (OData V4, A2X) | `src/zapi_zari002_o4.srvb.xml` | 5 | ⬜ |
-
-Entity set ที่ 3rd-party เห็น: **`Payment`** และ **`PaymentItem`**
-(ตั้งผ่าน `expose ... as ...` ใน service definition — ชื่อ CDS ภายในไม่รั่วออกไปที่ API contract)
+> **RAP ถูกถอดออกทั้งหมดเมื่อ 2026-08-31** — CDS view, behavior definition, behavior pool,
+> projection view และ behavior projection ถูกลบ · เหตุผลอยู่ใน `01_architecture.md` §2
 
 ## Configuration (ไม่ใช่ repository object — ไม่เข้า repo)
 
@@ -84,9 +69,9 @@ Entity set ที่ 3rd-party เห็น: **`Payment`** และ **`PaymentI
 
 | Object | เหตุผล |
 |--------|--------|
-| Draft table | เป็น API ไม่มี UI → ไม่ต้องมี draft |
-| Number range object | key เป็น UUID (early numbering) |
-| Authorization object `Z_ZARI002` | ใช้ `authorization master ( global )` + คุมสิทธิ์ที่ communication arrangement |
+| RAP BO ทั้งชุด | ถอดออก 2026-08-31 — ไม่มี OData แล้วจึงไม่มีเหตุผลที่ต้องมี BO (`01_architecture.md` §2) |
+| Number range object | key เป็น UUID — `ZCL_ZARI002_PROCESSOR` สร้างเอง |
+| Authorization object `Z_ZARI002` | คุมสิทธิ์ที่ communication arrangement |
 | Data element ของ field อื่น ๆ | table ใช้ built-in type ตรง ๆ → label ไปอยู่ที่ `@EndUserText.label` ใน CDS |
 | Log table | reject ทั้ง request ไม่บันทึกอะไร → ถ้าต้องการ audit trail ค่อยพิจารณาเพิ่ม (`01_architecture.md` §8) |
 

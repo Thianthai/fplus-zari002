@@ -19,14 +19,7 @@
 | ชนิด | Pattern | ตัวอย่างจริงใน project |
 |------|---------|------------------------|
 | Package | `Z<APP>` | `ZARI002` |
-| Root view entity | `ZR_<APP>` | `ZR_ZARI002` |
-| Interface view (child) | `ZI_<APP>_<ENT>` | `ZI_ZARI002_ITEM` |
-| Projection view | `ZC_<APP>[_<ENT>]` | `ZC_ZARI002`, `ZC_ZARI002_ITEM` |
-| Behavior definition | = ชื่อ view | `ZR_ZARI002`, `ZC_ZARI002` |
-| Behavior pool | `ZBP_R_<APP>` | `ZBP_R_ZARI002` |
-| Local handler / saver | `lhc_<Entity>` / `lsc_<Entity>` | `lhc_Payment`, `lhc_Item` |
-| Service definition (Web API) | `ZAPI_<APP>` | `ZAPI_ZARI002` |
-| Service binding (OData V4) | `ZAPI_<APP>_O4` | `ZAPI_ZARI002_O4` |
+| HTTP handler | `ZCL_<APP>_HTTP` | `ZCL_ZARI002_HTTP` |
 | Global class | `ZCL_<APP>_<PURPOSE>` | `ZCL_ZARI002_VALIDATOR` |
 | Global interface | `ZIF_<APP>_<PURPOSE>` | `ZIF_ZARI002_MD_CHK` |
 | Exception class | `ZCX_<APP>_<...>` | `ZCX_ZARI002_ERROR` |
@@ -54,8 +47,8 @@
   (แยกการอ่าน master data ออกเป็น `ZIF_ZARI002_MD_CHK` + test double)
 - ทุก method มี ABAP Doc comment สั้น ๆ อธิบาย purpose
 - Error ทั้งหมดรวมศูนย์ที่ message class `ZARI002` + exception `ZCX_ZARI002_ERROR`
-- ไม่ใช้ `COMMIT WORK` ตรง ๆ ใน RAP — ใช้ `COMMIT ENTITIES` เท่านั้น
-- BDEF เป็น `managed;` + `strict ( 2 );` เสมอ
+- **ไม่มี RAP ใน project นี้แล้ว (2026-08-31)** — ใช้ `INSERT` + `COMMIT WORK` ตรง ๆ
+  กฎ RAP ทั้งหมดข้างล่างเก็บไว้เป็นบันทึก เผื่อ RICEFW อื่นที่ใช้ RAP
 - **Comment ใน BDEF (`.asbdef`) ใช้ `//` ไม่ใช่ `"`** — `"` เป็นของ ABAP ใช้ใน `.asbdef` ไม่ได้
 - **RAP derived type (`TYPE STRUCTURE FOR READ RESULT ...`) ใช้ตรง ๆ ใน method signature ไม่ได้**
   parser จะกิน token ถัดไป (`RETURNING`, `EXPORTING`) เข้ามาเป็นส่วนหนึ่งของ type

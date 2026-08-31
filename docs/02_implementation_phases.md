@@ -71,98 +71,76 @@ serialize ขึ้นมา แล้วค่อยเอาเอกสาร
 > ไม่มี data element/domain เพิ่มแล้ว — `ZD_STATUS` / `ZE_STATUS` ทำใน Phase 0
 > field อื่นใช้ built-in type ตรง ๆ label ไปอยู่ที่ `@EndUserText.label` ใน CDS
 
-**Exit criteria**: activate ผ่านทุก object · index สร้างสำเร็จ ✅ — รีวิวทะเบียนข้อสงสัยแล้ว ไม่มีข้อใหม่จาก Phase 2
+**Exit criteria**: activate ผ่านทุก object ✅
 
 ---
 
-## Phase 3 — RAP business object (managed)
+## Phase 3 — Core logic
 
 | # | Object | Status |
 |---|--------|--------|
-| 3.1 | Root view entity `ZR_ZARI002` (บน `ztar_i002_pymt`) + composition `_Item` | ✅ |
-| 3.2 | Child view entity `ZI_ZARI002_ITEM` + `association to parent _Payment` | ✅ |
-| 3.3 | Behavior definition `ZR_ZARI002` — `managed; strict ( 2 ); persistent table; lock master / dependent by _Payment;` early numbering UUID, `etag master LocalLastChangedAt`, `authorization master ( global )` · **ไม่มี `total etag`** เพราะไม่มี draft | ✅ |
-| 3.4 | Behavior pool `ZBP_R_ZARI002` — `lhc_Payment` (16 method) / `lhc_Item` (5 method) generate จาก BDEF | ✅ |
+| 3.1 | `ZIF_ZARI002_MASTER_DATA` + `ZCL_ZARI002_MASTER_DATA` | ✅ |
+| 3.2 | `ZCL_ZARI002_VALIDATOR` — เปลี่ยน signature จาก RAP derived type เป็น `ztar_i002_pymt` / `ztar_i002_item` · logic เดิมทั้งหมด | ⬜ |
+| 3.3 | `ZCL_ZARI002_SFDC_NOTIFY` — ยิง callback ไป SFDC · แยก `build_payload( )` ออกมาให้ unit test ได้ | ⬜ |
+| 3.4 | `ZCL_ZARI002_PROCESSOR` — flow 5 ขั้น: parse → normalize → validate → save → callback | ⬜ |
+| 3.5 | ABAP Unit ครบทุก class (validator 31 test เดิมยังใช้ได้) | ⬜ |
 
-**Exit criteria**: EML deep create จาก console class → row ลงครบทั้ง 2 table, `payment_uuid` ฝั่ง item ผูกถูก, admin field เติมเอง ✅
-
-ผลทดสอบ 2026-08-28 (`ZCL_ZARI002_SPIKE_EML`): MODIFY + COMMIT ผ่าน · header 1 row + item 2 row
-· `payment_uuid` ของ item ทั้งสองตรงกับ header (`FA163E19…2234F`) · `item_uuid` ต่างกัน
-· admin field ครบทุกตัวรวม `last_changed_at` · `currency` / `sap_payment_method` / `status`
-ว่างเปล่าตามที่คาด เพราะ determination ยังไม่มี logic
+**Exit criteria**: unit test เขียวทั้งหมด · เรียก processor จาก console class แล้วข้อมูลลงครบ 2 table
 
 ---
 
-## Phase 4 — Determination, validation + ABAP Unit
+## Phase 4 — HTTP service
 
 | # | Object | Status |
 |---|--------|--------|
-| 4.1 | `ZIF_ZARI002_MD_CHK` + `ZCL_ZARI002_MD_CHECK` — อ่าน master data (mock ได้ใน test) | ✅ |
-| 4.2 | `ZCL_ZARI002_VALIDATOR` — logic กลุ่ม format/mandatory/consistency + constant แปลง payment method · **31 unit test เขียวทั้งหมด** | ✅ |
-| 4.3 | Determination `setPaymentDefaults` `setPaymentMethodCode` `setItemDefaults` ใน `ZBP_R_ZARI002` | ✅ |
-| 4.4 | Validation 12 ตัวที่มี logic ใน `ZBP_R_ZARI002` (แปลง finding → RAP message + `%element`) · อีก 4 ตัวยังเป็นที่ว่าง | ✅ |
-| 4.5 | ABAP Unit — validator 31 test + BO test 3 test ด้วย `cl_osql_test_environment` + master data double | ✅ |
+| 4.1 | `ZCL_ZARI002_HTTP` — handler ที่ implement `IF_HTTP_SERVICE_EXTENSION` · บางที่สุด | ⬜ |
+| 4.2 | HTTP Service repository object ผูกกับ handler | ⬜ |
+| 4.3 | ทดสอบยิง POST จากใน tenant | ⬜ |
+| 4.4 | บันทึก URL จริงลง `05_api_spec.md` §2 (ปิด OQ-06) | ⬜ |
 
-**Exit criteria**: unit test เขียวทั้งหมด · deep create ที่ข้อมูลผิดถูก reject พร้อม message ครบทุกข้อในรอบเดียว · rollback ไม่เหลือ row ค้าง
-
-ผลทดสอบ determination 2026-08-28 (`ZCL_ZARI002_SPIKE_EML` บน client `100`):
-`batch_id` = `20260828_125639` · `gl_account` `11011214` → `0011011214` · `sap_payment_method`
-`Cheque` → `A` · `currency` = `THB` **ทั้ง header และทุก item** · `status` = `N` ·
-`salesforce_status` / `salesforce_message` / `reject_reason` ว่างเปล่าตามที่ออกแบบ
+**Exit criteria**: POST payload จริงเข้ามาแล้วข้อมูลลง table · payload ผิดได้ error กลับไปครบทุกข้อ
 
 ---
 
-## Phase 5 — Service exposure
-
-| # | Object | Status |
-|---|--------|--------|
-| 5.1 | Projection view `ZC_ZARI002` / `ZC_ZARI002_ITEM` (เปิดเฉพาะ field ที่เป็น API contract) | ⬜ |
-| 5.2 | Behavior projection `ZC_ZARI002` — **`use create;` เท่านั้น ทั้ง Payment และ Item** · ⚠️ BDEF ประกาศ `update;` ไว้ **ทั้ง 2 entity** เพราะ determination ต้องใช้ `MODIFY ENTITIES ... UPDATE` เขียนค่ากลับ ถ้าลืมคุมตรงนี้ Salesforce จะแก้ทั้ง header และ item ที่ post ไปแล้วได้ | ⬜ |
-| 5.3 | Service definition `ZAPI_ZARI002` — `expose ZC_ZARI002 as Payment; expose ZC_ZARI002_ITEM as PaymentItem;` | ⬜ |
-| 5.4 | Service binding `ZAPI_ZARI002_O4` (OData V4 Web API / A2X) + publish | ⬜ |
-| 5.5 | ทดสอบ `$metadata` + POST nested payload ผ่าน ADT preview ในระบบ | ⬜ |
-| 5.6 | บันทึก URL + payload ตัวจริงลง `docs/05_api_spec.md` | ⬜ |
-
-**Exit criteria**: deep insert `POST /Payment` พร้อม `_Item[]` สำเร็จจากในระบบ และ error case ตอบ 400 พร้อม message ที่อ่านรู้เรื่อง
-
----
-
-## Phase 6 — Security & connectivity
+## Phase 5 — Security & connectivity
 
 | # | งาน | ฝั่ง | Status |
 |---|-----|------|--------|
-| 6.1 | Communication Scenario `ZARI002_CSCEN` (inbound) ผูก service binding | Claude + ผู้ใช้ | ⬜ |
-| 6.2 | Communication System + Communication User | ผู้ใช้ (Fiori app) | ⬜ |
-| 6.3 | Communication Arrangement | ผู้ใช้ | ⬜ |
-| 6.4 | Business role / catalog ให้ comm user | ผู้ใช้ | ⬜ |
-| 6.5 | ทดสอบยิงจาก Postman นอก tenant | ร่วมกัน | ⬜ |
+| 5.1 | Communication Scenario **inbound** ผูก HTTP service | Claude + ผู้ใช้ | ⬜ |
+| 5.2 | Communication Scenario **outbound** สำหรับยิง callback ไป SFDC | Claude + ผู้ใช้ | ⬜ |
+| 5.3 | Communication System / User / Arrangement ทั้ง 2 ทาง | ผู้ใช้ (Fiori) | ⬜ |
+| 5.4 | ทดสอบ inbound จาก Postman นอก tenant | ร่วมกัน | ⬜ |
+| 5.5 | ทดสอบ outbound callback ไปปลายทางจริง (รอ SFDC ทำ API) | ร่วมกัน | ⬜ |
 
-**Exit criteria**: Salesforce (หรือ Postman แทน) ยิงเข้ามาบันทึกข้อมูลได้จริงจากนอกระบบ
+⚠️ **งานนี้มี 2 ทิศทาง** ต่างจากตอนเป็น OData ที่มีแค่ขาเข้า — outbound ต้องมี destination
+ของตัวเองเพื่อให้ `cl_http_destination_provider` หาปลายทางเจอ
 
----
-
-## Phase 7 — Test & hardening
-
-| # | งาน | Status |
-|---|-----|--------|
-| 7.0 | แก้ prefix ของ `salesforce_id` ใน `ZCL_ZARI002_SPIKE_EML` ให้สั้นลง — ปัจจุบัน 18 ตัวพอดี ต่อ `-1`/`-2` แล้วโดนตัด ทำให้ item ทั้งสองได้ id เดียวกัน (`validateSalesforceItemId` จะ reject) | ⬜ |
-| 7.1 | Positive: 1 header/1 item · 1 header/N item · ทุก optional field ว่าง | ⬜ |
-| 7.2 | Negative — format: mandatory ขาด, type ผิด, จำนวนเงินติดลบ, วันที่ผิดรูป | ⬜ |
-| 7.3 | Negative — consistency: `number_of_items` ไม่ตรง, `salesforce_item_id` ซ้ำกันเองใน payment, ไม่มี item เลย | ⬜ |
-| 7.4 | Negative — master data: company code / GL account / currency / payment method / customer ไม่มีจริง | ⬜ |
-| 7.5 | **Idempotency**: ยิง `salesforce_id` เดิมซ้ำ → 400 · ยิงพร้อมกัน 2 request → ต้องเข้าได้ใบเดียว | ⬜ |
-| 7.6 | **Rollback**: item ใบกลางผิด → ต้องไม่มี row ค้างทั้ง header และ item | ⬜ |
-| 7.7 | Volume test — หาจำนวน item/call ที่ปลอดภัย แล้วกำหนด limit ใน API spec | ⬜ |
-| 7.8 | ATC check (Clean Core / released API) ผ่านหมด | ⬜ |
+**Exit criteria**: SFDC ยิงเข้ามาได้จริง และเรายิง callback ออกไปได้จริง
 
 ---
 
-## Phase 8 — Documentation & handover
+## Phase 6 — Test & hardening
 
 | # | งาน | Status |
 |---|-----|--------|
-| 8.1 | `docs/05_api_spec.md` ฉบับสมบูรณ์ — endpoint, auth, payload/response ตัวอย่าง, error code ทุกตัว, limit | ⬜ |
-| 8.2 | `docs/06_deployment.md` — ขั้นตอน communication arrangement + การ deploy ไประบบอื่น | ⬜ |
-| 8.3 | Troubleshooting guide — request ที่ถูก reject ไม่เหลือร่องรอยฝั่ง SAP ต้องเขียนให้ชัดว่าสืบจากที่ไหน | ⬜ |
-| 8.4 | Technical spec สำหรับ RICEFW document | ⬜ |
-| 8.5 | ส่งมอบ contract ของ table ให้ทีม **ZARE002** | ⬜ |
+| 6.1 | Positive: 1 header/1 item · 1 header/N item · optional field ว่าง | ⬜ |
+| 6.2 | Negative — format: mandatory ขาด, type ผิด, วันที่ผิดรูป, JSON พัง | ⬜ |
+| 6.3 | Negative — consistency: `number_of_items_in_payment` ไม่ตรง, `salesforce_item_id` ซ้ำ, ไม่มี item | ⬜ |
+| 6.4 | Negative — master data: company code / GL / payment method / customer ไม่มีจริง | ⬜ |
+| 6.5 | **Duplicate**: ส่งชุดเดิมซ้ำ → ได้ message `010` ครบทุกบรรทัด | ⬜ |
+| 6.6 | **Rollback**: item ใบเดียวผิด → ต้องไม่มี row ค้างทั้ง 2 table | ⬜ |
+| 6.7 | **Callback**: ยิงถูกทั้งกรณี S และ E · ปลายทางล่มแล้ว request หลักต้องไม่พัง | ⬜ |
+| 6.8 | Volume test — หาจำนวน item/call ที่ปลอดภัย (ปิด OQ-07) | ⬜ |
+| 6.9 | ATC check (Clean Core / released API) ผ่านหมด | ⬜ |
+
+---
+
+## Phase 7 — Documentation & handover
+
+| # | งาน | Status |
+|---|-----|--------|
+| 7.1 | `docs/05_api_spec.md` ฉบับสมบูรณ์ + payload/response ตัวจริง | ⬜ |
+| 7.2 | `docs/06_deployment.md` — comm arrangement ทั้ง 2 ทาง | ⬜ |
+| 7.3 | Troubleshooting guide — รวมเคส OQ-14 (ใบที่ post ไม่ผ่านส่งซ้ำไม่ได้) และเคส callback ล้ม | ⬜ |
+| 7.4 | Technical spec สำหรับ RICEFW document | ⬜ |
+| 7.5 | ส่งมอบ contract ของ table ให้ทีม **ZARE002** | ⬜ |
