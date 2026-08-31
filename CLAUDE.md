@@ -80,6 +80,18 @@
 - Push เอกสารขึ้น GitHub ได้เลยเมื่อผู้ใช้สั่ง ไม่ต้อง confirm ซ้ำ
 - Remote: https://github.com/Thianthai/fplus-zari002.git
 
+## ADT ขึ้น HTTP 500 — ลองใหม่ก่อนไล่หาสาเหตุ
+
+เจอมาแล้ว 2 ครั้งบน tenant นี้ ทั้งคู่หายเองโดยไม่ได้แก้อะไร:
+
+| เมื่อไหร่ | อาการ | ทางออก |
+|---|---|---|
+| Link abapGit repo (2026-08-27) | `POST /sap/bc/adt/abapgit/repos failed: 500` | กด ignore แล้ว link ติด · ครั้งถัดมา link ใหม่ผ่านฉลุย |
+| Publish HTTP service (2026-08-31) | `POST /sap/bc/adt/ucon/httpservices/.../publish failed: 500` (`SHTTP/092`) | ลองใหม่เฉย ๆ แล้วผ่าน |
+
+**ลองซ้ำ 1–2 ครั้งก่อนเสมอ** — ถ้ายังไม่ผ่านค่อยไปดู short dump ที่ ADT → Feed Reader →
+ABAP Runtime Errors ซึ่งบอกสาเหตุจริง (ข้อความที่ ADT เด้งมาเป็นแค่เปลือก)
+
 ## วิธีทำงานเมื่อข้อมูลยังไม่ครบ (ตกลง 2026-08-27)
 
 master data บน tenant ยัง config ไม่เสร็จ และ sample data บางส่วนยังไม่มีจริงในระบบ
