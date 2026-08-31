@@ -410,3 +410,18 @@ repository object (class / CDS / BDEF) ใช้ร่วมกันข้า�
 **สิ่งที่ transformation ทำให้ไม่ได้คือชนิดข้อมูล** — `dats` ต้องแปลงเอง เพราะ ISO `2026-08-15`
 ยาว 10 ตัวแต่ `dats` รับ 8 · `to_date( )` รับได้ทั้ง ISO และ SAP
 ⚠️ แต่ยังไม่ตรวจว่าเป็นวันที่จริงไหม (OQ-10)
+
+
+## 12. สิ่งที่ processor ทำแทน RAP — ยืนยันแล้วว่าใช้ได้
+
+| งาน | วิธีที่ใช้ |
+|---|---|
+| UUID | `cl_system_uuid=>create_uuid_x16_static( )` — released บน ABAP Cloud |
+| ผู้ใช้ปัจจุบัน | `cl_abap_context_info=>get_user_technical_name( )` |
+| timestamp | `GET TIME STAMP FIELD` ลง `abp_*_tstmpl` |
+| batch_id | `get_system_date( )` + `get_system_time( )` → `YYYYMMDD_hhmmss` |
+| transaction | `INSERT` 2 ตาราง → `COMMIT WORK AND WAIT` · พลาดกลางทาง `ROLLBACK WORK` |
+| ข้อความ message | `MESSAGE ... INTO` resolve ตั้งแต่ใน processor — ชั้น HTTP ไม่ต้องรู้จัก message class |
+
+**`COMMIT WORK AND WAIT` ไม่ใช่ `COMMIT WORK` เฉย ๆ** — ต้องรอให้เขียนจริงเสร็จก่อนยิง callback
+ไม่งั้นอาจบอก SFDC ว่าสำเร็จตอนที่ข้อมูลยังไม่ลง table

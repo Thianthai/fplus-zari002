@@ -83,7 +83,7 @@ serialize ขึ้นมา แล้วค่อยเอาเอกสาร
 | 3.2 | `ZCL_ZARI002_VALIDATOR` — เปลี่ยน signature เป็น `ztar_i002_pymt` / `ztar_i002_item` · logic เดิมทั้งหมด · **31 unit test เขียวครบ** | ✅ |
 | 3.3 | `ZCL_ZARI002_JSON` — parse payload + แปลงชื่อ 2 ทางด้วย `xco_cp_json` transformation · **9 unit test เขียว** | ✅ |
 | 3.4 | `ZCL_ZARI002_SFDC_NOTIFY` — **draft เท่านั้น ยังไม่มี unit test** · รอ API ตัวจริงจาก SFDC (OQ-17) แล้วค่อยกลับมาทำให้จบ | 🟨 |
-| 3.5 | `ZCL_ZARI002_PROCESSOR` — flow 5 ขั้น: parse → normalize → validate → save → callback | ⬜ |
+| 3.5 | `ZCL_ZARI002_PROCESSOR` — flow 5 ขั้น: parse → normalize → validate → save → callback | 🟨 activate แล้ว รอ test |
 | 3.6 | ABAP Unit ครบทุก class (validator 31 test เดิมยังใช้ได้) | ⬜ |
 
 **Exit criteria**: unit test เขียวทั้งหมด · เรียก processor จาก console class แล้วข้อมูลลงครบ 2 table
