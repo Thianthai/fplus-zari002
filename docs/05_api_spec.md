@@ -39,7 +39,7 @@ Content-Type: application/json
 | `NumberOfItemsInPayment` | **Int32** | ✔ | 🔴 **เปลี่ยนชื่อจาก `NumberOfItems` (2026-08-28)** · จำนวนนับ ส่งเป็นตัวเลข `5` ไม่ใช่ `"5"` · ต้องเท่ากับจำนวน `_Item` |
 | `CompanyCode` | String(4) | ✔ | ต้องมีจริงใน SAP |
 | `PostingDate` | Date | ✔ | `YYYY-MM-DD` |
-| `GLAccount` | String(10) | ✔ | **ส่งแบบไม่มี leading zero ได้** — SAP เติมให้เอง (ดู §6.1) |
+| `GlAccount` | String(10) | ✔ | 🔴 **เดิมชื่อ `GLAccount`** เปลี่ยน 2026-08-31 · **ส่งแบบไม่มี leading zero ได้** — SAP เติมให้เอง (ดู §6.1) |
 | `PaymentMethod` | String(8) | ✔ | ส่งเป็น**คำ** เช่น `Cheque`, `Transfer` (ดู §6.2) |
 | `ChequeNo` | String(8) | (✔) | |
 | `IssueDate` | Date | (✔) | |
@@ -51,7 +51,7 @@ Content-Type: application/json
 | `PaymentAmount` | Decimal(23,2) | ✔ | |
 | `_Item` | array | ✔ | ต้องมีอย่างน้อย 1 รายการ |
 
-**ห้ามส่ง** (ระบบเติมเอง ส่งมาก็ถูกเมิน): `PaymentUUID` · `BatchId` · `Currency` ·
+**ห้ามส่ง** (ระบบเติมเอง ส่งมาก็ถูกเมิน): `PaymentUuid` · `BatchId` · `Currency` ·
 `SapPaymentMethod` · `Status` · `SalesforceStatus` · `SalesforceMessage` ·
 field `Created*` / `LastChanged*` ทั้งหมด
 
@@ -73,7 +73,7 @@ field `Created*` / `LastChanged*` ทั้งหมด
 | `SaleSubmitDate` | Date | ✔ | |
 | `BillingDocument` | String(10) | ✔ | **เป็นส่วนหนึ่งของ duplicate key** (ดู §7) |
 
-**ห้ามส่ง**: `ItemUUID` · `PaymentUUID` · `Currency` · `RejectReason` · admin fields
+**ห้ามส่ง**: `ItemUuid` · `PaymentUuid` · `Currency` · `RejectReason` · admin fields
 
 > **item ไม่มี `Status` และ `ErrorMessage` แล้ว** (2026-08-28) — สถานะทั้งหมดอยู่ที่ระดับ
 > header เท่านั้น · error อะไรก็ตามถือเป็น error ของ payment ทั้งใบ
@@ -87,7 +87,7 @@ field `Created*` / `LastChanged*` ทั้งหมด
   "NumberOfItemsInPayment": 2,
   "CompanyCode": "2000",
   "PostingDate": "2026-08-15",
-  "GLAccount": "11011214",
+  "GlAccount": "11011214",
   "PaymentMethod": "Cheque",
   "ChequeNo": "10020185",
   "IssueDate": "2026-07-15",
@@ -130,7 +130,7 @@ field `Created*` / `LastChanged*` ทั้งหมด
 
 ### 6.1 Leading zero — ไม่ต้องเติมมา
 
-SAP เก็บ `GLAccount` และ `CustomerCode` เป็น 10 หลักเต็มโดยเติม `0` ข้างหน้า
+SAP เก็บ `GlAccount` และ `CustomerCode` เป็น 10 หลักเต็มโดยเติม `0` ข้างหน้า
 API **เติมให้เอง** ก่อนตรวจและก่อนบันทึก
 
 ```

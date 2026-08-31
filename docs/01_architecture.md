@@ -206,27 +206,27 @@ duplicate — การแก้ต้องทำฝั่ง SAP
 
 | Validation | Entity | ตรวจอะไร |
 |---|---|---|
-| `validateMandatory` | Payment | 8 field บังคับ ครบไหม (ดู `04_field_mapping.md`) |
-| `validateChequeFields` | Payment | ถ้า `sap_payment_method` = เช็ค → `cheque_no` `issue_date` `due_on` `cheque_bankbranch` ต้องครบ (ดูจาก code ที่แปลงแล้ว ไม่ใช่คำดิบ) |
-| `validatePaymentTotal` | Payment | **ที่ว่างไว้ ยังไม่ใส่ logic** — เผื่อภายหลังต้องเทียบ `payment_amount` กับผลรวม `amount_paid` |
-| `validateAmountPaidTotal` | Payment | ผลรวม `amount_paid` ของทุก item ต้อง **> 0** |
-| `validateAmountFormat` | Payment | **ที่ว่างไว้ ยังไม่ใส่ logic** — OData จับค่าที่ไม่ใช่ตัวเลขไปก่อนแล้ว รอนิยามเงื่อนไข (OQ-10) |
-| `validateItemDuplicate` | Payment | `payment_document_no` + `billing_document` ต้องไม่เคยมีใน table |
-| `validateNumberOfItems` | Payment | ต้องเท่ากับจำนวน `_Item` ที่ส่งมาจริง |
-| `validateDates` | Payment | `due_on` ต้องไม่ก่อน `issue_date` |
-| `validateSalesforceItemId` | Item | mandatory + ไม่ซ้ำกันเองภายใน payment เดียวกัน |
-| `validateItemMandatory` | Item | 8 field บังคับของ item ครบไหม |
+| `check_mandatory` | Payment | 8 field บังคับ ครบไหม (ดู `04_field_mapping.md`) |
+| `check_cheque_fields` | Payment | ถ้า `sap_payment_method` = เช็ค → `cheque_no` `issue_date` `due_on` `cheque_bankbranch` ต้องครบ (ดูจาก code ที่แปลงแล้ว ไม่ใช่คำดิบ) |
+| `check_payment_total` | Payment | **ที่ว่างไว้ ยังไม่ใส่ logic** — เผื่อภายหลังต้องเทียบ `payment_amount` กับผลรวม `amount_paid` |
+| `check_amount_paid_total` | Payment | ผลรวม `amount_paid` ของทุก item ต้อง **> 0** |
+| `check_amount_format` | Payment | **ที่ว่างไว้ ยังไม่ใส่ logic** — OData จับค่าที่ไม่ใช่ตัวเลขไปก่อนแล้ว รอนิยามเงื่อนไข (OQ-10) |
+| `check_duplicate` | Payment | `payment_document_no` + `billing_document` ต้องไม่เคยมีใน table |
+| `check_number_of_items` | Payment | ต้องเท่ากับจำนวน `_Item` ที่ส่งมาจริง |
+| `check_dates` | Payment | `due_on` ต้องไม่ก่อน `issue_date` |
+| `check_item_ids` | Item | mandatory + ไม่ซ้ำกันเองภายใน payment เดียวกัน |
+| `check_item_mandatory` | Item | 8 field บังคับของ item ครบไหม |
 
 **กลุ่ม B — master data** ⚠️ ต้อง verify release state บน tenant ก่อน (Phase 1)
 
 | Validation | Field | Released CDS view ที่ตั้งใจใช้ |
 |---|---|---|
-| `validateCompanyCode` | `company_code` | `I_CompanyCode` |
-| `validateGLAccount` | `gl_account` | `I_GLAccountInCompanyCode` |
-| `validatePaymentMethod` | `sap_payment_method` | `I_PaymentMethod` เช็คแค่ว่า code มีจริง · ถ้าแปลงไม่ได้ (คำที่ไม่รู้จัก) ต้องแจ้งคำที่ส่งมาในข้อความด้วย |
-| `validateCustomerCode` | `customer_code` (Item) | `I_Customer` |
-| `validateArOpenItem` | `accounting_document` (Item) | **ที่ว่างไว้ ยังไม่ใส่ logic** — ตรวจว่ารายการยังไม่ถูกรับชำระหรือ reverse · ต้องหา released view ที่มีสถานะนี้ก่อน (OQ-08) |
-| `validateChequeBankBranch` | `cheque_bankbranch` | **ที่ว่างไว้ ยังไม่ใส่ logic** — โครงสร้างของ field ยังไม่ชัด (`0040129` ไม่มีใน `I_Bank_2`) ดู `04_field_mapping.md` §7.2 |
+| `check_company_code` | `company_code` | `I_CompanyCode` |
+| `check_gl_account` | `gl_account` | `I_GLAccountInCompanyCode` |
+| `check_payment_method` | `sap_payment_method` | `I_PaymentMethod` เช็คแค่ว่า code มีจริง · ถ้าแปลงไม่ได้ (คำที่ไม่รู้จัก) ต้องแจ้งคำที่ส่งมาในข้อความด้วย |
+| `check_customer_code` | `customer_code` (Item) | `I_Customer` |
+| `check_ar_open_item` | `accounting_document` (Item) | **ที่ว่างไว้ ยังไม่ใส่ logic** — ตรวจว่ารายการยังไม่ถูกรับชำระหรือ reverse · ต้องหา released view ที่มีสถานะนี้ก่อน (OQ-08) |
+| `check_cheque_bank_branch` | `cheque_bankbranch` | **ที่ว่างไว้ ยังไม่ใส่ logic** — โครงสร้างของ field ยังไม่ชัด (`0040129` ไม่มีใน `I_Bank_2`) ดู `04_field_mapping.md` §7.2 |
 
 **ไม่เช็คเครื่องหมายจำนวนเงิน** — sample จริงมี `rounding_diff = -1.00` และ
 `advance_payment = -100.00` ซึ่งถูกต้องตามธุรกิจ · ปล่อยให้ ZARE002 ไปเจอเองตอน post
@@ -243,7 +243,7 @@ Salesforce ส่ง `gl_account` มาแบบ **ไม่มี leading zero
 **ไม่ validate**: `billing_document` — เป็นเลขอ้างอิงฝั่ง Salesforce ที่อาจยังไม่มีใน SAP
 
 ⚠️ `accounting_document` **เคยตกลงว่าไม่ validate แล้วกลับคำ** (2026-08-27) — ตอนนี้ต้องตรวจว่า
-รายการยังเปิดอยู่ ผ่าน `validateArOpenItem`
+รายการยังเปิดอยู่ ผ่าน `check_ar_open_item`
 
 การอ่าน master data ทั้งหมดผ่าน **`ZIF_ZARI002_MD_CHK`** เพื่อให้ unit test ใส่ test double ได้
 ไม่ต้องพึ่งข้อมูลจริงบน tenant
@@ -345,7 +345,7 @@ released CDS view ใช้ได้ครบทั้ง 6 ตัว ชื่�
 | `I_Bank_2` | key = `BankCountry` + `BankInternalID` · ค่าบน tenant เป็น **รหัส 3 หลัก**: `002 004 006 008 009 011 014 017 018 020` |
 
 ⚠️ **customer ที่ sample ของ SFDC ใช้ยังไม่ครบ** — `1000000001` `1000000005` `1000000013`
-`1000000020` `1000000021` ยังไม่มีใน master data · `validateCustomerCode` จะ reject sample
+`1000000020` `1000000021` ยังไม่มีใน master data · `check_customer_code` จะ reject sample
 เหล่านี้ **ต้องเตรียม test data ให้ครบก่อน Phase 7**
 
 ### ⚠️ ต้องรันเทสที่ client `100` เท่านั้น
