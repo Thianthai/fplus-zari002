@@ -36,7 +36,7 @@ Content-Type: application/json
 |---|---|---|---|
 | `SalesforceId` | String(18) | ✔ | **ต้องไม่ซ้ำ** — ใช้กันการยิงซ้ำ (ดู §7) |
 | `PaymentDocumentNo` | String(10) | ✔ | เลขที่เอกสารรับชำระเงินฝั่ง Salesforce |
-| `NumberOfItemsInPayment` | **Int32** | ✔ | 🔴 **เปลี่ยนชื่อจาก `NumberOfItems` (2026-08-28)** · จำนวนนับ ส่งเป็นตัวเลข `5` ไม่ใช่ `"5"` · ต้องเท่ากับจำนวน `_Item` |
+| `NumberOfItemsInPayment` | **Int32** | ✔ | 🔴 **เปลี่ยนชื่อจาก `NumberOfItems` (2026-08-28)** · จำนวนนับ ส่งเป็นตัวเลข `5` ไม่ใช่ `"5"` · ต้องเท่ากับจำนวน `Items` |
 | `CompanyCode` | String(4) | ✔ | ต้องมีจริงใน SAP |
 | `PostingDate` | Date | ✔ | `YYYY-MM-DD` |
 | `GlAccount` | String(10) | ✔ | 🔴 **เดิมชื่อ `GLAccount`** เปลี่ยน 2026-08-31 · **ส่งแบบไม่มี leading zero ได้** — SAP เติมให้เอง (ดู §6.1) |
@@ -49,13 +49,13 @@ Content-Type: application/json
 | `AdvancePayment` | Decimal(23,2) | – | **ติดลบได้** |
 | `Fees` | Decimal(23,2) | – | |
 | `PaymentAmount` | Decimal(23,2) | ✔ | |
-| `_Item` | array | ✔ | ต้องมีอย่างน้อย 1 รายการ |
+| `Items` | array | ✔ | ต้องมีอย่างน้อย 1 รายการ · **เดิมชื่อ `_Item` สมัย OData** เปลี่ยน 2026-08-31 เพราะขึ้นต้นด้วย `_` ทำให้กฎแปลงชื่อเพี้ยน |
 
 **ห้ามส่ง** (ระบบเติมเอง ส่งมาก็ถูกเมิน): `PaymentUuid` · `BatchId` · `Currency` ·
 `SapPaymentMethod` · `Status` · `SalesforceStatus` · `SalesforceMessage` ·
 field `Created*` / `LastChanged*` ทั้งหมด
 
-## 4. Field ของ item (`_Item`)
+## 4. Field ของ item (`Items`)
 
 **ส่งได้ 10 field**
 
@@ -97,7 +97,7 @@ field `Created*` / `LastChanged*` ทั้งหมด
   "AdvancePayment": "60.00",
   "Fees": "5.00",
   "PaymentAmount": "9650.00",
-  "_Item": [
+  "Items": [
     {
       "SalesforceItemId": "a0yfd000000GRsHAAW",
       "CustomerCode": "1000000001",
@@ -127,6 +127,13 @@ field `Created*` / `LastChanged*` ทั้งหมด
 ```
 
 ## 6. กฎที่ต้องรู้ก่อนเขียน client
+
+### 6.0 รูปแบบวันที่
+
+รับได้ทั้ง **ISO `"2026-08-15"`** และ **SAP `"20260815"`** — ให้ผลเหมือนกัน
+
+⬜ ⚠️ ค่าที่ไม่ใช่วันที่เลย (เช่น `"abc"`) **ยังไม่ถูกตรวจ** จะกลายเป็นวันที่ขยะ —
+รวมอยู่ใน OQ-10 (การตรวจ format ที่ยังไม่ได้นิยาม)
 
 ### 6.1 Leading zero — ไม่ต้องเติมมา
 

@@ -20,7 +20,7 @@ API field ↔ table field · **JSON ใช้ CamelCase · table ใช้ snake
 | `BatchId` | `batch_id` | `char(20)` | `String(20)` | out | – | **SAP สร้างตอนรับ** รูปแบบ `YYYYMMDD_hhmmss` |
 | `SalesforceId` | `salesforce_id` | `char(18)` | `String(18)` | in | ✔ | key ฝั่ง SFDC · **ซ้ำได้** ไม่ใช่ตัวกัน duplicate |
 | `PaymentDocumentNo` | `payment_document_no` | `char(10)` | `String(10)` | in | ✔ | เลขที่เอกสารรับชำระเงินฝั่ง SFDC · **เป็นส่วนหนึ่งของ duplicate key** |
-| `NumberOfItemsInPayment` | `number_of_items_in_payment` | `int4` | `Int32` | in | ✔ | จำนวนนับ ส่งเป็นตัวเลข · ต้องเท่ากับจำนวน `_Item` |
+| `NumberOfItemsInPayment` | `number_of_items_in_payment` | `int4` | `Int32` | in | ✔ | จำนวนนับ ส่งเป็นตัวเลข · ต้องเท่ากับจำนวน `Items` |
 | `CompanyCode` | `company_code` | `char(4)` | `String(4)` | in | ✔ | ต้องมีจริงใน SAP |
 | `PostingDate` | `posting_date` | `dats` | `Date` | in | ✔ | |
 | `GlAccount` | `gl_account` | `char(10)` | `String(10)` | in | ✔ | **เดิม `GLAccount`** เปลี่ยน 2026-08-31 เพราะตัวใหญ่ติดกันทำให้กฎแปลงชื่อแตก · ส่งแบบไม่มี leading zero ได้ — SAP pad ให้ (§4.1) |
@@ -39,7 +39,7 @@ API field ↔ table field · **JSON ใช้ CamelCase · table ใช้ snake
 | `SalesforceStatus` | `salesforce_status` | `ze_response_status` | `String(1)` | out | – | **result status ที่ส่งกลับ SFDC** — ZARI002 ปล่อยว่างเสมอ |
 | `SalesforceMessage` | `salesforce_message` | `char(200)` | `String(200)` | out | – | ข้อความคู่กับ `SalesforceStatus` — ZARI002 ปล่อยว่างเสมอ |
 | `CreatedBy` `CreatedAt` `LastChangedBy` `LastChangedAt` `LocalLastChangedAt` | admin fields | | | out | – | managed · `LocalLastChangedAt` = etag |
-| `_Item` | — | — | navigation | in | ✔ | ต้องมีอย่างน้อย 1 รายการ |
+| `Items` | — | array | array | in | ✔ | ต้องมีอย่างน้อย 1 รายการ |
 
 **Input field: 15** — `SalesforceId` `PaymentDocumentNo` `NumberOfItemsInPayment` `CompanyCode`
 `PostingDate` `GlAccount` `PaymentMethod` `ChequeNo` `IssueDate` `DueOn` `ChequeBankBranch`
@@ -66,7 +66,7 @@ API field ↔ table field · **JSON ใช้ CamelCase · table ใช้ snake
 | `SaleSubmitDate` | `sale_submit_date` | `dats` | `Date` | in | ✔ | |
 | `RejectReason` | `reject_reason` | `char(200)` | `String(200)` | out | – | **ZARI002 ไม่เคยเขียน** — เป็นของ ZARE002 |
 | `CreatedBy` `CreatedAt` `LastChangedBy` `LocalLastChangedAt` | admin fields | | | out | – | managed · ไม่มี `LastChangedAt` (ดู `01_architecture.md` §3.4) |
-| `_Payment` | — | — | navigation | – | – | Association to parent |
+
 
 **Input field: 10** — mandatory 8 · optional 2 (`BillingNoteNo` `PartialAmount`)
 
