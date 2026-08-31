@@ -209,6 +209,7 @@ API แปลงคำเป็น SAP payment method code ให้เอง
 
 | Code | ข้อความ |
 |---|---|
+| `ZARI002/000` | `&1 &2 &3 &4` — **ข้อความอิสระ** ใช้เมื่อไม่มี code เฉพาะที่ตรงกว่า · ⚠️ client แยกประเภทจาก code ไม่ได้ ใช้เท่าที่จำเป็น |
 | `ZARI002/001` | Payment must have at least one item |
 | `ZARI002/002` | Number of items &1 does not match &2 items sent |
 | `ZARI002/003` | Due date &1 is before issue date &2 |
@@ -220,6 +221,7 @@ API แปลงคำเป็น SAP payment method code ให้เอง
 | `ZARI002/009` | Invalid payment data for payment &1. Please verify — ⬜ ยังไม่เปิดใช้ (OQ-10) |
 | `ZARI002/010` | Duplicate: payment &1 with billing document &2 exists |
 | `ZARI002/011` | Payment &1: received amount must be greater than zero |
+| `ZARI002/012` | Request body is not valid JSON |
 
 **`1xx` — field ที่บังคับ**
 
