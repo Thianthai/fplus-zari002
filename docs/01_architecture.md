@@ -389,3 +389,24 @@ repository object (class / CDS / BDEF) ใช้ร่วมกันข้า�
   → determination ที่ pad ก่อน validate ทำงานถูกต้องแน่นอน
 - **`cheque_bankbranch`**: `004` มีใน `I_Bank_2` แต่ `0040129` **ไม่มี** → ยืนยันว่า field นี้
   ไม่ใช่ `BankInternalID` ล้วน เป็น bank + branch ประกอบกัน
+
+
+---
+
+## 11. การแปลงชื่อ field ระหว่าง JSON กับ table
+
+`ZCL_ZARI002_JSON` เป็นที่เดียวที่รู้จักทั้ง 2 ฝั่ง — ใช้ transformation ของ `xco_cp_json`
+ทั้งขาเข้าและขาออก จึงไม่มีตาราง mapping ให้ maintain
+
+```
+ขาเข้า   JSON PascalCase ──pascal_case_to_underscore──▶ ztar_i002_* snake_case
+ขาออก   ชื่อ field ของ table ──to_json_name( )──▶ ชื่อ JSON  (ใช้ตอนสร้าง error response)
+```
+
+**เงื่อนไขที่ทำให้ใช้ได้**: ชื่อ JSON ทุกตัวต้องเป็น PascalCase สะอาด ไม่มีตัวใหญ่ติดกัน
+— เป็นเหตุผลที่ `GLAccount` ถูกเปลี่ยนเป็น `GlAccount` และ `_Item` เปลี่ยนเป็น `Items`
+(`_` นำหน้าทำให้กฎเพี้ยน) · unit test `json_name_gl_account` ล็อกไว้ว่า 2 ทางต้องกลับด้านกันได้จริง
+
+**สิ่งที่ transformation ทำให้ไม่ได้คือชนิดข้อมูล** — `dats` ต้องแปลงเอง เพราะ ISO `2026-08-15`
+ยาว 10 ตัวแต่ `dats` รับ 8 · `to_date( )` รับได้ทั้ง ISO และ SAP
+⚠️ แต่ยังไม่ตรวจว่าเป็นวันที่จริงไหม (OQ-10)

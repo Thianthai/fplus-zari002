@@ -41,7 +41,7 @@
 | `ZIF_ZARI002_MASTER_DATA` | Interface — อ่าน master data (mock ได้) | `src/zif_zari002_master_data.intf.abap` | 3 | ✅ |
 | `ZCL_ZARI002_MASTER_DATA` | Class — implementation จริงบน released CDS view | `src/zcl_zari002_master_data.clas.abap` | 3 | ✅ |
 | `ZCL_ZARI002_VALIDATOR` | Class — validation format/mandatory/consistency + constant แปลง payment method · 31 unit test | `src/zcl_zari002_validator.clas.abap` | 3 | ✅ |
-| `ZCL_ZARI002_JSON` | Class — parse payload + แปลงชื่อ field CamelCase ↔ snake_case ทั้ง 2 ทาง | `src/zcl_zari002_json.clas.abap` | 3 | ⬜ |
+| `ZCL_ZARI002_JSON` | Class — parse payload + แปลงชื่อ field 2 ทาง · 9 unit test | `src/zcl_zari002_json.clas.abap` | 3 | ✅ |
 | `ZCL_ZARI002_SFDC_NOTIFY` | Class — ยิง callback ไป SFDC | `src/zcl_zari002_sfdc_notify.clas.abap` | 3 | ⬜ |
 | `ZCL_ZARI002_PROCESSOR` | Class — flow 5 ขั้น (parse → normalize → validate → save → callback) | `src/zcl_zari002_processor.clas.abap` | 3 | ⬜ |
 
