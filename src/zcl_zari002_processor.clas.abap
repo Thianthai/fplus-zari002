@@ -17,6 +17,7 @@ CLASS zcl_zari002_processor DEFINITION
       BEGIN OF ty_outcome,
         success  TYPE abap_bool,
         batch_id TYPE ztar_i002_pymt-batch_id,
+        items    TYPE i,
         errors   TYPE tt_error,
       END OF ty_outcome.
 
@@ -116,6 +117,7 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
                         ct_item    = lt_item ).
 
     rs_result-batch_id = ls_payment-batch_id.
+    rs_result-items    = lines( lt_item ).
 
 *   --- 3. validate ----------------------------------------------------
     rs_result-errors = validate( is_payment = ls_payment

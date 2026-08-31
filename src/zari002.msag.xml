@@ -239,6 +239,12 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZARI002</ARBGB>
+     <MSGNR>206</MSGNR>
+     <TEXT>Item &amp;1: document &amp;2 already cleared or reversed</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
      <MSGNR>900</MSGNR>
      <TEXT>Unexpected error: &amp;1</TEXT>
     </T100>
