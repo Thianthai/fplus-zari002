@@ -26,7 +26,8 @@
 | `ZE_REQUEST_STATUS` | Data element | `src/ze_request_status.dtel.xml` | 4 | ✅ |
 | `ZD_RESPONSE_STATUS` | Domain (`S`/`W`/`E`) — result status ส่งกลับ SFDC | `src/zd_response_status.doma.xml` | 4 | ✅ |
 | `ZE_RESPONSE_STATUS` | Data element | `src/ze_response_status.dtel.xml` | 4 | ✅ |
-| `ZARI002` | Message class (34 messages) | `src/zari002.msag.xml` | 2 | ✅ |
+| `ZARI002` | Message class (**39 messages** — `000`–`012` · `100`–`118` · `200`–`205` · `900`) | `src/zari002.msag.xml` | 2 | ✅ |
+| `ZARI002/206` | Message `Item &1: document &2 already cleared or reversed` — **ยังไม่ได้สร้าง** สร้างพร้อมตอนเติม logic ของ OQ-08 | `src/zari002.msag.xml` | — | ⬜ |
 
 > **Index ไม่ใช่ไฟล์แยก** — abapGit ฝัง `DD12V` / `DD17V` ไว้ใน `.tabl.xml` ของ table เจ้าของ
 > `ZD_*` / `ZE_*` เป็น object กลาง **จงใจไม่ใส่ RICEFW ID ในชื่อ** เพื่อให้ RICEFW อื่น reuse ได้
