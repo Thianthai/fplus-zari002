@@ -74,3 +74,24 @@
 - **เปิดใหม่** OQ-12 (แจ้ง SFDC) · OQ-13 (`ZD_STATUS` orphan) · OQ-14 (แก้ใบที่ post ไม่ผ่าน)
 - OQ-01 `cheque_bank_branch` **ยังเปิดอยู่** — เปลี่ยนแค่ชื่อ field ไม่ได้ตอบเรื่องโครงสร้าง
 - OQ-02 `payment_method` ยังเปิด · OQ-03 / OQ-04 ยังไม่มีใครถาม FI · OQ-05 / OQ-08 / OQ-10 / OQ-11 ไม่กระทบ
+
+
+### จบ Phase 4 — 2026-08-28
+
+16 ข้อ · **ปิดไป 4** (OQ-09 duplicate key · OQ-11 ชื่อ interface · OQ-13 domain กำพร้า · OQ-15 description)
+· เปิดใหม่ 5 ระหว่าง phase (OQ-12 ถึง OQ-16)
+
+**ไม่มีข้อไหนบล็อก Phase 5** แต่มี 2 ข้อที่เปลี่ยนระดับความเร่งด่วน:
+
+- **OQ-12 กลายเป็นเร่งด่วน** — Phase 5 publish service · Phase 6 เปิดให้ SFDC ยิงเข้ามา
+  ถ้ายังไม่แจ้งว่า `NumberOfItems` → `NumberOfItemsInPayment` และ response รายบรรทัดไม่มี
+  `Status`/`ErrorMessage` แล้ว **integration test จะพังทันทีที่เริ่ม** และจะดูเหมือนบั๊กฝั่งเรา
+- **OQ-06 จะถูกตอบโดย Phase 5.4 เอง** — ไม่ต้องทำอะไร แค่จำไว้ว่าต้องเอา URL จริงไปเติม
+  `05_api_spec.md` §2
+
+**2 ข้อที่ค้างมา 3 phase แล้วโดยยังไม่มีใครไปถาม FI**: OQ-03 และ OQ-04
+OQ-04 บล็อก Phase 7 ซึ่งห่างจากตอนนี้แค่ 2 phase และการโหลด master data ไม่ใช่งานวันเดียว
+
+**ที่ว่างใน BDEF 4 ตัวยังรอคำตอบตามเดิม** — OQ-01 `validateChequeBankBranch` ·
+OQ-05 `validatePaymentTotal` · OQ-08 `validateArOpenItem` · OQ-10 `validateAmountFormat`
+ทุกตัวประกาศไว้แล้ว เติม logic ได้โดยไม่ต้องแตะ BDEF
