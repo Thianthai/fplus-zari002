@@ -111,9 +111,9 @@ reject แล้วไม่เหลือ row · duplicate ถูกจับ 
 
 | # | งาน | ฝั่ง | Status |
 |---|-----|------|--------|
-| 5.1 | Communication Scenario **inbound** ผูก HTTP service | Claude + ผู้ใช้ | ⬜ |
-| 5.2 | Communication Scenario **outbound** สำหรับยิง callback ไป SFDC | Claude + ผู้ใช้ | ⬜ |
-| 5.3 | Communication System / User / Arrangement ทั้ง 2 ทาง · 🔴 **inbound ต้องผูก client `100`** ไม่ใช่ `080` | ผู้ใช้ (Fiori) | ⬜ |
+| 5.1 | Communication Scenario **inbound** `ZCS_INCOMING_PYMT` ผูก inbound service `ZARI002_INCOMING_PYMT_HTTP` | ผู้ใช้ | ✅ |
+| 5.2 | Communication Scenario **outbound** สำหรับยิง callback ไป SFDC · ⚠️ `SBPA_DEV` ตั้งเป็น **Inbound Only** จึงใช้ตัวเดิมไม่ได้ ต้องมี communication system ใหม่ | Claude + ผู้ใช้ | ⬜ พักไว้ (OQ-17) |
+| 5.3 | Communication System `SBPA_DEV` / User `SBPA_DEV` / Arrangement `ZCS_INCOMING_PYMT` บน **IA5/100** ✅ | ผู้ใช้ (Fiori) | ✅ inbound · ⬜ outbound |
 | 5.4 | ทดสอบ inbound จาก Postman นอก tenant | ร่วมกัน | ⬜ |
 | 5.5 | ทดสอบ outbound callback ไปปลายทางจริง (รอ SFDC ทำ API) | ร่วมกัน | ⬜ |
 

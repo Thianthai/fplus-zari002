@@ -52,29 +52,30 @@
 
 | Object | Type | ไฟล์ | Phase | Status |
 |--------|------|------|-------|--------|
-| `ZCL_ZARI002_HTTP` | Handler — `IF_HTTP_SERVICE_EXTENSION` | `src/zcl_zari002_http.clas.abap` | 4 | 🟨 |
-| `ZARI002_INCOMING_PYMT` | HTTP Service repository object | รอดูจากของจริง | 4 | 🟨 |
+| `ZCL_ZARI002_HTTP` | Handler — `IF_HTTP_SERVICE_EXTENSION` | `src/zcl_zari002_http.clas.abap` | 4 | ✅ |
+| `ZARI002_INCOMING_PYMT` | HTTP Service | `src/zari002_incoming_pymt.http.xml` | 4 | ✅ |
 
 > **RAP ถูกถอดออกทั้งหมดเมื่อ 2026-08-31** — CDS view, behavior definition, behavior pool,
 > projection view และ behavior projection ถูกลบ · เหตุผลอยู่ใน `01_architecture.md` §2
+
+## Connectivity
+
+| Object | Type | ไฟล์ | Phase | Status |
+|--------|------|------|-------|--------|
+| `ZCS_INCOMING_PYMT` | Communication Scenario (inbound) | `src/zcs_incoming_pymt.sco1.xml` | 5 | ✅ |
+| `ZARI002_INCOMING_PYMT_HTTP` | Inbound Service | `src/zari002_incoming_pymt_http.sco2.xml` | 5 | ✅ |
+| *(hash)* | Service authorization ที่ระบบสร้างให้ | `src/44b031caa406301c29d6134c05f9baht.sush.xml` | 5 | ✅ |
+| Communication Scenario (outbound) | สำหรับยิง callback | — | 5 | ⬜ OQ-17 |
+
+> **Communication Scenario เป็น repository object** จึงขึ้น git ด้วย · ส่วน Communication
+> System / User / Arrangement เป็น config ใน Fiori **ไม่ขึ้น git** ต้องตั้งใหม่เองในทุกระบบ
 
 ## Configuration (ไม่ใช่ repository object — ไม่เข้า repo)
 
 | สิ่งที่ต้องทำ | ที่ไหน | Phase | Status |
 |---|---|-------|--------|
-| Communication Scenario `ZARI002_CSCEN` | ADT | 6 | ⬜ |
-| Communication System | Fiori app | 6 | ⬜ |
-| Communication User | Fiori app | 6 | ⬜ |
-| Communication Arrangement | Fiori app | 6 | ⬜ |
+| Communication System `SBPA_DEV` | Fiori app | 5 | ✅ |
+| Communication User `SBPA_DEV` | Fiori app | 5 | ✅ |
+| Communication Arrangement `ZCS_INCOMING_PYMT` (client 100) | Fiori app | 5 | ✅ |
+| Communication System + Arrangement ขา outbound | Fiori app | 5 | ⬜ |
 
-## Object ที่ตัดสินใจไม่ทำ
-
-| Object | เหตุผล |
-|--------|--------|
-| RAP BO ทั้งชุด | ถอดออก 2026-08-31 — ไม่มี OData แล้วจึงไม่มีเหตุผลที่ต้องมี BO (`01_architecture.md` §2) |
-| Number range object | key เป็น UUID — `ZCL_ZARI002_PROCESSOR` สร้างเอง |
-| Authorization object `Z_ZARI002` | คุมสิทธิ์ที่ communication arrangement |
-| Data element ของ field อื่น ๆ | table ใช้ built-in type ตรง ๆ → label ไปอยู่ที่ `@EndUserText.label` ใน CDS |
-| Log table | reject ทั้ง request ไม่บันทึกอะไร → ถ้าต้องการ audit trail ค่อยพิจารณาเพิ่ม (`01_architecture.md` §8) |
-
-> `ZCL_ZARI002_SPIKE_MD` และ `ZCL_ZARI002_SPIKE_EML` เป็น throwaway — **ลบทิ้งเมื่อจบ Phase 4** · ไม่มี unit test เพราะเป็น manual probe

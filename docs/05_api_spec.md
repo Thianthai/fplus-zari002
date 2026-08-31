@@ -22,19 +22,20 @@
 ## 2. Endpoint
 
 ```
-POST  https://<host>/sap/bc/http/sap/ZARI002_INCOMING_PYMT
+POST  https://my442178-api.s4hana.cloud.sap/sap/bc/http/sap/zari002_incoming_pymt
 Content-Type: application/json
+Authorization: Basic <base64 ของ user:password>
 ```
 
-**path ยืนยันแล้ว** (2026-08-31) — GET ที่ URL นี้ตอบ `405` ตามที่ออกแบบ
+| | |
+|---|---|
+| Client | **100** (arrangement ผูกไว้แล้ว — ไม่ต้องส่ง `sap-client`) |
+| Auth | Basic · communication user `SBPA_DEV` (รหัสผ่านขอจากผู้ดูแล tenant) |
+| Communication scenario | `ZCS_INCOMING_PYMT` |
+| Auth ที่รองรับ | Basic · OAuth 2.0 (ยังไม่ได้ตั้ง arrangement สำหรับ OAuth) |
 
-⬜ **`<host>` ยังไม่ final** — ที่ทดสอบใช้ `my442202.s4hana.cloud.sap` ซึ่งเป็น **UI/dev host**
-ส่วน API host ของ tenant คือ `my442202-api.s4hana.cloud.sap` · **URL ตัวจริงที่ SFDC ใช้
-จะมาจาก communication arrangement ใน Phase 5.3** ไม่ใช่จากที่เราเปิดใน browser
-
-🔴 **ต้องผูกกับ client `100`** — client `080` ไม่มี master data เลย ถ้าผูกผิด client
-ทุก request จะถูก reject ด้วย `ZARI002/200` (company code ไม่มีจริง) และจะดูเหมือนบั๊กของ
-interface ทั้งที่เป็นเรื่อง client (เจอมาแล้ว 2026-08-28 — `01_architecture.md` §10)
+⚠️ **API host ไม่ใช่ host เดียวกับที่เปิดใน browser** — `my442178-api…` สำหรับ API
+ส่วน `my442202…` เป็น UI/dev host · เลข tenant ของสองอันไม่เกี่ยวกัน อย่าเดาเอง
 
 ## 3. Field ของ header (`Payment`)
 
