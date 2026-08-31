@@ -52,8 +52,8 @@
 
 | Object | Type | ไฟล์ | Phase | Status |
 |--------|------|------|-------|--------|
-| `ZCL_ZARI002_HTTP` | Handler — `IF_HTTP_SERVICE_EXTENSION` | `src/zcl_zari002_http.clas.abap` | 4 | ⬜ |
-| `ZARI002_HTTP` | HTTP Service repository object | รอดูจากของจริง | 4 | ⬜ |
+| `ZCL_ZARI002_HTTP` | Handler — `IF_HTTP_SERVICE_EXTENSION` | `src/zcl_zari002_http.clas.abap` | 4 | 🟨 |
+| `ZARI002_INCOMING_PYMT` | HTTP Service repository object | รอดูจากของจริง | 4 | 🟨 |
 
 > **RAP ถูกถอดออกทั้งหมดเมื่อ 2026-08-31** — CDS view, behavior definition, behavior pool,
 > projection view และ behavior projection ถูกลบ · เหตุผลอยู่ใน `01_architecture.md` §2

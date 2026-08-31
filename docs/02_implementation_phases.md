@@ -96,12 +96,14 @@ reject แล้วไม่เหลือ row · duplicate ถูกจับ 
 
 | # | Object | Status |
 |---|--------|--------|
-| 4.1 | `ZCL_ZARI002_HTTP` — handler ที่ implement `IF_HTTP_SERVICE_EXTENSION` · บางที่สุด | ⬜ |
-| 4.2 | HTTP Service repository object ผูกกับ handler | ⬜ |
-| 4.3 | ทดสอบยิง POST จากใน tenant | ⬜ |
-| 4.4 | บันทึก URL จริงลง `05_api_spec.md` §2 (ปิด OQ-06) | ⬜ |
+| 4.1 | `ZCL_ZARI002_HTTP` — handler ที่ implement `IF_HTTP_SERVICE_EXTENSION` · บางที่สุด | ✅ |
+| 4.2 | HTTP Service repository object `ZARI002_INCOMING_PYMT` ผูกกับ handler + publish | ✅ |
+| 4.3 | Smoke test — เปิด URL ด้วย browser (GET) **ต้องได้ `405`** พิสูจน์ว่า routing + handler ต่อกันถูก · POST จริงย้ายไป 5.4 เพราะต้องมี comm arrangement ก่อน | ✅ |
+| 4.4 | บันทึก URL จริงลง `05_api_spec.md` §2 (ปิด OQ-06) | 🟨 รอ path |
 
-**Exit criteria**: POST payload จริงเข้ามาแล้วข้อมูลลง table · payload ผิดได้ error กลับไปครบทุกข้อ
+**Exit criteria**: service ตอบสนองที่ URL ของตัวเอง ✅ (`405` จาก GET = handler ถูกเรียกจริง)
+· การยิง POST จริงต้องรอ Phase 5.4 เพราะ S/4HANA Cloud เข้าถึง HTTP service จากภายนอก
+ผ่าน communication arrangement เท่านั้น
 
 ---
 
