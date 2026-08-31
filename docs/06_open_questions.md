@@ -23,7 +23,7 @@
 
 | OQ-11 | ชื่อชั่วคราวของ interface — **ปิดแล้ว 2026-08-28** rename เป็น `ZIF_ZARI002_MASTER_DATA` คู่กับ `ZCL_ZARI002_MASTER_DATA` (`MD_` อ่านเป็น manday) | — | Phase 4 | — | ✅ |
 
-| OQ-12 | **ต้องแจ้ง SFDC ว่า API contract เปลี่ยน 2 จุด**: `NumberOfItems` → `NumberOfItemsInPayment` · response รายบรรทัดไม่มี `Status`/`ErrorMessage` แล้ว | ผู้ใช้ → Salesforce | Phase 4 | SFDC ถือ `05_api_spec.md` ฉบับเดิมไปเขียน client แล้ว ถ้าไม่แจ้งจะพังตอน integration test | ⬜ |
+| OQ-12 | แจ้ง SFDC เรื่อง contract เปลี่ยน — **ปิดแล้ว 2026-08-28**: SFDC ยังไม่เริ่ม implement · ส่วนเรื่อง response รายบรรทัดกลายเป็นคนละเรื่อง เพราะย้ายไปตอบผ่าน callback API ของ SFDC แทน (ดู OQ-17) | — | Phase 4 | — | ✅ |
 | OQ-13 | `ZD_STATUS` / `ZE_STATUS` — **ลบทิ้งแล้ว 2026-08-28** | — | Phase 4 | — | ✅ |
 | OQ-14 | ใบที่บันทึกสำเร็จแล้ว ZARE002 post ไม่ผ่าน → SFDC ส่งเข้ามาแก้ไม่ได้ (โดน duplicate) ต้องแก้ฝั่ง SAP · **ตกลงยอมรับแล้ว** แต่ต้องเขียนไว้ใน troubleshooting guide ให้ชัด | ผู้ใช้ | Phase 4 | Phase 8.3 | 🟨 |
 
