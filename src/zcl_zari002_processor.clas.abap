@@ -23,7 +23,8 @@ CLASS zcl_zari002_processor DEFINITION
       BEGIN OF ty_result,
         request_id TYPE ztar_i002_pymt-request_id,
         success    TYPE abap_bool,
-        items      TYPE i,
+        accepted   TYPE i,
+        rejected   TYPE i,
         errors     TYPE tt_error,
       END OF ty_result.
 
@@ -43,9 +44,10 @@ CLASS zcl_zari002_processor DEFINITION
     DATA go_notify      TYPE REF TO zcl_zari002_sfdc_notify.
 
     METHODS normalize
-      CHANGING cs_payment TYPE ztar_i002_pymt
-               ct_item    TYPE tt_item
-               cs_result  TYPE ty_result.
+      IMPORTING iv_request_id TYPE ztar_i002_pymt-request_id
+      CHANGING  cs_payment    TYPE ztar_i002_pymt
+                ct_item       TYPE tt_item
+                cs_result     TYPE ty_result.
 
     METHODS validate
       IMPORTING is_payment      TYPE ztar_i002_pymt
@@ -121,44 +123,57 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
         RETURN.
     ENDTRY.
 
+    " 2. Request ID ----------------------------------------------------
+    IF ls_request-request_id IS INITIAL.
+      ls_request-request_id = |{ cl_abap_context_info=>get_system_date( ) }_| &&
+                              |{ cl_abap_context_info=>get_system_time( ) }|.
+    ENDIF.
+
+    rs_result-request_id = ls_request-request_id.
+
+    " 3. Process -------------------------------------------------------
     LOOP AT ls_request-payments ASSIGNING FIELD-SYMBOL(<lfs_payment>).
 
       CLEAR: ls_payment, lt_item[].
-      MOVE-CORRESPONDING <lfs_payment> TO ls_payment.
+      MOVE-CORRESPONDING <lfs_payment>       TO ls_payment.
       MOVE-CORRESPONDING <lfs_payment>-items TO lt_item.
 
-      " 2. Normalize ---------------------------------------------------
-      normalize( CHANGING cs_payment = ls_payment
-                          ct_item    = lt_item
-                          cs_result  = rs_result ).
+      " 3.1 Normalize --------------------------------------------------
+      normalize( EXPORTING iv_request_id = CONV #( ls_request-request_id )
+                 CHANGING  cs_payment    = ls_payment
+                           ct_item       = lt_item
+                           cs_result     = rs_result ).
 
-      rs_result-request_id = ls_request-request_id.
-      rs_result-items      = lines( lt_item ).
+      " 3.2 Validate ---------------------------------------------------
+      DATA(lt_error) = validate( is_payment = ls_payment
+                                 it_item    = lt_item ).
 
-      " 3. Validate ----------------------------------------------------
-      rs_result-errors = validate( is_payment = ls_payment
-                                   it_item    = lt_item ).
-
-      " 4. Save --------------------------------------------------------
-      IF rs_result-errors IS INITIAL.
-        rs_result-success = save( is_payment = ls_payment
-                                  it_item    = lt_item ).
-
-        IF rs_result-success = abap_false.
+      " 3.3 Save -------------------------------------------------------
+      IF lt_error IS INITIAL.
+        IF save( is_payment = ls_payment
+                 it_item    = lt_item ) = abap_false.
           APPEND VALUE #( msgno         = '000'
                           msgtx         = message_text( iv_msgno = '000'
                                                         iv_v1    = `Database insert failed` )
-                          salesforce_id = ls_payment-salesforce_id
-                        ) TO rs_result-errors.
+                          salesforce_id = ls_payment-salesforce_id ) TO lt_error.
         ENDIF.
       ENDIF.
 
-      " 5. Callback ----------------------------------------------------
+      IF lt_error IS INITIAL.
+        rs_result-accepted = rs_result-accepted + 1.
+      ELSE.
+        rs_result-rejected = rs_result-rejected + 1.
+        APPEND LINES OF lt_error TO rs_result-errors.
+      ENDIF.
+
+      " 3.4 Callback ---------------------------------------------------
       send_callback( is_payment = ls_payment
                      it_item    = lt_item
                      is_result  = rs_result ).
 
     ENDLOOP.
+
+    rs_result-success = xsdbool( rs_result-rejected = 0 ).
 
   ENDMETHOD.
 
@@ -180,7 +195,7 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
     ENDTRY.
 
     " Request ID
-    cs_payment-request_id = |{ cl_abap_context_info=>get_system_date( ) }_{ cl_abap_context_info=>get_system_time( ) }|.
+    cs_payment-request_id = iv_request_id.
 
     " G/L Account
     cs_payment-gl_account = zcl_zari002_validator=>to_internal_key( cs_payment-gl_account ).

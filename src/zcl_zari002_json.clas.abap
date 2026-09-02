@@ -67,9 +67,14 @@ CLASS zcl_zari002_json IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    rv_result = replace( val = iv_value sub = `-` with = `` occ = 0 ).
-    rv_result = replace( val = iv_value sub = `/` with = `` occ = 0 ).
-    rv_result = replace( val = iv_value sub = `.` with = `` occ = 0 ).
+*   ต้องพักใน string ก่อน เพราะ rv_result เป็น d ยาว 8 ตัว
+*   รับ "2026-08-15" (10 ตัว) ระหว่างทางไม่ได้
+    DATA(lv_clean) = iv_value.
+    lv_clean = replace( val = lv_clean sub = `-` with = `` occ = 0 ).
+    lv_clean = replace( val = lv_clean sub = `/` with = `` occ = 0 ).
+    lv_clean = replace( val = lv_clean sub = `.` with = `` occ = 0 ).
+
+    rv_result = lv_clean.
 
   ENDMETHOD.
 

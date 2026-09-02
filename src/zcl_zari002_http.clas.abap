@@ -130,8 +130,8 @@ CLASS zcl_zari002_http IMPLEMENTATION.
     DATA(ls_result) = NEW zcl_zari002_processor( )->process( io_http_request->get_text( ) ).
 
     DATA(ls_response) = VALUE ty_response( request_id = |{ ls_result-request_id }|
-                                           accepted   = COND #( WHEN ls_result-success = abap_true THEN ls_result-items )
-                                           rejected   = COND #( WHEN ls_result-success = abap_false THEN ls_result-items )
+                                           accepted   = ls_result-accepted
+                                           rejected   = ls_result-rejected
                                            errors     = VALUE #( FOR <lfs_error> IN ls_result-errors
                                                                ( code               = |ZARI002/{ <lfs_error>-msgno }|
                                                                  message            = <lfs_error>-msgtx
