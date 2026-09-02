@@ -40,8 +40,8 @@ SBPA ──POST JSON──▶ HTTP Service
                               ├─ validate    ZCL_ZARI002_VALIDATOR + ZIF_ZARI002_MASTER_DATA
                               ├─ save        ผ่าน → INSERT 2 table + COMMIT
                               │              ไม่ผ่าน → ไม่ INSERT อะไรของใบนั้นเลย
-                              └─ callback    ZCL_ZARI002_SFDC_NOTIFY → S/E รายบรรทัด
-                                             ⚠️ กำลังจะถูกลบ — เป็นงานของ ARI003 (ดู §2.1)
+                              └─ callback    ZCL_ZARI003_SFDC_NOTIFY → S/E รายบรรทัด
+                                             class เป็นของ ARI003 · ZARI002 แค่เรียก (§2.1)
                          ▼
                     HTTP response  { RequestId, Accepted, Rejected, Errors[] }
 ```
@@ -62,14 +62,32 @@ SFDC ส่งข้อมูลให้ SBPA เป็น **ไฟล์ Excel
 **response ของเราจึงกลับไปหา SBPA เท่านั้น SFDC ไม่เคยเห็น** — จึงต้องมี **ARI003** เป็นขา
 outbound แยกต่างหากไว้แจ้งผลกลับไปที่ SFDC
 
-ผลที่ตามมาต่อ ZARI002:
+### 2.2 ขา outbound — เป็นของ ARI003 แต่ทำงานใน process ของ ZARI002
 
-- **ZARI002 ไม่มีขา outbound** — SBPA ได้คำตอบครบถ้วนแบบ synchronous ในการเรียกครั้งเดียว
-  ไม่ต้อง push อะไรออกไปอีก · `ZCL_ZARI002_SFDC_NOTIFY` จึงต้องถูกลบออกจาก RICEFW นี้
-  (ชื่อ class ก็ผิดด้วย — เขียนว่า SFDC ทั้งที่คู่สนทนาจริงคือ SBPA)
-- **Phase 5.2 / 5.6 และ 6.7 ตกไปทั้งหมด** — ไม่มี communication scenario ขาออก ไม่มี destination
-- ⚠️ **payment ที่ถูก reject ไม่ถูกเขียนลง table เลย** ถ้า ARI003 ต้องรายงานผล "การรับข้อมูล"
-  ให้ SFDC โดยอ่านจาก table จะไม่มีอะไรให้อ่าน — ดู **OQ-25** ยังไม่ตัดสิน
+ตอนแรกสรุปกันว่า ZARI002 ไม่ต้องมีขา outbound เลย เพราะ SBPA ได้ response แบบ synchronous
+อยู่แล้ว **แต่สรุปนั้นผิด** — มันตอบแค่ว่า SBPA รู้ผล ไม่ได้ตอบว่า SFDC รู้ผล
+
+**payment ที่ถูก reject มีตัวตนอยู่แค่ใน memory ระหว่าง request เท่านั้น** ไม่มี row ใน table
+ไม่มีร่องรอย พอ `process( )` จบก็หายไป · ถ้าจะบอก SFDC ว่าใบไหนตกและตกเพราะอะไร
+**ต้องยิงตอนที่ข้อมูลยังอยู่ในมือ** — คือใน process เดียวกันนี้ ไม่มีทางอื่น
+
+การแจ้งผลกลับไป SFDC เป็นหน้าที่ของ **ARI003** ตามเดิม เปลี่ยนแค่ความเป็นเจ้าของให้ชัด:
+
+| | |
+|---|---|
+| ชื่อ class | `ZCL_ZARI003_SFDC_NOTIFY` — ชื่อบอกว่าเป็นของ ARI003 |
+| ใครเรียก | `ZCL_ZARI002_PROCESSOR` เรียกท้าย loop ของแต่ละ payment |
+| comm scenario | `ZARI003_OUT_CSCEN` / service `ZARI003_OUT_REST` — ของ ARI003 |
+| package | อยู่ `ZARI002` ไปก่อน · ย้ายไป `ZARI003` ตอน package นั้นมีจริง |
+
+ทางเลือกที่ **ไม่** เลือกและเหตุผล:
+
+- ~~ให้ ARI003 อ่านจาก table แล้วยิงเอง~~ — ใบที่ตกไม่มีใน table จะอ่านอะไรไม่ได้เลย
+- ~~ให้ ZARI002 เก็บใบที่ตกลง table ด้วย~~ — ต้องรื้อ duplicate check ไม่งั้นพอแก้ข้อมูล
+  แล้วส่งเข้ามาใหม่จะติด `010` ตลอดกาล (ขัด OQ-09)
+
+⚠️ **ยังเหลือช่องว่าง** — `notify( )` เป็น fire and forget ถ้ายิงไม่สำเร็จ ใบที่ถูก reject
+จะหายไปโดยไม่มีร่องรอยที่ไหนเลย ทั้งใน SAP และที่ SFDC (**OQ-25**)
 
 field ชื่อ `salesforce_id` / `salesforce_item_id` / `salesforce_status` / `salesforce_message`
 **ยังถูกต้องตามเดิม** เพราะเป็น id ที่มีต้นทางจาก SFDC จริง แค่เดินทางผ่าน SBPA เข้ามา

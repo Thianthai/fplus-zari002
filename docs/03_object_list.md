@@ -43,7 +43,7 @@
 | `ZCL_ZARI002_MASTER_DATA` | Class — implementation จริงบน released CDS view | `src/zcl_zari002_master_data.clas.abap` | 3 | ✅ |
 | `ZCL_ZARI002_VALIDATOR` | Class — validation format/mandatory/consistency + constant แปลง payment method · 31 unit test | `src/zcl_zari002_validator.clas.abap` | 3 | ✅ |
 | `ZCL_ZARI002_JSON` | Class — parse payload + แปลงชื่อ field 2 ทาง · 9 unit test | `src/zcl_zari002_json.clas.abap` | 3 | ✅ |
-| `ZCL_ZARI002_SFDC_NOTIFY` | Class — ยิง callback ไป SFDC · **draft ไม่มี test** รอ OQ-17 | `src/zcl_zari002_sfdc_notify.clas.abap` | 3 | 🟨 |
+| `ZCL_ZARI003_SFDC_NOTIFY` | Class — **เป็นของ ARI003** แต่ถูกเรียกใน process ของ ZARI002 · ยิงผลกลับไป SFDC · **draft ไม่มี test** รอ OQ-17 | `src/zcl_zari003_sfdc_notify.clas.abap` | 3 | 🟨 |
 | `ZCL_ZARI002_PROCESSOR` | Class — flow 5 ขั้น (parse → normalize → validate → save → callback) · 9 unit test | `src/zcl_zari002_processor.clas.abap` | 3 | ✅ |
 
 ทุก class มีไฟล์คู่: `*.clas.xml` (metadata) + `*.clas.testclasses.abap` (ABAP Unit)

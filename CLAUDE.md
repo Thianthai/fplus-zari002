@@ -104,7 +104,8 @@ master data บน tenant ยัง config ไม่เสร็จ และ sa
 
 ## Related RICEFW
 
-ทั้ง 3 รหัสคุยกันผ่าน `ZTAR_I002_PYMT` / `ZTAR_I002_ITEM` เท่านั้น ไม่มี call ตรงระหว่างกัน
+ZARE002 กับอีก 2 รหัสคุยกันผ่าน `ZTAR_I002_PYMT` / `ZTAR_I002_ITEM` เท่านั้น
+**ยกเว้น ZARI002 → ARI003 ที่เป็น call ตรง** (แก้กฎ 2026-09-02 — ดูเหตุผลข้างล่าง)
 
 | RICEFW | หน้าที่ | เขียน `status` |
 |---|---|---|

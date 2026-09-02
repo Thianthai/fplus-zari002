@@ -112,11 +112,11 @@ reject แล้วไม่เหลือ row · duplicate ถูกจับ 
 | # | งาน | ฝั่ง | Status |
 |---|-----|------|--------|
 | 5.1 | Communication Scenario **inbound** `ZCS_INCOMING_PYMT` ผูก inbound service `ZARI002_INCOMING_PYMT_HTTP` | ผู้ใช้ | ✅ |
-| 5.2 | ~~Communication Scenario **outbound**~~ — **ตกไป 2026-09-02** ZARI002 ไม่มีขา outbound · ผู้เรียกคือ SBPA และได้ response แบบ synchronous อยู่แล้ว การแจ้ง SFDC เป็นงานของ ARI003 | — | ❌ ไม่ทำ |
+| 5.2 | Communication Scenario **outbound** `ZARI003_OUT_CSCEN` — **ของ ARI003 แต่ ZARI002 ต้องใช้** เพราะเรียก `ZCL_ZARI003_SFDC_NOTIFY` ใน process เดียวกัน · ⚠️ `SBPA_DEV` เป็น **Inbound Only** ใช้ตัวเดิมไม่ได้ | ผู้ใช้ (ฝั่ง ARI003) | ⬜ รอ OQ-17 |
 | 5.3 | Communication System `SBPA_DEV` / User `SBPA_DEV` / Arrangement `ZCS_INCOMING_PYMT` บน **IA5/100** | ผู้ใช้ (Fiori) | ✅ |
 | 5.4 | 🔴 **Business role ให้ communication user `SBPA_DEV`** — ต้องมีสิทธิ์อ่าน GL account master และ customer · ไม่งั้นทุก request ติด `201` + `205` | ผู้ใช้ (Fiori) | ⬜ |
 | 5.5 | ทดสอบ inbound จาก Postman นอก tenant | ร่วมกัน | 🟨 ยิงถึงแล้ว รอ 5.4 |
-| 5.6 | ~~ทดสอบ outbound callback~~ — **ตกไป 2026-09-02** พร้อมกับ 5.2 | — | ❌ ไม่ทำ |
+| 5.6 | ทดสอบยิงผลกลับไป SFDC ที่ปลายทางจริง (รอ SFDC ทำ API) | ร่วมกับฝั่ง ARI003 | ⬜ |
 
 ### ผลทดสอบครั้งแรกจาก Postman — 2026-08-31
 
@@ -135,7 +135,7 @@ serialize response (`Field` / `Item` / ข้อความจาก message cl
 ⚠️ **งานนี้มี 2 ทิศทาง** ต่างจากตอนเป็น OData ที่มีแค่ขาเข้า — outbound ต้องมี destination
 ของตัวเองเพื่อให้ `cl_http_destination_provider` หาปลายทางเจอ
 
-**Exit criteria**: **SBPA** ยิงเข้ามาได้จริงและได้ response ที่ถูกต้อง — ไม่มีขาออกให้ทดสอบแล้ว
+**Exit criteria**: **SBPA** ยิงเข้ามาได้จริงและได้ response ที่ถูกต้อง · และผลกลับไปถึง SFDC จริง
 
 ---
 
@@ -149,7 +149,7 @@ serialize response (`Field` / `Item` / ข้อความจาก message cl
 | 6.4 | Negative — master data: company code / GL / payment method / customer ไม่มีจริง | ⬜ |
 | 6.5 | **Duplicate**: ส่งชุดเดิมซ้ำ → ได้ message `010` ครบทุกบรรทัด | ⬜ |
 | 6.6 | **Rollback**: item ใบเดียวผิด → ต้องไม่มี row ค้างทั้ง 2 table | ⬜ |
-| 6.7 | ~~**Callback**~~ — **ตกไป 2026-09-02** ย้ายไป ARI003 ทั้งหมด | ❌ ไม่ทำ |
+| 6.7 | **Notify**: ยิงถูกทั้งกรณี S และ E · 🔴 **ปลายทางล่มแล้ว request ของ ZARI002 ต้องไม่พัง** — ข้อหลังเทสได้เลยไม่ต้องรอปลายทางจริง | ⬜ |
 | 6.8 | Volume test — หาจำนวน item/call ที่ปลอดภัย (ปิด OQ-07) | ⬜ |
 | 6.9 | **หลาย payment ต่อ request**: ใบเดียวตกใน 3 ใบ → `Accepted 2` / `Rejected 1` และใบที่ตกต้องไม่มี row ค้าง | ⬜ |
 | 6.10 | **หลาย payment**: ส่ง payment ซ้ำกันเองภายใน request เดียว → ใบที่สองต้องติด `010` (ใบแรก commit ไปแล้ว) | ⬜ |
@@ -162,10 +162,10 @@ serialize response (`Field` / `Item` / ข้อความจาก message cl
 | `ZCL_ZARI002_VALIDATOR` | ครอบคลุม check ทุกตัวที่ implement แล้ว | ✅ |
 | `ZCL_ZARI002_PROCESSOR` | ใช้ test double ผ่าน `ZIF_ZARI002_MASTER_DATA` — รันได้โดยไม่ต่อ SAP จริง | ✅ |
 | `ZCL_ZARI002_JSON` | 16 test — หลาย payment, `RequestId`, วันที่ 4 รูปแบบ, field ที่ไม่ส่งในใบที่ 2, JSON พัง, `to_json_name` | ✅ 2026-09-02 |
-| `ZCL_ZARI002_SFDC_NOTIFY` | ~~ไม่ต้องมี~~ — class นี้กำลังจะถูกลบออกจาก ZARI002 (ย้ายไป ARI003) | ❌ |
+| `ZCL_ZARI003_SFDC_NOTIFY` | ยังไม่มี — `build_payload( )` เทสได้เลย ส่วน `notify( )` ต้องมี seam ก่อน (OQ-17) | ⬜ |
 
 6.1 ถึง 6.3 และ 6.9 ถึง 6.10 เขียนเป็น unit test ได้เลยโดยไม่ต้องพึ่ง tenant
-ส่วน 6.4 ถึง 6.6 กับ 6.8 ต้องรอ **OQ-19** (สิทธิ์ของ `SBPA_DEV`) ไม่งั้นทุก request ตายที่ `201` + `205` ก่อนถึงชั้นที่อยากเทส
+ส่วน 6.4 ถึง 6.8 ต้องรอ **OQ-19** (สิทธิ์ของ `SBPA_DEV`) ไม่งั้นทุก request ตายที่ `201` + `205` ก่อนถึงชั้นที่อยากเทส
 
 ---
 
