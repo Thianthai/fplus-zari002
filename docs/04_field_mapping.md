@@ -17,7 +17,7 @@ API field ↔ table field · **JSON ใช้ CamelCase · table ใช้ snake
 | JSON field | Table field | Type | JSON type | I/O | Mand. | หมายเหตุ |
 |---|---|---|---|---|---|---|
 | `PaymentUuid` | `payment_uuid` | `sysuuid_x16` | `Guid` | out | – | Key — RAP gen |
-| `BatchId` | `batch_id` | `char(20)` | `String(20)` | out | – | **SAP สร้างตอนรับ** รูปแบบ `YYYYMMDD_hhmmss` |
+| `RequestId` | `request_id` | `char(20)` | `String(20)` | in | – | **SFDC เป็นเจ้าของ** · ไม่ส่งมา SAP สร้างให้รูปแบบ `YYYYMMDD_hhmmss` · อยู่ระดับ request ไม่ใช่ระดับ payment |
 | `SalesforceId` | `salesforce_id` | `char(18)` | `String(18)` | in | ✔ | key ฝั่ง SFDC · **ซ้ำได้** ไม่ใช่ตัวกัน duplicate |
 | `PaymentDocumentNo` | `payment_document_no` | `char(10)` | `String(10)` | in | ✔ | เลขที่เอกสารรับชำระเงินฝั่ง SFDC · **เป็นส่วนหนึ่งของ duplicate key** |
 | `NumberOfItemsInPayment` | `number_of_items_in_payment` | `int4` | `Int32` | in | ✔ | จำนวนนับ ส่งเป็นตัวเลข · ต้องเท่ากับจำนวน `Items` |

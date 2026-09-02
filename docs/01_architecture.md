@@ -28,20 +28,41 @@ POST /Payment
 SFDC ──POST JSON──▶ HTTP Service
                          │
                     ZCL_ZARI002_HTTP          IF_HTTP_SERVICE_EXTENSION
-                         │                     บางที่สุด — อ่าน body, เรียก processor, เขียน response
+                         │                     GET → 405 · POST → processor
                          ▼
-                    ZCL_ZARI002_PROCESSOR     flow เส้นตรง 5 ขั้น
+                    ZCL_ZARI002_PROCESSOR
                          │
-                         ├─ 1. parse JSON → ztar_i002_pymt + ztar_i002_item[]
-                         ├─ 2. normalize    UUID · batch_id · currency · pad key
-                         │                  แปลง payment method · admin field · status = N
-                         ├─ 3. validate     ZCL_ZARI002_VALIDATOR + ZIF_ZARI002_MASTER_DATA
-                         ├─ 4. save         ผ่าน → INSERT 2 table + COMMIT
-                         │                  ไม่ผ่าน → ไม่ INSERT อะไรเลย
-                         └─ 5. callback     ZCL_ZARI002_SFDC_NOTIFY → S/E รายบรรทัด
+                         ├─ parse JSON → { request_id, payments[] }
+                         │
+                         └─ วนทีละ payment ── 1 payment = 1 หน่วยที่สมบูรณ์หรือไม่มีเลย
+                              ├─ normalize   UUID · request_id · currency · pad key
+                              │              แปลง payment method · admin field · status = N
+                              ├─ validate    ZCL_ZARI002_VALIDATOR + ZIF_ZARI002_MASTER_DATA
+                              ├─ save        ผ่าน → INSERT 2 table + COMMIT
+                              │              ไม่ผ่าน → ไม่ INSERT อะไรของใบนั้นเลย
+                              └─ callback    ZCL_ZARI002_SFDC_NOTIFY → S/E รายบรรทัด
                          ▼
-                    HTTP response
+                    HTTP response  { RequestId, Accepted, Rejected, Errors[] }
 ```
+
+### 1 request = หลาย payment (2026-08-31)
+
+**reject-all ทำงานที่ระดับ payment ไม่ใช่ระดับ request** — ใบไหนผิดตกใบนั้น ใบที่เหลือยังเข้าได้
+`Accepted` / `Rejected` จึงนับเป็น **จำนวน payment** ไม่ใช่จำนวน item
+
+เหมาะกับเอกสารการเงิน: แต่ละใบต้องครบทั้งใบหรือไม่มีเลย แต่ไม่มีเหตุผลให้ใบที่ถูกต้อง
+ต้องตกไปด้วยเพราะใบอื่นผิด
+
+**`COMMIT` เกิดต่อ payment** → payment ใบหลังจึงเห็นใบก่อนหน้าที่เพิ่ง commit ไป
+ทำให้ duplicate check จับกรณีส่งใบซ้ำกันมาใน request เดียวได้ด้วยโดยไม่ต้องเขียนอะไรเพิ่ม
+
+### `request_id` — SFDC เป็นเจ้าของ
+
+SFDC ส่งมาใน payload · ถ้าไม่ส่ง SAP สร้างให้ในรูปแบบ `YYYYMMDD_hhmmss`
+**สร้างครั้งเดียวสำหรับทั้ง request** แล้วใช้ค่าเดียวกันกับทุก payment และใน response
+— ถ้าสร้างต่อ payment แต่ละใบจะได้เลขต่างกันและ response จะไม่ตรงกับที่เก็บใน table
+
+(เดิมชื่อ `batch_id` ที่ SAP สร้างเอง — เปลี่ยนเจ้าของและเปลี่ยนชื่อพร้อมกัน)
 
 ### ทำไมถึงเลิกใช้ RAP
 

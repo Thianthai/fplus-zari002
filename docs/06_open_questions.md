@@ -37,6 +37,9 @@
 | OQ-19 | business role ที่ `SBPA_DEV` ต้องมี เพื่ออ่าน `I_GLAccountInCompanyCode` และ `I_Customer` — catalog ไหนบ้าง และจะจำกัด company code แค่ `2000` ได้ไหม | ผู้ใช้ + FI | Phase 5 | **บล็อกการเทสทั้งหมด** — ทุก request ติด `201` + `205` จนกว่าจะแก้ | ⬜ |
 | OQ-20 | test data จาก `ZCL_ZARI002_SPIKE_EML` ค้างอยู่บน client 100 (`payment_document_no = 1000000001`) — เคลียร์ทิ้งหรือเปลี่ยนเลขที่ใช้เทส | ผู้ใช้ | Phase 6 | ทำให้เทส duplicate ปนกับของเก่า | ⬜ |
 
+| OQ-21 | test class ของ `ZCL_ZARI002_JSON` (9 test) ถูกลบตอน refactor รองรับหลาย payment — ชั้น parse ไม่มีอะไรคุมเลย ทั้งที่เพิ่งเปลี่ยนโครงสร้างใหญ่ | ผู้ใช้ + Claude | Phase 6 | บั๊ก `to_internal_date` ที่เจอ 2026-08-31 คือสิ่งที่ test เดิมจับได้ทันที | ⬜ |
+| OQ-22 | `request_id` ที่ SFDC ส่งมายาวเกิน `char(20)` จะถูกตัดเงียบ ๆ — ต้องตรวจความยาวและ reject หรือปล่อย | Salesforce | Phase 6 | ถ้าถูกตัด SFDC จะหา request ของตัวเองใน SAP ไม่เจอ | ⬜ |
+
 ## วิธีใช้
 
 - เจอข้อสงสัยใหม่ระหว่างทำ → **เพิ่มแถวที่นี่ทันที** อย่าเก็บไว้ในหัวหรือใน commit message
