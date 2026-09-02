@@ -151,7 +151,21 @@ serialize response (`Field` / `Item` / ข้อความจาก message cl
 | 6.6 | **Rollback**: item ใบเดียวผิด → ต้องไม่มี row ค้างทั้ง 2 table | ⬜ |
 | 6.7 | **Callback**: ยิงถูกทั้งกรณี S และ E · ปลายทางล่มแล้ว request หลักต้องไม่พัง | ⬜ |
 | 6.8 | Volume test — หาจำนวน item/call ที่ปลอดภัย (ปิด OQ-07) | ⬜ |
-| 6.9 | ATC check (Clean Core / released API) ผ่านหมด | ⬜ |
+| 6.9 | **หลาย payment ต่อ request**: ใบเดียวตกใน 3 ใบ → `Accepted 2` / `Rejected 1` และใบที่ตกต้องไม่มี row ค้าง | ⬜ |
+| 6.10 | **หลาย payment**: ส่ง payment ซ้ำกันเองภายใน request เดียว → ใบที่สองต้องติด `010` (ใบแรก commit ไปแล้ว) | ⬜ |
+| 6.11 | ATC check (Clean Core / released API) ผ่านหมด | ⬜ |
+
+### Unit test ที่มีแล้ว
+
+| Class | Test | Status |
+|---|---|---|
+| `ZCL_ZARI002_VALIDATOR` | ครอบคลุม check ทุกตัวที่ implement แล้ว | ✅ |
+| `ZCL_ZARI002_PROCESSOR` | ใช้ test double ผ่าน `ZIF_ZARI002_MASTER_DATA` — รันได้โดยไม่ต่อ SAP จริง | ✅ |
+| `ZCL_ZARI002_JSON` | 16 test — หลาย payment, `RequestId`, วันที่ 4 รูปแบบ, field ที่ไม่ส่งในใบที่ 2, JSON พัง, `to_json_name` | ✅ 2026-09-02 |
+| `ZCL_ZARI002_SFDC_NOTIFY` | ยังไม่มี — รอ contract จริงจาก SFDC (OQ-17) | ⬜ |
+
+6.1 ถึง 6.3 และ 6.9 ถึง 6.10 เขียนเป็น unit test ได้เลยโดยไม่ต้องพึ่ง tenant
+ส่วน 6.4 ถึง 6.8 ต้องรอ **OQ-19** (สิทธิ์ของ `SBPA_DEV`) ไม่งั้นทุก request ตายที่ `201` + `205` ก่อนถึงชั้นที่อยากเทส
 
 ---
 
