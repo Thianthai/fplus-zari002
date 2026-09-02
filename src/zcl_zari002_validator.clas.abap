@@ -15,13 +15,16 @@ CLASS zcl_zari002_validator DEFINITION
         msgno TYPE symsgno,
         msgv1 TYPE string,
         msgv2 TYPE string,
+        msgv3 TYPE string,
+        msgv4 TYPE string,
         field TYPE string,
       END OF ty_finding,
       tt_finding TYPE STANDARD TABLE OF ty_finding WITH EMPTY KEY.
 
     CONSTANTS:
       "! SAP payment method ที่หมายถึงเช็ค — ตัวตัดสิน conditional mandatory
-      gc_pymt_method_cheque TYPE ztar_i002_pymt-sap_payment_method VALUE 'A'.
+      gc_pymt_method_cheque   TYPE ztar_i002_pymt-sap_payment_method VALUE 'A',
+      gc_pymt_method_transfer TYPE ztar_i002_pymt-sap_payment_method VALUE 'T'.
 
     "! แปลงคำจาก Salesforce เป็น SAP payment method code
     "! คืนค่าว่างถ้าไม่รู้จักคำนั้น — ผู้เรียกออก message 202
@@ -38,40 +41,40 @@ CLASS zcl_zari002_validator DEFINITION
 
     "! 100–106 · field บังคับของ header
     CLASS-METHODS check_mandatory
-      IMPORTING is_payment       TYPE ty_payment
-      RETURNING VALUE(rt_result) TYPE tt_finding.
+      IMPORTING is_payment        TYPE ty_payment
+      RETURNING VALUE(rt_finding) TYPE tt_finding.
 
     "! 001 · 002 · ต้องมี item และจำนวนต้องตรงกับที่แจ้งมา
     CLASS-METHODS check_number_of_items
       IMPORTING iv_number_of_items TYPE ztar_i002_pymt-number_of_items_in_payment
                 iv_item_count      TYPE i
-      RETURNING VALUE(rt_result)   TYPE tt_finding.
+      RETURNING VALUE(rt_finding)  TYPE tt_finding.
 
     "! 003 · due_on ต้องไม่ก่อน issue_date
     CLASS-METHODS check_dates
-      IMPORTING is_payment       TYPE ty_payment
-      RETURNING VALUE(rt_result) TYPE tt_finding.
+      IMPORTING is_payment        TYPE ty_payment
+      RETURNING VALUE(rt_finding) TYPE tt_finding.
 
     "! 107–110 · field ที่บังคับเมื่อจ่ายด้วยเช็ค
     CLASS-METHODS check_cheque_fields
-      IMPORTING is_payment       TYPE ty_payment
-      RETURNING VALUE(rt_result) TYPE tt_finding.
+      IMPORTING is_payment        TYPE ty_payment
+      RETURNING VALUE(rt_finding) TYPE tt_finding.
 
     "! 011 · ผลรวม amount_paid ของทุก item ต้องมากกว่า 0
     CLASS-METHODS check_amount_paid_total
-      IMPORTING iv_salesforce_id TYPE ztar_i002_pymt-salesforce_id
-                it_item          TYPE tt_item
-      RETURNING VALUE(rt_result) TYPE tt_finding.
+      IMPORTING iv_salesforce_id  TYPE ztar_i002_pymt-salesforce_id
+                it_item           TYPE tt_item
+      RETURNING VALUE(rt_finding) TYPE tt_finding.
 
     "! 111 · 005 · item id ต้องมี และห้ามซ้ำกันเองภายใน payment เดียวกัน
     CLASS-METHODS check_item_ids
-      IMPORTING it_item          TYPE tt_item
-      RETURNING VALUE(rt_result) TYPE tt_finding.
+      IMPORTING it_item           TYPE tt_item
+      RETURNING VALUE(rt_finding) TYPE tt_finding.
 
     "! 112–118 · 006 · field บังคับของ item + รูปแบบ partial flag
     CLASS-METHODS check_item_mandatory
-      IMPORTING is_item          TYPE ty_item
-      RETURNING VALUE(rt_result) TYPE tt_finding.
+      IMPORTING is_item           TYPE ty_item
+      RETURNING VALUE(rt_finding) TYPE tt_finding.
 
 ENDCLASS.
 
@@ -83,7 +86,7 @@ CLASS zcl_zari002_validator IMPLEMENTATION.
 *   mapping ชั่วคราว — รู้แค่ 2 คำที่ Salesforce ยืนยันแล้ว (OQ-02)
     rv_result = SWITCH #( to_upper( condense( CONV string( iv_payment_method ) ) )
                           WHEN 'CHEQUE'   THEN gc_pymt_method_cheque
-                          WHEN 'TRANSFER' THEN 'T'
+                          WHEN 'TRANSFER' THEN gc_pymt_method_transfer
                           ELSE space ).
 
   ENDMETHOD.
@@ -102,31 +105,45 @@ CLASS zcl_zari002_validator IMPLEMENTATION.
   METHOD check_mandatory.
 
     IF is_payment-salesforce_id IS INITIAL.
-      APPEND VALUE #( msgno = '100' field = 'salesforce_id' ) TO rt_result.
+      APPEND VALUE #( msgno = '100'
+                      field = 'salesforce_id'
+                   ) TO rt_finding.
     ENDIF.
 
     IF is_payment-payment_document_no IS INITIAL.
-      APPEND VALUE #( msgno = '101' field = 'payment_document_no' ) TO rt_result.
+      APPEND VALUE #( msgno = '101'
+                      field = 'payment_document_no'
+                    ) TO rt_finding.
     ENDIF.
 
     IF is_payment-company_code IS INITIAL.
-      APPEND VALUE #( msgno = '102' field = 'company_code' ) TO rt_result.
+      APPEND VALUE #( msgno = '102'
+                      field = 'company_code'
+                    ) TO rt_finding.
     ENDIF.
 
     IF is_payment-posting_date IS INITIAL.
-      APPEND VALUE #( msgno = '103' field = 'posting_date' ) TO rt_result.
+      APPEND VALUE #( msgno = '103'
+                      field = 'posting_date'
+                    ) TO rt_finding.
     ENDIF.
 
     IF is_payment-gl_account IS INITIAL.
-      APPEND VALUE #( msgno = '104' field = 'gl_account' ) TO rt_result.
+      APPEND VALUE #( msgno = '104'
+                      field = 'gl_account'
+                    ) TO rt_finding.
     ENDIF.
 
     IF is_payment-payment_method IS INITIAL.
-      APPEND VALUE #( msgno = '105' field = 'payment_method' ) TO rt_result.
+      APPEND VALUE #( msgno = '105'
+                      field = 'payment_method'
+                    ) TO rt_finding.
     ENDIF.
 
     IF is_payment-payment_amount IS INITIAL.
-      APPEND VALUE #( msgno = '106' field = 'payment_amount' ) TO rt_result.
+      APPEND VALUE #( msgno = '106'
+                      field = 'payment_amount'
+                    ) TO rt_finding.
     ENDIF.
 
   ENDMETHOD.
@@ -135,7 +152,7 @@ CLASS zcl_zari002_validator IMPLEMENTATION.
   METHOD check_number_of_items.
 
     IF iv_item_count = 0.
-      APPEND VALUE #( msgno = '001' ) TO rt_result.
+      APPEND VALUE #( msgno = '001' ) TO rt_finding.
       RETURN.
     ENDIF.
 
@@ -143,7 +160,8 @@ CLASS zcl_zari002_validator IMPLEMENTATION.
       APPEND VALUE #( msgno = '002'
                       msgv1 = |{ iv_number_of_items }|
                       msgv2 = |{ iv_item_count }|
-                      field = 'number_of_items_in_payment' ) TO rt_result.
+                      field = 'number_of_items_in_payment'
+                    ) TO rt_finding.
     ENDIF.
 
   ENDMETHOD.
@@ -151,15 +169,15 @@ CLASS zcl_zari002_validator IMPLEMENTATION.
 
   METHOD check_dates.
 
-*   เช็คเฉพาะเมื่อส่งมาทั้งคู่ — ความบังคับเป็นหน้าที่ check_cheque_fields
     IF is_payment-issue_date IS NOT INITIAL
-   AND is_payment-due_on     IS NOT INITIAL
-   AND is_payment-due_on     < is_payment-issue_date.
+    AND is_payment-due_on IS NOT INITIAL
+    AND is_payment-due_on < is_payment-issue_date.
 
       APPEND VALUE #( msgno = '003'
                       msgv1 = |{ is_payment-due_on DATE = ISO }|
                       msgv2 = |{ is_payment-issue_date DATE = ISO }|
-                      field = 'due_on' ) TO rt_result.
+                      field = 'due_on'
+                    ) TO rt_finding.
     ENDIF.
 
   ENDMETHOD.
@@ -174,19 +192,31 @@ CLASS zcl_zari002_validator IMPLEMENTATION.
     DATA(lv_method) = CONV string( is_payment-payment_method ).
 
     IF is_payment-cheque_no IS INITIAL.
-      APPEND VALUE #( msgno = '107' msgv1 = lv_method field = 'cheque_no' ) TO rt_result.
+      APPEND VALUE #( msgno = '107'
+                      msgv1 = lv_method
+                      field = 'cheque_no'
+                    ) TO rt_finding.
     ENDIF.
 
     IF is_payment-issue_date IS INITIAL.
-      APPEND VALUE #( msgno = '108' msgv1 = lv_method field = 'issue_date' ) TO rt_result.
+      APPEND VALUE #( msgno = '108'
+                      msgv1 = lv_method
+                      field = 'issue_date'
+                    ) TO rt_finding.
     ENDIF.
 
     IF is_payment-due_on IS INITIAL.
-      APPEND VALUE #( msgno = '109' msgv1 = lv_method field = 'due_on' ) TO rt_result.
+      APPEND VALUE #( msgno = '109'
+                      msgv1 = lv_method
+                      field = 'due_on'
+                    ) TO rt_finding.
     ENDIF.
 
     IF is_payment-cheque_bank_branch IS INITIAL.
-      APPEND VALUE #( msgno = '110' msgv1 = lv_method field = 'cheque_bank_branch' ) TO rt_result.
+      APPEND VALUE #( msgno = '110'
+                      msgv1 = lv_method
+                      field = 'cheque_bank_branch'
+                    ) TO rt_finding.
     ENDIF.
 
   ENDMETHOD.
@@ -202,7 +232,8 @@ CLASS zcl_zari002_validator IMPLEMENTATION.
 
     IF lv_total <= 0.
       APPEND VALUE #( msgno = '011'
-                      msgv1 = |{ iv_salesforce_id }| ) TO rt_result.
+                      msgv1 = |{ iv_salesforce_id }|
+                    ) TO rt_finding.
     ENDIF.
 
   ENDMETHOD.
@@ -211,14 +242,16 @@ CLASS zcl_zari002_validator IMPLEMENTATION.
   METHOD check_item_ids.
 
     DATA lt_seen TYPE SORTED TABLE OF ztar_i002_item-salesforce_item_id
-                      WITH UNIQUE KEY table_line.
+                 WITH UNIQUE KEY table_line.
 
     LOOP AT it_item ASSIGNING FIELD-SYMBOL(<lfs_item>).
 
       IF <lfs_item>-salesforce_item_id IS INITIAL.
 *       ไม่มี id ให้อ้างถึง จึงออก message ที่ไม่ระบุรายการ แล้วข้ามการเช็คซ้ำ
-        IF NOT line_exists( rt_result[ msgno = '111' ] ).
-          APPEND VALUE #( msgno = '111' field = 'salesforce_item_id' ) TO rt_result.
+        IF NOT line_exists( rt_finding[ msgno = '111' ] ).
+          APPEND VALUE #( msgno = '111'
+                          field = 'salesforce_item_id'
+                        ) TO rt_finding.
         ENDIF.
         CONTINUE.
       ENDIF.
@@ -227,7 +260,8 @@ CLASS zcl_zari002_validator IMPLEMENTATION.
       IF sy-subrc <> 0.
         APPEND VALUE #( msgno = '005'
                         msgv1 = |{ <lfs_item>-salesforce_item_id }|
-                        field = 'salesforce_item_id' ) TO rt_result.
+                        field = 'salesforce_item_id'
+                      ) TO rt_finding.
       ENDIF.
 
     ENDLOOP.
@@ -240,35 +274,59 @@ CLASS zcl_zari002_validator IMPLEMENTATION.
     DATA(lv_id) = CONV string( is_item-salesforce_item_id ).
 
     IF is_item-customer_code IS INITIAL.
-      APPEND VALUE #( msgno = '112' msgv1 = lv_id field = 'customer_code' ) TO rt_result.
+      APPEND VALUE #( msgno = '112'
+                      msgv1 = lv_id
+                      field = 'customer_code'
+                    ) TO rt_finding.
     ENDIF.
 
     IF is_item-accounting_document IS INITIAL.
-      APPEND VALUE #( msgno = '113' msgv1 = lv_id field = 'accounting_document' ) TO rt_result.
+      APPEND VALUE #( msgno = '113'
+                      msgv1 = lv_id
+                      field = 'accounting_document'
+                    ) TO rt_finding.
     ENDIF.
 
     IF is_item-billing_document IS INITIAL.
-      APPEND VALUE #( msgno = '114' msgv1 = lv_id field = 'billing_document' ) TO rt_result.
+      APPEND VALUE #( msgno = '114'
+                      msgv1 = lv_id
+                      field = 'billing_document'
+                    ) TO rt_finding.
     ENDIF.
 
     IF is_item-invoice_posting_date IS INITIAL.
-      APPEND VALUE #( msgno = '115' msgv1 = lv_id field = 'invoice_posting_date' ) TO rt_result.
+      APPEND VALUE #( msgno = '115'
+                      msgv1 = lv_id
+                      field = 'invoice_posting_date'
+                    ) TO rt_finding.
     ENDIF.
 
     IF is_item-invoice_amount IS INITIAL.
-      APPEND VALUE #( msgno = '116' msgv1 = lv_id field = 'invoice_amount' ) TO rt_result.
+      APPEND VALUE #( msgno = '116'
+                      msgv1 = lv_id
+                      field = 'invoice_amount'
+                    ) TO rt_finding.
     ENDIF.
 
     IF is_item-amount_paid IS INITIAL.
-      APPEND VALUE #( msgno = '117' msgv1 = lv_id field = 'amount_paid' ) TO rt_result.
+      APPEND VALUE #( msgno = '117'
+                      msgv1 = lv_id
+                      field = 'amount_paid'
+                    ) TO rt_finding.
     ENDIF.
 
     IF is_item-sale_submit_date IS INITIAL.
-      APPEND VALUE #( msgno = '118' msgv1 = lv_id field = 'sale_submit_date' ) TO rt_result.
+      APPEND VALUE #( msgno = '118'
+                      msgv1 = lv_id
+                      field = 'sale_submit_date'
+                    ) TO rt_finding.
     ENDIF.
 
     IF is_item-partial_amount IS NOT INITIAL AND is_item-partial_amount <> 'X'.
-      APPEND VALUE #( msgno = '006' msgv1 = lv_id field = 'partial_amount' ) TO rt_result.
+      APPEND VALUE #( msgno = '006'
+                      msgv1 = lv_id
+                      field = 'partial_amount'
+                    ) TO rt_finding.
     ENDIF.
 
   ENDMETHOD.

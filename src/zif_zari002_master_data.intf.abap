@@ -30,16 +30,16 @@ INTERFACE zif_zari002_master_data
     END OF ty_payment_method_key.
 
   TYPES:
-    tt_company_code      TYPE SORTED TABLE OF ty_company_code
-                              WITH UNIQUE KEY table_line,
-    tt_company_code_info TYPE SORTED TABLE OF ty_company_code_info
-                              WITH UNIQUE KEY company_code,
-    tt_gl_key            TYPE SORTED TABLE OF ty_gl_key
-                              WITH UNIQUE KEY company_code gl_account,
+    tt_company_code       TYPE SORTED TABLE OF ty_company_code
+                          WITH UNIQUE KEY table_line,
+    tt_company_code_info  TYPE SORTED TABLE OF ty_company_code_info
+                          WITH UNIQUE KEY company_code,
+    tt_gl_key             TYPE SORTED TABLE OF ty_gl_key
+                          WITH UNIQUE KEY company_code gl_account,
     tt_payment_method_key TYPE SORTED TABLE OF ty_payment_method_key
-                              WITH UNIQUE KEY country payment_method,
-    tt_customer          TYPE SORTED TABLE OF ty_customer
-                              WITH UNIQUE KEY table_line.
+                          WITH UNIQUE KEY country payment_method,
+    tt_customer           TYPE SORTED TABLE OF ty_customer
+                          WITH UNIQUE KEY table_line.
 
   "! อ่าน currency และ country ของ company code
   "! ใช้ทั้งใน setPaymentDefaults (เอาค่าไปเติม) และ validateCompanyCode (เช็คว่ามีจริง)

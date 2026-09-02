@@ -182,10 +182,10 @@ CLASS ltc_processor IMPLEMENTATION.
     go_cut->process( sample_json( ) ).
 
     SELECT SINGLE FROM ztar_i002_pymt
-      FIELDS batch_id, currency, status, sap_payment_method
+      FIELDS request_id, currency, status, sap_payment_method
       INTO @DATA(ls_pymt).
 
-    cl_abap_unit_assert=>assert_not_initial( act = ls_pymt-batch_id ).
+    cl_abap_unit_assert=>assert_not_initial( act = ls_pymt-request_id ).
     cl_abap_unit_assert=>assert_equals( exp = 'THB' act = ls_pymt-currency ).
     cl_abap_unit_assert=>assert_equals( exp = 'N'   act = ls_pymt-status ).
     cl_abap_unit_assert=>assert_equals( exp = 'A'   act = ls_pymt-sap_payment_method ).

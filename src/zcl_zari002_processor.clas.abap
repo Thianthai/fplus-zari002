@@ -5,31 +5,37 @@ CLASS zcl_zari002_processor DEFINITION
   PUBLIC SECTION.
 
     TYPES:
-      "! 1 error ที่จะส่งกลับใน response — `field` และ `item` เป็นชื่อฝั่ง JSON แล้ว
+      ty_request TYPE zcl_zari002_http=>ty_request,
+      ty_payment TYPE ztar_i002_pymt,
+      ty_item    TYPE ztar_i002_item,
+      tt_item    TYPE STANDARD TABLE OF ztar_i002_item WITH EMPTY KEY.
+
+    TYPES:
       BEGIN OF ty_error,
-        msgno TYPE symsgno,
-        text  TYPE string,
-        field TYPE string,
-        item  TYPE ztar_i002_item-salesforce_item_id,
+        msgno              TYPE symsgno,
+        msgtx              TYPE string,
+        salesforce_id      TYPE ztar_i002_pymt-salesforce_id,
+        salesforce_item_id TYPE ztar_i002_item-salesforce_item_id,
+        field              TYPE string,
       END OF ty_error,
       tt_error TYPE STANDARD TABLE OF ty_error WITH EMPTY KEY,
 
-      BEGIN OF ty_outcome,
-        success  TYPE abap_bool,
-        batch_id TYPE ztar_i002_pymt-batch_id,
-        items    TYPE i,
-        errors   TYPE tt_error,
-      END OF ty_outcome.
+      BEGIN OF ty_result,
+        request_id TYPE ztar_i002_pymt-request_id,
+        success    TYPE abap_bool,
+        items      TYPE i,
+        errors     TYPE tt_error,
+      END OF ty_result.
 
     "! ฉีด dependency ได้เพื่อให้ unit test ไม่แตะ master data จริงและไม่ยิง HTTP
     METHODS constructor
-      IMPORTING io_master_data TYPE REF TO zif_zari002_master_data      OPTIONAL
-                io_notify      TYPE REF TO zcl_zari002_sfdc_notify      OPTIONAL.
+      IMPORTING io_master_data TYPE REF TO zif_zari002_master_data OPTIONAL
+                io_notify      TYPE REF TO zcl_zari002_sfdc_notify OPTIONAL.
 
     "! flow เดียวจบ: parse → normalize → validate → save → callback
     METHODS process
       IMPORTING iv_body          TYPE string
-      RETURNING VALUE(rs_result) TYPE ty_outcome.
+      RETURNING VALUE(rs_result) TYPE ty_result.
 
   PRIVATE SECTION.
 
@@ -38,38 +44,40 @@ CLASS zcl_zari002_processor DEFINITION
 
     METHODS normalize
       CHANGING cs_payment TYPE ztar_i002_pymt
-               ct_item    TYPE zcl_zari002_validator=>tt_item.
+               ct_item    TYPE tt_item
+               cs_result  TYPE ty_result.
 
     METHODS validate
-      IMPORTING is_payment       TYPE ztar_i002_pymt
-                it_item          TYPE zcl_zari002_validator=>tt_item
-      RETURNING VALUE(rt_result) TYPE tt_error.
+      IMPORTING is_payment      TYPE ztar_i002_pymt
+                it_item         TYPE tt_item
+      RETURNING VALUE(rt_error) TYPE tt_error.
 
     METHODS check_master_data
-      IMPORTING is_payment       TYPE ztar_i002_pymt
-                it_item          TYPE zcl_zari002_validator=>tt_item
-      RETURNING VALUE(rt_result) TYPE tt_error.
+      IMPORTING is_payment      TYPE ztar_i002_pymt
+                it_item         TYPE tt_item
+      RETURNING VALUE(rt_error) TYPE tt_error.
 
     METHODS check_duplicate
       IMPORTING is_payment       TYPE ztar_i002_pymt
-                it_item          TYPE zcl_zari002_validator=>tt_item
-      RETURNING VALUE(rt_result) TYPE tt_error.
+                it_item          TYPE tt_item
+      RETURNING VALUE(rt_error) TYPE tt_error.
 
     METHODS save
       IMPORTING is_payment       TYPE ztar_i002_pymt
-                it_item          TYPE zcl_zari002_validator=>tt_item
+                it_item          TYPE tt_item
       RETURNING VALUE(rv_result) TYPE abap_bool.
 
     METHODS send_callback
       IMPORTING is_payment TYPE ztar_i002_pymt
-                it_item    TYPE zcl_zari002_validator=>tt_item
-                is_outcome TYPE ty_outcome.
+                it_item    TYPE tt_item
+                is_result  TYPE ty_result.
 
     "! แปลง finding ของ validator เป็น error ที่พร้อมส่งกลับ (ชื่อ field เป็น JSON แล้ว)
     METHODS to_errors
-      IMPORTING it_finding       TYPE zcl_zari002_validator=>tt_finding
-                iv_item          TYPE ztar_i002_item-salesforce_item_id OPTIONAL
-      RETURNING VALUE(rt_result) TYPE tt_error.
+      IMPORTING it_finding            TYPE zcl_zari002_validator=>tt_finding
+                iv_salesforce_id      TYPE ztar_i002_pymt-salesforce_id      OPTIONAL
+                iv_salesforce_item_id TYPE ztar_i002_item-salesforce_item_id OPTIONAL
+      RETURNING VALUE(rt_error)       TYPE tt_error.
 
     METHODS message_text
       IMPORTING iv_msgno         TYPE symsgno
@@ -97,75 +105,101 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
 
   METHOD process.
 
-*   --- 1. parse -------------------------------------------------------
-    DATA ls_payment TYPE ztar_i002_pymt.
-    DATA lt_item    TYPE zcl_zari002_validator=>tt_item.
+    " 1. Parse ---------------------------------------------------------
+    DATA ls_request TYPE ty_request.
+    DATA ls_payment TYPE ty_payment.
+    DATA lt_item    TYPE tt_item.
 
     TRY.
-        zcl_zari002_json=>parse( EXPORTING iv_body    = iv_body
-                                 IMPORTING es_payment = ls_payment
-                                           et_item    = lt_item ).
+        zcl_zari002_json=>parse_json_request( EXPORTING iv_body    = iv_body
+                                              IMPORTING es_request = ls_request ).
       CATCH zcx_zari002_error.
         rs_result-success = abap_false.
         APPEND VALUE #( msgno = '012'
-                        text  = message_text( '012' ) ) TO rs_result-errors.
+                        msgtx = message_text( '012' )
+                      ) TO rs_result-errors.
         RETURN.
     ENDTRY.
 
-*   --- 2. normalize ---------------------------------------------------
-    normalize( CHANGING cs_payment = ls_payment
-                        ct_item    = lt_item ).
+    LOOP AT ls_request-payments ASSIGNING FIELD-SYMBOL(<lfs_payment>).
 
-    rs_result-batch_id = ls_payment-batch_id.
-    rs_result-items    = lines( lt_item ).
+      CLEAR: ls_payment, lt_item[].
+      MOVE-CORRESPONDING <lfs_payment> TO ls_payment.
+      MOVE-CORRESPONDING <lfs_payment>-items TO lt_item.
 
-*   --- 3. validate ----------------------------------------------------
-    rs_result-errors = validate( is_payment = ls_payment
-                                 it_item    = lt_item ).
+      " 2. Normalize ---------------------------------------------------
+      normalize( CHANGING cs_payment = ls_payment
+                          ct_item    = lt_item
+                          cs_result  = rs_result ).
 
-*   --- 4. save --------------------------------------------------------
-    IF rs_result-errors IS INITIAL.
-      rs_result-success = save( is_payment = ls_payment
-                                it_item    = lt_item ).
+      rs_result-request_id = ls_request-request_id.
+      rs_result-items      = lines( lt_item ).
 
-      IF rs_result-success = abap_false.
-        APPEND VALUE #( msgno = '900'
-                        text  = message_text( iv_msgno = '900'
-                                              iv_v1    = `database insert failed` ) )
-               TO rs_result-errors.
+      " 3. Validate ----------------------------------------------------
+      rs_result-errors = validate( is_payment = ls_payment
+                                   it_item    = lt_item ).
+
+      " 4. Save --------------------------------------------------------
+      IF rs_result-errors IS INITIAL.
+        rs_result-success = save( is_payment = ls_payment
+                                  it_item    = lt_item ).
+
+        IF rs_result-success = abap_false.
+          APPEND VALUE #( msgno         = '000'
+                          msgtx         = message_text( iv_msgno = '000'
+                                                        iv_v1    = `Database insert failed` )
+                          salesforce_id = ls_payment-salesforce_id
+                        ) TO rs_result-errors.
+        ENDIF.
       ENDIF.
-    ENDIF.
 
-*   --- 5. callback ----------------------------------------------------
-    send_callback( is_payment = ls_payment
-                   it_item    = lt_item
-                   is_outcome = rs_result ).
+      " 5. Callback ----------------------------------------------------
+      send_callback( is_payment = ls_payment
+                     it_item    = lt_item
+                     is_result  = rs_result ).
+
+    ENDLOOP.
 
   ENDMETHOD.
 
 
   METHOD normalize.
 
-    cs_payment-batch_id = |{ cl_abap_context_info=>get_system_date( ) }_| &&
-                          |{ cl_abap_context_info=>get_system_time( ) }|.
-
-    cs_payment-payment_uuid = cl_system_uuid=>create_uuid_x16_static( ).
-    cs_payment-gl_account   = zcl_zari002_validator=>to_internal_key( cs_payment-gl_account ).
-    cs_payment-sap_payment_method =
-      zcl_zari002_validator=>convert_payment_method( cs_payment-payment_method ).
-    cs_payment-status = 'N'.
-
-*   currency มาจาก company code — อ่านครั้งเดียวแล้วแจกลงทุก item
     DATA lt_company_code TYPE zif_zari002_master_data=>tt_company_code.
+
+    " 1. Payment -------------------------------------------------------
+    " Payment UUID
+    TRY.
+        cs_payment-payment_uuid = cl_system_uuid=>create_uuid_x16_static( ).
+      CATCH cx_uuid_error INTO DATA(lo_uuid_error).
+        cs_result-success = abap_false.
+        APPEND VALUE #( msgno = '000'
+                        msgtx = lo_uuid_error->get_longtext( )
+                      ) TO cs_result-errors.
+        RETURN.
+    ENDTRY.
+
+    " Request ID
+    cs_payment-request_id = |{ cl_abap_context_info=>get_system_date( ) }_{ cl_abap_context_info=>get_system_time( ) }|.
+
+    " G/L Account
+    cs_payment-gl_account = zcl_zari002_validator=>to_internal_key( cs_payment-gl_account ).
+
+    " Payment Method
+    cs_payment-sap_payment_method = zcl_zari002_validator=>convert_payment_method( cs_payment-payment_method ).
+
+    " Status
+    cs_payment-status = 'N'. "New
+
+    " Currency
     IF cs_payment-company_code IS NOT INITIAL.
       INSERT cs_payment-company_code INTO TABLE lt_company_code.
     ENDIF.
 
     DATA(lt_cc_info) = go_master_data->get_company_codes( lt_company_code ).
+    cs_payment-currency = VALUE #( lt_cc_info[ company_code = cs_payment-company_code ]-currency OPTIONAL ).
 
-    cs_payment-currency = VALUE #(
-      lt_cc_info[ company_code = cs_payment-company_code ]-currency OPTIONAL ).
-
+    " Administrative Data
     DATA(lv_user) = cl_abap_context_info=>get_user_technical_name( ).
     GET TIME STAMP FIELD DATA(lv_now).
 
@@ -175,16 +209,34 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
     cs_payment-last_changed_at       = lv_now.
     cs_payment-local_last_changed_at = lv_now.
 
+    " 2. Item ----------------------------------------------------------
     LOOP AT ct_item ASSIGNING FIELD-SYMBOL(<lfs_item>).
-      <lfs_item>-item_uuid     = cl_system_uuid=>create_uuid_x16_static( ).
-      <lfs_item>-payment_uuid  = cs_payment-payment_uuid.
-      <lfs_item>-currency      = cs_payment-currency.
+
+      " Item UUID
+      TRY.
+          <lfs_item>-item_uuid = cl_system_uuid=>create_uuid_x16_static( ).
+        CATCH cx_uuid_error INTO lo_uuid_error.
+          cs_result-success = abap_false.
+          APPEND VALUE #( msgno = '000'
+                          msgtx = lo_uuid_error->get_longtext( )
+                        ) TO cs_result-errors.
+          RETURN.
+      ENDTRY.
+
+      " Payment UUID
+      <lfs_item>-payment_uuid = cs_payment-payment_uuid.
+
+      " Currency
+      <lfs_item>-currency = cs_payment-currency.
+
+      " Customer Code
       <lfs_item>-customer_code = zcl_zari002_validator=>to_internal_key( <lfs_item>-customer_code ).
 
-      <lfs_item>-created_by            = lv_user.
-      <lfs_item>-created_at            = lv_now.
-      <lfs_item>-last_changed_by       = lv_user.
-      <lfs_item>-local_last_changed_at = lv_now.
+      " Administrative Data
+      <lfs_item>-created_by            = cs_payment-created_by.
+      <lfs_item>-created_at            = cs_payment-created_at.
+      <lfs_item>-last_changed_by       = cs_payment-last_changed_by.
+      <lfs_item>-local_last_changed_at = cs_payment-local_last_changed_at.
     ENDLOOP.
 
   ENDMETHOD.
@@ -192,28 +244,54 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
 
   METHOD validate.
 
-    APPEND LINES OF to_errors( zcl_zari002_validator=>check_mandatory( is_payment ) ) TO rt_result.
-    APPEND LINES OF to_errors( zcl_zari002_validator=>check_dates( is_payment ) )     TO rt_result.
-    APPEND LINES OF to_errors( zcl_zari002_validator=>check_cheque_fields( is_payment ) ) TO rt_result.
+    " 1. Validate Header -----------------------------------------------
+    APPEND LINES OF to_errors( zcl_zari002_validator=>check_mandatory( is_payment )
+                             ) TO rt_error.
+
+    APPEND LINES OF to_errors( zcl_zari002_validator=>check_dates( is_payment )
+                             ) TO rt_error.
+
+    APPEND LINES OF to_errors( zcl_zari002_validator=>check_cheque_fields( is_payment )
+                             ) TO rt_error.
 
     APPEND LINES OF to_errors( zcl_zari002_validator=>check_number_of_items(
                                  iv_number_of_items = is_payment-number_of_items_in_payment
-                                 iv_item_count      = lines( it_item ) ) ) TO rt_result.
+                                 iv_item_count      = lines( it_item ) )
+                             ) TO rt_error.
 
     APPEND LINES OF to_errors( zcl_zari002_validator=>check_amount_paid_total(
                                  iv_salesforce_id = is_payment-salesforce_id
-                                 it_item          = it_item ) ) TO rt_result.
+                                 it_item          = it_item )
+                             ) TO rt_error.
 
-    APPEND LINES OF to_errors( zcl_zari002_validator=>check_item_ids( it_item ) ) TO rt_result.
+    APPEND LINES OF to_errors( zcl_zari002_validator=>check_item_ids( it_item )
+                             ) TO rt_error.
 
+    APPEND LINES OF to_errors( zcl_zari002_validator=>check_item_ids( it_item )
+                             ) TO rt_error.
+
+    APPEND LINES OF to_errors( zcl_zari002_validator=>check_amount_paid_total(
+                                 iv_salesforce_id = is_payment-salesforce_id
+                                 it_item          = it_item )
+                             ) TO rt_error.
+
+    " 2. Validate Item -------------------------------------------------
     LOOP AT it_item ASSIGNING FIELD-SYMBOL(<lfs_item>).
-      APPEND LINES OF to_errors(
-        it_finding = zcl_zari002_validator=>check_item_mandatory( <lfs_item> )
-        iv_item    = <lfs_item>-salesforce_item_id ) TO rt_result.
+      APPEND LINES OF to_errors( it_finding            = zcl_zari002_validator=>check_item_mandatory( <lfs_item> )
+                                 iv_salesforce_id      = is_payment-salesforce_id
+                                 iv_salesforce_item_id = <lfs_item>-salesforce_item_id
+                               ) TO rt_error.
     ENDLOOP.
 
-    APPEND LINES OF check_master_data( is_payment = is_payment it_item = it_item ) TO rt_result.
-    APPEND LINES OF check_duplicate(   is_payment = is_payment it_item = it_item ) TO rt_result.
+    " 3. Validate Master Data ------------------------------------------
+    APPEND LINES OF check_master_data( is_payment = is_payment
+                                       it_item    = it_item
+                                     ) TO rt_error.
+
+    " 4. Validate Duplicate --------------------------------------------
+    APPEND LINES OF check_duplicate( is_payment = is_payment
+                                     it_item    = it_item
+                                   ) TO rt_error.
 
 *   ---- ที่ว่างรอคำตอบ ----
 *   check_amount_format       → 009 (OQ-10)
@@ -226,8 +304,12 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
 
   METHOD check_master_data.
 
-*   company code
     DATA lt_company_code TYPE zif_zari002_master_data=>tt_company_code.
+    DATA lt_gl_key       TYPE zif_zari002_master_data=>tt_gl_key.
+    DATA lt_pm_key       TYPE zif_zari002_master_data=>tt_payment_method_key.
+    DATA lt_customer     TYPE zif_zari002_master_data=>tt_customer.
+
+    " Company Code
     IF is_payment-company_code IS NOT INITIAL.
       INSERT is_payment-company_code INTO TABLE lt_company_code.
     ENDIF.
@@ -235,56 +317,61 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
     DATA(lt_cc_info) = go_master_data->get_company_codes( lt_company_code ).
 
     IF is_payment-company_code IS NOT INITIAL
-   AND NOT line_exists( lt_cc_info[ company_code = is_payment-company_code ] ).
-      APPEND VALUE #( msgno = '200'
-                      text  = message_text( iv_msgno = '200'
-                                            iv_v1    = |{ is_payment-company_code }| )
-                      field = zcl_zari002_json=>to_json_name( 'company_code' ) ) TO rt_result.
-      RETURN.   " ไม่รู้ company code ก็เช็คตัวที่ผูกกับมันต่อไม่ได้
+    AND NOT line_exists( lt_cc_info[ company_code = is_payment-company_code ] ).
+      APPEND VALUE #( msgno         = '200'
+                      msgtx         = message_text( iv_msgno = '200'
+                                                    iv_v1    = |{ is_payment-company_code }| )
+                      salesforce_id = is_payment-salesforce_id
+                      field         = zcl_zari002_json=>to_json_name( 'company_code' ) ) TO rt_error.
+      RETURN.
     ENDIF.
 
+    " G/L Account
+    IF is_payment-gl_account IS NOT INITIAL.
+      INSERT VALUE #( company_code = is_payment-company_code
+                      gl_account   = is_payment-gl_account
+                    ) INTO TABLE lt_gl_key.
+
+      IF go_master_data->find_unknown_gl_accounts( lt_gl_key ) IS NOT INITIAL.
+        APPEND VALUE #( msgno         = '201'
+                        msgtx         = message_text( iv_msgno = '201'
+                                                      iv_v1    = |{ is_payment-gl_account }|
+                                                      iv_v2    = |{ is_payment-company_code }| )
+                        salesforce_id = is_payment-salesforce_id
+                        field         = zcl_zari002_json=>to_json_name( 'gl_account' ) ) TO rt_error.
+      ENDIF.
+    ENDIF.
+
+    " Payment Method
     DATA(lv_country) = VALUE zif_zari002_master_data=>ty_country(
       lt_cc_info[ company_code = is_payment-company_code ]-country OPTIONAL ).
 
-*   gl account
-    IF is_payment-gl_account IS NOT INITIAL.
-      DATA lt_gl_key TYPE zif_zari002_master_data=>tt_gl_key.
-      INSERT VALUE #( company_code = is_payment-company_code
-                      gl_account   = is_payment-gl_account ) INTO TABLE lt_gl_key.
-
-      IF go_master_data->find_unknown_gl_accounts( lt_gl_key ) IS NOT INITIAL.
-        APPEND VALUE #( msgno = '201'
-                        text  = message_text( iv_msgno = '201'
-                                              iv_v1    = |{ is_payment-gl_account }|
-                                              iv_v2    = |{ is_payment-company_code }| )
-                        field = zcl_zari002_json=>to_json_name( 'gl_account' ) ) TO rt_result.
-      ENDIF.
-    ENDIF.
-
-*   payment method
     IF is_payment-sap_payment_method IS INITIAL.
       IF is_payment-payment_method IS NOT INITIAL.
-        APPEND VALUE #( msgno = '202'
-                        text  = message_text( iv_msgno = '202'
-                                              iv_v1    = |{ is_payment-payment_method }| )
-                        field = zcl_zari002_json=>to_json_name( 'payment_method' ) ) TO rt_result.
+        APPEND VALUE #( msgno         = '202'
+                        msgtx         = message_text( iv_msgno = '202'
+                                                      iv_v1    = |{ is_payment-payment_method }| )
+                        salesforce_id = is_payment-salesforce_id
+                        field         = zcl_zari002_json=>to_json_name( 'payment_method' )
+                      ) TO rt_error.
       ENDIF.
     ELSEIF lv_country IS NOT INITIAL.
-      DATA lt_pm_key TYPE zif_zari002_master_data=>tt_payment_method_key.
       INSERT VALUE #( country        = lv_country
-                      payment_method = is_payment-sap_payment_method ) INTO TABLE lt_pm_key.
+                      payment_method = is_payment-sap_payment_method
+                    ) INTO TABLE lt_pm_key.
 
       IF go_master_data->find_unknown_pymt_methods( lt_pm_key ) IS NOT INITIAL.
-        APPEND VALUE #( msgno = '203'
-                        text  = message_text( iv_msgno = '203'
-                                              iv_v1    = |{ is_payment-sap_payment_method }|
-                                              iv_v2    = |{ lv_country }| )
-                        field = zcl_zari002_json=>to_json_name( 'payment_method' ) ) TO rt_result.
+        APPEND VALUE #( msgno         = '203'
+                        msgtx         = message_text( iv_msgno = '203'
+                                                      iv_v1    = |{ is_payment-sap_payment_method }|
+                                                      iv_v2    = |{ lv_country }| )
+                        salesforce_id = is_payment-salesforce_id
+                        field         = zcl_zari002_json=>to_json_name( 'payment_method' )
+                      ) TO rt_error.
       ENDIF.
     ENDIF.
 
-*   customer
-    DATA lt_customer TYPE zif_zari002_master_data=>tt_customer.
+    " Customer
     LOOP AT it_item ASSIGNING FIELD-SYMBOL(<lfs_item>).
       IF <lfs_item>-customer_code IS NOT INITIAL.
         INSERT <lfs_item>-customer_code INTO TABLE lt_customer.
@@ -295,13 +382,15 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
 
     LOOP AT it_item ASSIGNING <lfs_item>.
       IF <lfs_item>-customer_code IS NOT INITIAL
-     AND line_exists( lt_unknown_cust[ table_line = <lfs_item>-customer_code ] ).
-        APPEND VALUE #( msgno = '205'
-                        text  = message_text( iv_msgno = '205'
-                                              iv_v1    = |{ <lfs_item>-salesforce_item_id }|
-                                              iv_v2    = |{ <lfs_item>-customer_code }| )
-                        field = zcl_zari002_json=>to_json_name( 'customer_code' )
-                        item  = <lfs_item>-salesforce_item_id ) TO rt_result.
+      AND line_exists( lt_unknown_cust[ table_line = <lfs_item>-customer_code ] ).
+        APPEND VALUE #( msgno              = '205'
+                        msgtx              = message_text( iv_msgno = '205'
+                                                           iv_v1    = |{ <lfs_item>-salesforce_item_id }|
+                                                           iv_v2    = |{ <lfs_item>-customer_code }| )
+                        salesforce_id      = is_payment-salesforce_id
+                        salesforce_item_id = <lfs_item>-salesforce_item_id
+                        field              = zcl_zari002_json=>to_json_name( 'customer_code' )
+                      ) TO rt_error.
       ENDIF.
     ENDLOOP.
 
@@ -338,12 +427,14 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
 
     LOOP AT it_item ASSIGNING <lfs_item>.
       IF line_exists( lt_existing[ billing_document = <lfs_item>-billing_document ] ).
-        APPEND VALUE #( msgno = '010'
-                        text  = message_text( iv_msgno = '010'
-                                              iv_v1    = |{ is_payment-payment_document_no }|
-                                              iv_v2    = |{ <lfs_item>-billing_document }| )
-                        field = zcl_zari002_json=>to_json_name( 'payment_document_no' )
-                        item  = <lfs_item>-salesforce_item_id ) TO rt_result.
+        APPEND VALUE #( msgno              = '010'
+                        msgtx              = message_text( iv_msgno = '010'
+                                                           iv_v1    = |{ is_payment-payment_document_no }|
+                                                           iv_v2    = |{ <lfs_item>-billing_document }| )
+                        salesforce_id      = is_payment-salesforce_id
+                        salesforce_item_id = <lfs_item>-salesforce_item_id
+                        field              = zcl_zari002_json=>to_json_name( 'payment_document_no' )
+                      ) TO rt_error.
       ENDIF.
     ENDLOOP.
 
@@ -372,54 +463,57 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
 
   METHOD send_callback.
 
-    DATA lt_result TYPE zcl_zari002_sfdc_notify=>tt_result.
-
-    DATA(lv_status) = COND #( WHEN is_outcome-success = abap_true
-                              THEN zcl_zari002_sfdc_notify=>gc_status_success
-                              ELSE zcl_zari002_sfdc_notify=>gc_status_error ).
-
-*   error ที่ระบุ item ได้ ให้ไปอยู่กับ item นั้น · ที่เหลือเป็น error ระดับ payment
-*   ใช้กับทุกบรรทัดเพราะ reject-all — ทั้งใบตกไปด้วยกัน
-    DATA(lv_common) = concat_lines_of(
-      table = VALUE string_table( FOR <lfs_e> IN is_outcome-errors
-                                  WHERE ( item IS INITIAL ) ( <lfs_e>-text ) )
-      sep   = ` · ` ).
-
-    LOOP AT it_item ASSIGNING FIELD-SYMBOL(<lfs_item>).
-
-      DATA(lv_text) = concat_lines_of(
-        table = VALUE string_table(
-                  FOR <lfs_ie> IN is_outcome-errors
-                  WHERE ( item = <lfs_item>-salesforce_item_id ) ( <lfs_ie>-text ) )
-        sep   = ` · ` ).
-
-      IF lv_common IS NOT INITIAL.
-        lv_text = COND #( WHEN lv_text IS INITIAL THEN lv_common
-                          ELSE |{ lv_common } · { lv_text }| ).
-      ENDIF.
-
-      APPEND VALUE #( salesforce_id      = is_payment-salesforce_id
-                      salesforce_item_id = <lfs_item>-salesforce_item_id
-                      status             = lv_status
-                      error_message      = lv_text ) TO lt_result.
-
-    ENDLOOP.
-
-    go_notify->notify( lt_result ).
+*    DATA lt_result TYPE zcl_zari002_sfdc_notify=>tt_result.
+*
+*    DATA(lv_status) = COND #( WHEN is_result-success = abap_true
+*                              THEN zcl_zari002_sfdc_notify=>gc_status_success
+*                              ELSE zcl_zari002_sfdc_notify=>gc_status_error ).
+*
+**   error ที่ระบุ item ได้ ให้ไปอยู่กับ item นั้น · ที่เหลือเป็น error ระดับ payment
+**   ใช้กับทุกบรรทัดเพราะ reject-all — ทั้งใบตกไปด้วยกัน
+*    DATA(lv_common) = concat_lines_of(
+*      table = VALUE string_table( FOR <lfs_e> IN is_result-errors
+*                                  WHERE ( item IS INITIAL ) ( <lfs_e>-msgtx ) )
+*      sep   = ` · ` ).
+*
+*    LOOP AT it_item ASSIGNING FIELD-SYMBOL(<lfs_item>).
+*
+*      DATA(lv_text) = concat_lines_of(
+*        table = VALUE string_table(
+*                  FOR <lfs_ie> IN is_result-errors
+*                  WHERE ( item = <lfs_item>-salesforce_item_id ) ( <lfs_ie>-text ) )
+*        sep   = ` · ` ).
+*
+*      IF lv_common IS NOT INITIAL.
+*        lv_text = COND #( WHEN lv_text IS INITIAL THEN lv_common
+*                          ELSE |{ lv_common } · { lv_text }| ).
+*      ENDIF.
+*
+*      APPEND VALUE #( salesforce_id      = is_payment-salesforce_id
+*                      salesforce_item_id = <lfs_item>-salesforce_item_id
+*                      status             = lv_status
+*                      error_message      = lv_text ) TO lt_result.
+*
+*    ENDLOOP.
+*
+*    go_notify->notify( lt_result ).
 
   ENDMETHOD.
 
 
   METHOD to_errors.
 
-    LOOP AT it_finding ASSIGNING FIELD-SYMBOL(<lfs_find>).
-      APPEND VALUE #( msgno = <lfs_find>-msgno
-                      text  = message_text( iv_msgno = <lfs_find>-msgno
-                                            iv_v1    = <lfs_find>-msgv1
-                                            iv_v2    = <lfs_find>-msgv2 )
-                      field = COND #( WHEN <lfs_find>-field IS NOT INITIAL
-                                      THEN zcl_zari002_json=>to_json_name( <lfs_find>-field ) )
-                      item  = iv_item ) TO rt_result.
+    LOOP AT it_finding ASSIGNING FIELD-SYMBOL(<lfs_finding>).
+      APPEND VALUE #( msgno              = <lfs_finding>-msgno
+                      msgtx              = message_text( iv_msgno = <lfs_finding>-msgno
+                                                         iv_v1    = <lfs_finding>-msgv1
+                                                         iv_v2    = <lfs_finding>-msgv2
+                                                         iv_v3    = <lfs_finding>-msgv3
+                                                         iv_v4    = <lfs_finding>-msgv4 )
+                      salesforce_id      = iv_salesforce_id
+                      salesforce_item_id = iv_salesforce_item_id
+                      field              = zcl_zari002_json=>to_json_name( <lfs_finding>-field )
+                    ) TO rt_error.
     ENDLOOP.
 
   ENDMETHOD.
@@ -428,8 +522,8 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
   METHOD message_text.
 
     MESSAGE ID 'ZARI002' TYPE 'E' NUMBER iv_msgno
-            WITH iv_v1 iv_v2 iv_v3 iv_v4
-            INTO rv_result.
+    WITH iv_v1 iv_v2 iv_v3 iv_v4
+    INTO rv_result.
 
   ENDMETHOD.
 
