@@ -72,7 +72,7 @@ CLASS zcl_zari002_processor DEFINITION
     METHODS send_callback
       IMPORTING is_payment TYPE ztar_i002_pymt
                 it_item    TYPE tt_item
-                is_result  TYPE ty_result.
+                it_error   TYPE tt_error.
 
     "! แปลง finding ของ validator เป็น error ที่พร้อมส่งกลับ (ชื่อ field เป็น JSON แล้ว)
     METHODS to_errors
@@ -169,7 +169,7 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
       " 3.4 Callback ---------------------------------------------------
       send_callback( is_payment = ls_payment
                      it_item    = lt_item
-                     is_result  = rs_result ).
+                     it_error   = lt_error ).
 
     ENDLOOP.
 
@@ -280,14 +280,6 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
                              ) TO rt_error.
 
     APPEND LINES OF to_errors( zcl_zari002_validator=>check_item_ids( it_item )
-                             ) TO rt_error.
-
-    APPEND LINES OF to_errors( zcl_zari002_validator=>check_item_ids( it_item )
-                             ) TO rt_error.
-
-    APPEND LINES OF to_errors( zcl_zari002_validator=>check_amount_paid_total(
-                                 iv_salesforce_id = is_payment-salesforce_id
-                                 it_item          = it_item )
                              ) TO rt_error.
 
     " 2. Validate Item -------------------------------------------------

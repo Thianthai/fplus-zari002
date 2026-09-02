@@ -26,7 +26,7 @@ CLASS zcl_zari002_json DEFINITION
 
     CLASS-METHODS to_internal_date
       IMPORTING iv_value         TYPE string
-      RETURNING VALUE(rv_result) TYPE d.
+      RETURNING VALUE(rv_result) TYPE string.
 
 ENDCLASS.
 
@@ -35,19 +35,19 @@ CLASS zcl_zari002_json IMPLEMENTATION.
 
   METHOD parse_json_request.
 
-    DATA ls_request TYPE ty_request.
+    CLEAR es_request.
 
     TRY.
         xco_cp_json=>data->from_string( iv_body
           )->apply( VALUE #( ( xco_cp_json=>transformation->pascal_case_to_underscore ) )
-          )->write_to( REF #( ls_request ) ).
+          )->write_to( REF #( es_request ) ).
 
       CATCH cx_root INTO DATA(lo_error).
         RAISE EXCEPTION TYPE zcx_zari002_error
           EXPORTING iv_msgv1 = |JSON parse failed: { lo_error->get_text( ) }|.
     ENDTRY.
 
-    LOOP AT ls_request-payments ASSIGNING FIELD-SYMBOL(<lfs_payment>).
+    LOOP AT es_request-payments ASSIGNING FIELD-SYMBOL(<lfs_payment>).
       <lfs_payment>-posting_date = to_internal_date( <lfs_payment>-posting_date ).
       <lfs_payment>-issue_date   = to_internal_date( <lfs_payment>-issue_date ).
       <lfs_payment>-due_on       = to_internal_date( <lfs_payment>-due_on ).
@@ -67,14 +67,10 @@ CLASS zcl_zari002_json IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-*   ต้องพักใน string ก่อน เพราะ rv_result เป็น d ยาว 8 ตัว
-*   รับ "2026-08-15" (10 ตัว) ระหว่างทางไม่ได้
-    DATA(lv_clean) = iv_value.
-    lv_clean = replace( val = lv_clean sub = `-` with = `` occ = 0 ).
-    lv_clean = replace( val = lv_clean sub = `/` with = `` occ = 0 ).
-    lv_clean = replace( val = lv_clean sub = `.` with = `` occ = 0 ).
-
-    rv_result = lv_clean.
+    rv_result = iv_value.
+    rv_result = replace( val = rv_result sub = `-` with = `` occ = 0 ).
+    rv_result = replace( val = rv_result sub = `/` with = `` occ = 0 ).
+    rv_result = replace( val = rv_result sub = `.` with = `` occ = 0 ).
 
   ENDMETHOD.
 
