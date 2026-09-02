@@ -31,7 +31,7 @@ CLASS zcl_zari002_processor DEFINITION
     "! ฉีด dependency ได้เพื่อให้ unit test ไม่แตะ master data จริงและไม่ยิง HTTP
     METHODS constructor
       IMPORTING io_master_data TYPE REF TO zif_zari002_master_data OPTIONAL
-                io_notify      TYPE REF TO zcl_zari002_sfdc_notify OPTIONAL.
+                io_notify      TYPE REF TO zcl_zari003_sfdc_notify OPTIONAL.
 
     "! flow เดียวจบ: parse → normalize → validate → save → callback
     METHODS process
@@ -41,7 +41,7 @@ CLASS zcl_zari002_processor DEFINITION
   PRIVATE SECTION.
 
     DATA go_master_data TYPE REF TO zif_zari002_master_data.
-    DATA go_notify      TYPE REF TO zcl_zari002_sfdc_notify.
+    DATA go_notify      TYPE REF TO zcl_zari003_sfdc_notify.
 
     METHODS normalize
       IMPORTING iv_request_id TYPE ztar_i002_pymt-request_id
@@ -100,7 +100,7 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
                              ELSE NEW zcl_zari002_master_data( ) ).
 
     go_notify = COND #( WHEN io_notify IS BOUND THEN io_notify
-                        ELSE NEW zcl_zari002_sfdc_notify( ) ).
+                        ELSE NEW zcl_zari003_sfdc_notify( ) ).
 
   ENDMETHOD.
 
@@ -470,25 +470,25 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
 
   METHOD send_callback.
 
-*    DATA lt_result TYPE zcl_zari002_sfdc_notify=>tt_result.
+*    DATA lt_result TYPE zcl_zari003_sfdc_notify=>tt_result.
 *
-*    DATA(lv_status) = COND #( WHEN is_result-success = abap_true
-*                              THEN zcl_zari002_sfdc_notify=>gc_status_success
-*                              ELSE zcl_zari002_sfdc_notify=>gc_status_error ).
+*    DATA(lv_status) = COND #( WHEN it_error IS INITIAL
+*                              THEN zcl_zari003_sfdc_notify=>gc_status_success
+*                              ELSE zcl_zari003_sfdc_notify=>gc_status_error ).
 *
 **   error ที่ระบุ item ได้ ให้ไปอยู่กับ item นั้น · ที่เหลือเป็น error ระดับ payment
 **   ใช้กับทุกบรรทัดเพราะ reject-all — ทั้งใบตกไปด้วยกัน
 *    DATA(lv_common) = concat_lines_of(
-*      table = VALUE string_table( FOR <lfs_e> IN is_result-errors
-*                                  WHERE ( item IS INITIAL ) ( <lfs_e>-msgtx ) )
+*      table = VALUE string_table( FOR <lfs_e> IN it_error
+*                                  WHERE ( salesforce_item_id IS INITIAL ) ( <lfs_e>-msgtx ) )
 *      sep   = ` · ` ).
 *
 *    LOOP AT it_item ASSIGNING FIELD-SYMBOL(<lfs_item>).
 *
 *      DATA(lv_text) = concat_lines_of(
 *        table = VALUE string_table(
-*                  FOR <lfs_ie> IN is_result-errors
-*                  WHERE ( item = <lfs_item>-salesforce_item_id ) ( <lfs_ie>-text ) )
+*                  FOR <lfs_ie> IN it_error
+*                  WHERE ( salesforce_item_id = <lfs_item>-salesforce_item_id ) ( <lfs_ie>-msgtx ) )
 *        sep   = ` · ` ).
 *
 *      IF lv_common IS NOT INITIAL.

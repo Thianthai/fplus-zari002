@@ -1,4 +1,4 @@
-CLASS zcl_zari002_sfdc_notify DEFINITION
+CLASS zcl_zari003_sfdc_notify DEFINITION
   PUBLIC
   CREATE PUBLIC.
 
@@ -26,22 +26,22 @@ CLASS zcl_zari002_sfdc_notify DEFINITION
       IMPORTING it_result        TYPE tt_result
       RETURNING VALUE(rv_result) TYPE string.
 
-    "! ยิง callback ไป SFDC — fire and forget ตามที่ตกลง (ไม่เก็บสถานะ ไม่ retry)
-    "! callback ล้มเหลวต้องไม่ทำให้ request หลักพัง
+    "! ยิงผลกลับไป SFDC — fire and forget ตามที่ตกลง (ไม่เก็บสถานะ ไม่ retry)
+    "! ยิงไม่สำเร็จต้องไม่ทำให้ request ของ ZARI002 พัง
     METHODS notify
       IMPORTING it_result TYPE tt_result.
 
   PRIVATE SECTION.
 
     CONSTANTS:
-      "! ⬜ ยังไม่มีของจริง — ได้ตอน Phase 5.2/5.3 (OQ-17)
-      gc_comm_scenario TYPE sxco_cds_object_name VALUE 'ZARI002_OUT_CSCEN',
-      gc_service_id    TYPE c LENGTH 40          VALUE 'ZARI002_OUT_REST'.
+      "! ⬜ ยังไม่มีของจริง — รอ config ขา outbound ของ ARI003
+      gc_comm_scenario TYPE sxco_cds_object_name VALUE 'ZARI003_OUT_CSCEN',
+      gc_service_id    TYPE c LENGTH 40          VALUE 'ZARI003_OUT_REST'.
 
 ENDCLASS.
 
 
-CLASS zcl_zari002_sfdc_notify IMPLEMENTATION.
+CLASS zcl_zari003_sfdc_notify IMPLEMENTATION.
 
   METHOD build_payload.
 
@@ -74,7 +74,7 @@ CLASS zcl_zari002_sfdc_notify IMPLEMENTATION.
         lo_client->close( ).
 
       CATCH cx_root.
-*       fire and forget — ยิงไม่สำเร็จก็ปล่อย ไม่ให้กระทบ request หลัก
+*       fire and forget — ยิงไม่สำเร็จก็ปล่อย ไม่ให้กระทบ request ของ ZARI002
 *       ⚠️ แลกกับการที่ไม่มีใครรู้ว่ามันล้ม และ retry ไม่ได้ (ตกลงไว้ 2026-08-31)
     ENDTRY.
 

@@ -41,10 +41,10 @@ CLASS ltd_master_data IMPLEMENTATION.
 ENDCLASS.
 
 
-CLASS ltd_notify DEFINITION FOR TESTING INHERITING FROM zcl_zari002_sfdc_notify.
+CLASS ltd_notify DEFINITION FOR TESTING INHERITING FROM zcl_zari003_sfdc_notify.
   PUBLIC SECTION.
     "! เก็บสิ่งที่ "จะยิง" ไว้ตรวจ แทนที่จะยิงจริง
-    DATA gt_sent TYPE zcl_zari002_sfdc_notify=>tt_result.
+    DATA gt_sent TYPE zcl_zari003_sfdc_notify=>tt_result.
     METHODS notify REDEFINITION.
 ENDCLASS.
 
