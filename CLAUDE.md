@@ -108,8 +108,20 @@ master data บน tenant ยัง config ไม่เสร็จ และ sa
 
 | RICEFW | หน้าที่ | เขียน `status` |
 |---|---|---|
-| **ZARI002** (งานนี้) | รับข้อมูลจาก Salesforce มาลง table | `N` |
+| **ZARI002** (งานนี้) | **SBPA** ยิงเข้ามา — validate แล้วลง table | `N` |
 | **ZARE002** | RAP UI — อ่าน row `N` ไป post FI จริง | `S` / `W` / `E` + `error_message` |
-| **ZARI003** | ดึงผลการ post ส่งกลับไปให้ Salesforce | — (อ่านอย่างเดียว) |
+| **ZARI003** | ขา outbound — แจ้งผลกลับไปที่ Salesforce | — (อ่านอย่างเดียว) |
 
-ZARI002 จึงเป็น **create อย่างเดียว ไม่ต้องเปิด read** — การรายงานผลกลับเป็นหน้าที่ ZARI003
+### เส้นทางข้อมูลจริง (แก้ความเข้าใจผิด 2026-09-02)
+
+```
+SFDC ──(Excel)──▶ SBPA ──(HTTP POST)──▶ ZARI002 ──▶ table ──▶ ARI003 ──▶ SFDC
+                   ▲                        │
+                   └────(response)──────────┘
+```
+
+**ผู้เรียก ZARI002 คือ SBPA ไม่ใช่ SFDC** — SFDC ส่ง Excel ให้ SBPA แล้ว SBPA อ่านไฟล์
+ยิงเข้ามา · response ของเราจบที่ SBPA **SFDC ไม่เคยเห็น** จึงต้องมี ARI003 แจ้งผลกลับแยก
+
+ZARI002 จึงเป็น **create อย่างเดียว ไม่มีขา outbound ไม่ต้องเปิด read** —
+การรายงานผลกลับไป SFDC เป็นหน้าที่ ARI003 ทั้งหมด

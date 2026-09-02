@@ -4,7 +4,7 @@
 
 ## 1. Requirement สรุป
 
-- OData API สำหรับให้ **Salesforce ส่งข้อมูล incoming payment เข้ามาเก็บใน SAP**
+- HTTP API สำหรับให้ **SBPA ส่งข้อมูล incoming payment เข้ามาเก็บใน SAP**
 - ไม่มี UI — ถูกเรียกจาก non-SAP system ผ่าน HTTPS
 - Payload เป็น **nested JSON**: 1 payment header มีหลาย item
 - Logic คือ validate แล้ว **save ลง 2 table ให้ถูกต้อง** — ไม่ post FI ใน RICEFW นี้
@@ -25,7 +25,7 @@ POST /Payment
 ## 2. สถาปัตยกรรม — HTTP Service (เปลี่ยนจาก RAP OData V4 เมื่อ 2026-08-31)
 
 ```
-SFDC ──POST JSON──▶ HTTP Service
+SBPA ──POST JSON──▶ HTTP Service
                          │
                     ZCL_ZARI002_HTTP          IF_HTTP_SERVICE_EXTENSION
                          │                     GET → 405 · POST → processor
@@ -41,9 +41,38 @@ SFDC ──POST JSON──▶ HTTP Service
                               ├─ save        ผ่าน → INSERT 2 table + COMMIT
                               │              ไม่ผ่าน → ไม่ INSERT อะไรของใบนั้นเลย
                               └─ callback    ZCL_ZARI002_SFDC_NOTIFY → S/E รายบรรทัด
+                                             ⚠️ กำลังจะถูกลบ — เป็นงานของ ARI003 (ดู §2.1)
                          ▼
                     HTTP response  { RequestId, Accepted, Rejected, Errors[] }
 ```
+
+### 2.1 ใครคุยกับใคร — แก้ความเข้าใจผิด 2026-09-02
+
+**ผู้ที่ยิงเข้ามาหา ZARI002 คือ SBPA ไม่ใช่ Salesforce**
+
+```
+SFDC ──(Excel file)──▶ SBPA ──(HTTP POST)──▶ ZARI002 ──▶ table
+                        ▲                        │
+                        └────(HTTP response)─────┘   ← response จบแค่ SBPA
+
+SFDC ◀──(ARI003)── table
+```
+
+SFDC ส่งข้อมูลให้ SBPA เป็น **ไฟล์ Excel** · SBPA อ่านไฟล์แล้วยิงเข้ามาที่ HTTP service ของเรา
+**response ของเราจึงกลับไปหา SBPA เท่านั้น SFDC ไม่เคยเห็น** — จึงต้องมี **ARI003** เป็นขา
+outbound แยกต่างหากไว้แจ้งผลกลับไปที่ SFDC
+
+ผลที่ตามมาต่อ ZARI002:
+
+- **ZARI002 ไม่มีขา outbound** — SBPA ได้คำตอบครบถ้วนแบบ synchronous ในการเรียกครั้งเดียว
+  ไม่ต้อง push อะไรออกไปอีก · `ZCL_ZARI002_SFDC_NOTIFY` จึงต้องถูกลบออกจาก RICEFW นี้
+  (ชื่อ class ก็ผิดด้วย — เขียนว่า SFDC ทั้งที่คู่สนทนาจริงคือ SBPA)
+- **Phase 5.2 / 5.6 และ 6.7 ตกไปทั้งหมด** — ไม่มี communication scenario ขาออก ไม่มี destination
+- ⚠️ **payment ที่ถูก reject ไม่ถูกเขียนลง table เลย** ถ้า ARI003 ต้องรายงานผล "การรับข้อมูล"
+  ให้ SFDC โดยอ่านจาก table จะไม่มีอะไรให้อ่าน — ดู **OQ-25** ยังไม่ตัดสิน
+
+field ชื่อ `salesforce_id` / `salesforce_item_id` / `salesforce_status` / `salesforce_message`
+**ยังถูกต้องตามเดิม** เพราะเป็น id ที่มีต้นทางจาก SFDC จริง แค่เดินทางผ่าน SBPA เข้ามา
 
 ### 1 request = หลาย payment (2026-08-31)
 
@@ -56,17 +85,19 @@ SFDC ──POST JSON──▶ HTTP Service
 **`COMMIT` เกิดต่อ payment** → payment ใบหลังจึงเห็นใบก่อนหน้าที่เพิ่ง commit ไป
 ทำให้ duplicate check จับกรณีส่งใบซ้ำกันมาใน request เดียวได้ด้วยโดยไม่ต้องเขียนอะไรเพิ่ม
 
-### `request_id` — SFDC เป็นเจ้าของ
+### `request_id` — ผู้เรียกเป็นเจ้าของ
 
-SFDC ส่งมาใน payload · ถ้าไม่ส่ง SAP สร้างให้ในรูปแบบ `YYYYMMDD_hhmmss`
+ผู้เรียก (SBPA) ส่งมาใน payload · ถ้าไม่ส่ง SAP สร้างให้ในรูปแบบ `YYYYMMDD_hhmmss`
 **สร้างครั้งเดียวสำหรับทั้ง request** แล้วใช้ค่าเดียวกันกับทุก payment และใน response
 — ถ้าสร้างต่อ payment แต่ละใบจะได้เลขต่างกันและ response จะไม่ตรงกับที่เก็บใน table
 
 (เดิมชื่อ `batch_id` ที่ SAP สร้างเอง — เปลี่ยนเจ้าของและเปลี่ยนชื่อพร้อมกัน)
 
+⚠️ **ยังไม่ยืนยันว่า SBPA ส่ง `RequestId` มาให้จริงหรือไม่** — ดู OQ-26
+
 ### ทำไมถึงเลิกใช้ RAP
 
-RAP BO มีอยู่เพื่อรองรับ OData V4 พอ SFDC ต้องการให้เรา **push ผลกลับไปที่ API ของเขา**
+RAP BO มีอยู่เพื่อรองรับ OData V4 พอมีความต้องการให้เรา **push ผลกลับไปที่ API ปลายทาง**
 แทนที่จะอ่านจาก response ของเรา RAP ก็ไม่มีจุดที่เห็นทั้ง 2 กรณีให้แขวน callback:
 
 | กรณี | RAP มี hook ไหม |
