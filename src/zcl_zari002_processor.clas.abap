@@ -1,5 +1,6 @@
 CLASS zcl_zari002_processor DEFINITION
-  PUBLIC FINAL
+  PUBLIC
+  FINAL
   CREATE PUBLIC.
 
   PUBLIC SECTION.
@@ -92,6 +93,7 @@ CLASS zcl_zari002_processor DEFINITION
 ENDCLASS.
 
 
+
 CLASS zcl_zari002_processor IMPLEMENTATION.
 
   METHOD constructor.
@@ -152,10 +154,12 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
       IF lt_error IS INITIAL.
         IF save( is_payment = ls_payment
                  it_item    = lt_item ) = abap_false.
+
           APPEND VALUE #( msgno         = '000'
                           msgtx         = message_text( iv_msgno = '000'
                                                         iv_v1    = `Database insert failed` )
-                          salesforce_id = ls_payment-salesforce_id ) TO lt_error.
+                          salesforce_id = ls_payment-salesforce_id
+                        ) TO lt_error.
         ENDIF.
       ENDIF.
 
@@ -329,7 +333,8 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
                       msgtx         = message_text( iv_msgno = '200'
                                                     iv_v1    = |{ is_payment-company_code }| )
                       salesforce_id = is_payment-salesforce_id
-                      field         = zcl_zari002_json=>to_json_name( 'company_code' ) ) TO rt_error.
+                      field         = zcl_zari002_json=>to_json_name( 'company_code' )
+                    ) TO rt_error.
       RETURN.
     ENDIF.
 
@@ -345,7 +350,8 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
                                                       iv_v1    = |{ is_payment-gl_account }|
                                                       iv_v2    = |{ is_payment-company_code }| )
                         salesforce_id = is_payment-salesforce_id
-                        field         = zcl_zari002_json=>to_json_name( 'gl_account' ) ) TO rt_error.
+                        field         = zcl_zari002_json=>to_json_name( 'gl_account' )
+                      ) TO rt_error.
       ENDIF.
     ENDIF.
 
@@ -416,7 +422,7 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
       IF <lfs_item>-billing_document IS NOT INITIAL
      AND NOT line_exists( lr_billing[ low = <lfs_item>-billing_document ] ).
         APPEND VALUE #( sign = 'I' option = 'EQ' low = <lfs_item>-billing_document )
-               TO lr_billing.
+                     TO lr_billing.
       ENDIF.
     ENDLOOP.
 
@@ -470,40 +476,40 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
 
   METHOD send_callback.
 
-*    DATA lt_result TYPE zcl_zari003_sfdc_notify=>tt_result.
-*
-*    DATA(lv_status) = COND #( WHEN it_error IS INITIAL
-*                              THEN zcl_zari003_sfdc_notify=>gc_status_success
-*                              ELSE zcl_zari003_sfdc_notify=>gc_status_error ).
-*
-**   error ที่ระบุ item ได้ ให้ไปอยู่กับ item นั้น · ที่เหลือเป็น error ระดับ payment
-**   ใช้กับทุกบรรทัดเพราะ reject-all — ทั้งใบตกไปด้วยกัน
-*    DATA(lv_common) = concat_lines_of(
-*      table = VALUE string_table( FOR <lfs_e> IN it_error
-*                                  WHERE ( salesforce_item_id IS INITIAL ) ( <lfs_e>-msgtx ) )
-*      sep   = ` · ` ).
-*
-*    LOOP AT it_item ASSIGNING FIELD-SYMBOL(<lfs_item>).
-*
-*      DATA(lv_text) = concat_lines_of(
-*        table = VALUE string_table(
-*                  FOR <lfs_ie> IN it_error
-*                  WHERE ( salesforce_item_id = <lfs_item>-salesforce_item_id ) ( <lfs_ie>-msgtx ) )
-*        sep   = ` · ` ).
-*
-*      IF lv_common IS NOT INITIAL.
-*        lv_text = COND #( WHEN lv_text IS INITIAL THEN lv_common
-*                          ELSE |{ lv_common } · { lv_text }| ).
-*      ENDIF.
-*
-*      APPEND VALUE #( salesforce_id      = is_payment-salesforce_id
-*                      salesforce_item_id = <lfs_item>-salesforce_item_id
-*                      status             = lv_status
-*                      error_message      = lv_text ) TO lt_result.
-*
-*    ENDLOOP.
-*
-*    go_notify->notify( lt_result ).
+    DATA lt_result TYPE zcl_zari003_sfdc_notify=>tt_result.
+
+    DATA(lv_status) = COND #( WHEN it_error IS INITIAL
+                              THEN zcl_zari003_sfdc_notify=>gc_status_success
+                              ELSE zcl_zari003_sfdc_notify=>gc_status_error ).
+
+*   error ที่ระบุ item ได้ ให้ไปอยู่กับ item นั้น · ที่เหลือเป็น error ระดับ payment
+*   ใช้กับทุกบรรทัดเพราะ reject-all — ทั้งใบตกไปด้วยกัน
+    DATA(lv_common) = concat_lines_of(
+      table = VALUE string_table( FOR <lfs_e> IN it_error
+                                  WHERE ( salesforce_item_id IS INITIAL ) ( <lfs_e>-msgtx ) )
+      sep   = ` · ` ).
+
+    LOOP AT it_item ASSIGNING FIELD-SYMBOL(<lfs_item>).
+
+      DATA(lv_text) = concat_lines_of(
+        table = VALUE string_table(
+                  FOR <lfs_ie> IN it_error
+                  WHERE ( salesforce_item_id = <lfs_item>-salesforce_item_id ) ( <lfs_ie>-msgtx ) )
+        sep   = ` · ` ).
+
+      IF lv_common IS NOT INITIAL.
+        lv_text = COND #( WHEN lv_text IS INITIAL THEN lv_common
+                          ELSE |{ lv_common } · { lv_text }| ).
+      ENDIF.
+
+      APPEND VALUE #( salesforce_id      = is_payment-salesforce_id
+                      salesforce_item_id = <lfs_item>-salesforce_item_id
+                      status             = lv_status
+                      error_message      = lv_text ) TO lt_result.
+
+    ENDLOOP.
+
+    go_notify->notify( lt_result ).
 
   ENDMETHOD.
 

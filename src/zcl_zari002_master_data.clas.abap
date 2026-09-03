@@ -1,5 +1,6 @@
 CLASS zcl_zari002_master_data DEFINITION
-  PUBLIC FINAL
+  PUBLIC
+  FINAL
   CREATE PUBLIC.
 
   PUBLIC SECTION.
@@ -7,15 +8,16 @@ CLASS zcl_zari002_master_data DEFINITION
 ENDCLASS.
 
 
+
 CLASS zcl_zari002_master_data IMPLEMENTATION.
 
   METHOD zif_zari002_master_data~get_company_codes.
 
+    DATA lr_company_code TYPE RANGE OF zif_zari002_master_data=>ty_company_code.
+
     IF it_company_code IS INITIAL.
       RETURN.
     ENDIF.
-
-    DATA lr_company_code TYPE RANGE OF zif_zari002_master_data=>ty_company_code.
 
     lr_company_code = VALUE #( FOR <lfs_cc> IN it_company_code
                                ( sign = 'I' option = 'EQ' low = <lfs_cc> ) ).
@@ -32,12 +34,12 @@ CLASS zcl_zari002_master_data IMPLEMENTATION.
 
   METHOD zif_zari002_master_data~find_unknown_gl_accounts.
 
+    DATA lr_company_code TYPE RANGE OF zif_zari002_master_data=>ty_company_code.
+    DATA lr_gl_account   TYPE RANGE OF zif_zari002_master_data=>ty_gl_account.
+
     IF it_gl_key IS INITIAL.
       RETURN.
     ENDIF.
-
-    DATA lr_company_code TYPE RANGE OF zif_zari002_master_data=>ty_company_code.
-    DATA lr_gl_account   TYPE RANGE OF zif_zari002_master_data=>ty_gl_account.
 
 *   จำกัดขอบเขตด้วย 2 range แล้วค่อยจับคู่ในหน่วยความจำ
 *   เพราะ SQL เทียบคู่ (company_code, gl_account) พร้อมกันไม่ได้
@@ -74,12 +76,12 @@ CLASS zcl_zari002_master_data IMPLEMENTATION.
 
   METHOD zif_zari002_master_data~find_unknown_pymt_methods.
 
+    DATA lr_country        TYPE RANGE OF zif_zari002_master_data=>ty_country.
+    DATA lr_payment_method TYPE RANGE OF zif_zari002_master_data=>ty_payment_method.
+
     IF it_payment_method_key IS INITIAL.
       RETURN.
     ENDIF.
-
-    DATA lr_country        TYPE RANGE OF zif_zari002_master_data=>ty_country.
-    DATA lr_payment_method TYPE RANGE OF zif_zari002_master_data=>ty_payment_method.
 
     LOOP AT it_payment_method_key ASSIGNING FIELD-SYMBOL(<lfs_pm>).
 
@@ -114,11 +116,11 @@ CLASS zcl_zari002_master_data IMPLEMENTATION.
 
   METHOD zif_zari002_master_data~find_unknown_customers.
 
+    DATA lr_customer TYPE RANGE OF zif_zari002_master_data=>ty_customer.
+
     IF it_customer IS INITIAL.
       RETURN.
     ENDIF.
-
-    DATA lr_customer TYPE RANGE OF zif_zari002_master_data=>ty_customer.
 
     lr_customer = VALUE #( FOR <lfs_cust> IN it_customer
                            ( sign = 'I' option = 'EQ' low = <lfs_cust> ) ).

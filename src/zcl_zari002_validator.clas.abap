@@ -1,5 +1,6 @@
 CLASS zcl_zari002_validator DEFINITION
-  PUBLIC FINAL
+  PUBLIC
+  FINAL
   CREATE PUBLIC.
 
   PUBLIC SECTION.
@@ -77,6 +78,7 @@ CLASS zcl_zari002_validator DEFINITION
       RETURNING VALUE(rt_finding) TYPE tt_finding.
 
 ENDCLASS.
+
 
 
 CLASS zcl_zari002_validator IMPLEMENTATION.

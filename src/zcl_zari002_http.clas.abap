@@ -3,6 +3,7 @@ CLASS zcl_zari002_http DEFINITION
   CREATE PUBLIC.
 
   PUBLIC SECTION.
+
     INTERFACES if_http_service_extension.
 
     " Request Type -----------------------------------------------------
@@ -46,6 +47,7 @@ CLASS zcl_zari002_http DEFINITION
         payments   TYPE tt_payment,
       END OF ty_request.
 
+  PROTECTED SECTION.
   PRIVATE SECTION.
 
     " Response Type ----------------------------------------------------
@@ -98,6 +100,7 @@ CLASS zcl_zari002_http IMPLEMENTATION.
 
   ENDMETHOD.
 
+
   METHOD handle_get.
 
     DATA ls_request TYPE ty_request.
@@ -123,6 +126,7 @@ CLASS zcl_zari002_http IMPLEMENTATION.
                                 )->to_string( ) ).
 
   ENDMETHOD.
+
 
   METHOD handle_post.
 

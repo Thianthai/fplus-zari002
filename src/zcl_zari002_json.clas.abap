@@ -1,5 +1,6 @@
 CLASS zcl_zari002_json DEFINITION
-  PUBLIC FINAL
+  PUBLIC
+  FINAL
   CREATE PUBLIC.
 
   PUBLIC SECTION.
@@ -22,6 +23,7 @@ CLASS zcl_zari002_json DEFINITION
       IMPORTING iv_field         TYPE string
       RETURNING VALUE(rv_result) TYPE string.
 
+  PROTECTED SECTION.
   PRIVATE SECTION.
 
     CLASS-METHODS to_internal_date
@@ -29,6 +31,7 @@ CLASS zcl_zari002_json DEFINITION
       RETURNING VALUE(rv_result) TYPE string.
 
 ENDCLASS.
+
 
 
 CLASS zcl_zari002_json IMPLEMENTATION.

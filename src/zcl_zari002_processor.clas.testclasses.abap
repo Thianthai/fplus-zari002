@@ -117,38 +117,43 @@ CLASS ltc_processor IMPLEMENTATION.
   METHOD sample_json.
 
     rv_result =
-      `{`                                                     &&
-      `  "SalesforceId": "SF0000000000000001",`               &&
-      `  "PaymentDocumentNo": "` && iv_doc_no && `",`         &&
-      `  "NumberOfItemsInPayment": 2,`                        &&
-      `  "CompanyCode": "` && iv_company_code && `",`         &&
-      `  "PostingDate": "2026-08-15",`                        &&
-      `  "GlAccount": "11011214",`                            &&
-      `  "PaymentMethod": "Cheque",`                          &&
-      `  "ChequeNo": "10020185",`                             &&
-      `  "IssueDate": "2026-07-15",`                          &&
-      `  "DueOn": "2026-08-31",`                              &&
-      `  "ChequeBankBranch": "0040129",`                      &&
-      `  "PaymentAmount": "9650.00",`                         &&
-      `  "Items": [`                                          &&
-      `    { "SalesforceItemId": "IT0000000000000001",`       &&
-      `      "CustomerCode": "1000000002",`                   &&
-      `      "AccountingDocument": "6000000001",`             &&
-      `      "BillingDocument": "0090000000",`                &&
-      `      "InvoicePostingDate": "2026-07-01",`             &&
-      `      "InvoiceAmount": "1070.00",`                     &&
-      `      "AmountPaid": "1070.00",`                        &&
-      `      "SaleSubmitDate": "2026-08-15" },`               &&
-      `    { "SalesforceItemId": "IT0000000000000002",`       &&
-      `      "CustomerCode": "1000000002",`                   &&
-      `      "AccountingDocument": "6000000003",`             &&
-      `      "BillingDocument": "0090000002",`                &&
-      `      "InvoicePostingDate": "2026-08-03",`             &&
-      `      "InvoiceAmount": "1605.00",`                     &&
-      `      "AmountPaid": "500.00",`                         &&
-      `      "PartialAmount": "X",`                           &&
-      `      "SaleSubmitDate": "2026-08-15" }`                &&
-      `  ]`                                                   &&
+      `{`                                                       &&
+      `  "RequestId": "REQ-TEST-0001",`                         &&
+      `  "Payments": [`                                         &&
+      `    {`                                                   &&
+      `      "SalesforceId": "SF0000000000000001",`             &&
+      `      "PaymentDocumentNo": "` && iv_doc_no && `",`        &&
+      `      "NumberOfItemsInPayment": 2,`                       &&
+      `      "CompanyCode": "` && iv_company_code && `",`        &&
+      `      "PostingDate": "2026-08-15",`                       &&
+      `      "GlAccount": "11011214",`                           &&
+      `      "PaymentMethod": "Cheque",`                         &&
+      `      "ChequeNo": "10020185",`                            &&
+      `      "IssueDate": "2026-07-15",`                         &&
+      `      "DueOn": "2026-08-31",`                             &&
+      `      "ChequeBankBranch": "0040129",`                     &&
+      `      "PaymentAmount": "9650.00",`                        &&
+      `      "Items": [`                                         &&
+      `        { "SalesforceItemId": "IT0000000000000001",`      &&
+      `          "CustomerCode": "1000000002",`                  &&
+      `          "AccountingDocument": "6000000001",`             &&
+      `          "BillingDocument": "0090000000",`                &&
+      `          "InvoicePostingDate": "2026-07-01",`              &&
+      `          "InvoiceAmount": "1070.00",`                      &&
+      `          "AmountPaid": "1070.00",`                         &&
+      `          "SaleSubmitDate": "2026-08-15" },`                &&
+      `        { "SalesforceItemId": "IT0000000000000002",`        &&
+      `          "CustomerCode": "1000000002",`                    &&
+      `          "AccountingDocument": "6000000003",`               &&
+      `          "BillingDocument": "0090000002",`                  &&
+      `          "InvoicePostingDate": "2026-08-03",`                &&
+      `          "InvoiceAmount": "1605.00",`                        &&
+      `          "AmountPaid": "500.00",`                             &&
+      `          "PartialAmount": "X",`                                &&
+      `          "SaleSubmitDate": "2026-08-15" }`                     &&
+      `      ]`                                                        &&
+      `    }`                                                          &&
+      `  ]`                                                            &&
       `}`.
 
   ENDMETHOD.

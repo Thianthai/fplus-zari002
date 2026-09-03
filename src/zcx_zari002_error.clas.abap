@@ -5,6 +5,7 @@ CLASS zcx_zari002_error DEFINITION
   CREATE PUBLIC .
 
   PUBLIC SECTION.
+
     INTERFACES if_t100_message.
     INTERFACES if_t100_dyn_msg.
 
