@@ -114,7 +114,7 @@ reject แล้วไม่เหลือ row · duplicate ถูกจับ 
 | 5.1 | Communication Scenario **inbound** `ZCS_INCOMING_PYMT` ผูก inbound service `ZARI002_INCOMING_PYMT_HTTP` | ผู้ใช้ | ✅ |
 | 5.2 | Communication Scenario **outbound** `ZARI003_OUT_CSCEN` — **ของ ARI003 แต่ ZARI002 ต้องใช้** เพราะเรียก `ZCL_ZARI003_SFDC_NOTIFY` ใน process เดียวกัน · ⚠️ `SBPA_DEV` เป็น **Inbound Only** ใช้ตัวเดิมไม่ได้ | ผู้ใช้ (ฝั่ง ARI003) | ⬜ รอ OQ-17 |
 | 5.3 | Communication System `SBPA_DEV` / User `SBPA_DEV` / Arrangement `ZCS_INCOMING_PYMT` บน **IA5/100** | ผู้ใช้ (Fiori) | ✅ |
-| 5.4 | 🔴 **Business role ให้ communication user `SBPA_DEV`** — ต้องมีสิทธิ์อ่าน GL account master และ customer · ไม่งั้นทุก request ติด `201` + `205` | ผู้ใช้ (Fiori) | ⬜ |
+| 5.4 | ~~Business role ให้ `SBPA_DEV`~~ — **แก้ด้วยวิธีอื่นแล้ว 2026-09-04** ใช้ `WITH PRIVILEGED ACCESS` ใน `ZCL_ZARI002_MASTER_DATA` ข้าม DCL ไปเลย ไม่ต้องขอ role · เหตุผล: มีแต่ SBPA เรียก ไม่ใช่ user จริง | — | ✅ |
 | 5.5 | ทดสอบ inbound จาก Postman นอก tenant | ร่วมกัน | 🟨 ยิงถึงแล้ว รอ 5.4 |
 | 5.6 | ทดสอบยิงผลกลับไป SFDC ที่ปลายทางจริง (รอ SFDC ทำ API) | ร่วมกับฝั่ง ARI003 | ⬜ |
 
@@ -165,7 +165,7 @@ serialize response (`Field` / `Item` / ข้อความจาก message cl
 | `ZCL_ZARI003_SFDC_NOTIFY` | ยังไม่มี — `build_payload( )` เทสได้เลย ส่วน `notify( )` ต้องมี seam ก่อน (OQ-17) | ⬜ |
 
 6.1 ถึง 6.3 และ 6.9 ถึง 6.10 เขียนเป็น unit test ได้เลยโดยไม่ต้องพึ่ง tenant
-ส่วน 6.4 ถึง 6.8 ต้องรอ **OQ-19** (สิทธิ์ของ `SBPA_DEV`) ไม่งั้นทุก request ตายที่ `201` + `205` ก่อนถึงชั้นที่อยากเทส
+ส่วน 6.4 ถึง 6.8 **ปลดบล็อกแล้ว** (OQ-19 ปิด) เหลือรอแค่ **OQ-04** master data ที่ยังโหลดไม่ครบบน tenant
 
 ---
 

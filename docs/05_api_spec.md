@@ -149,6 +149,11 @@ field `Created*` / `LastChanged*` ทั้งหมด
 SAP เก็บ `GlAccount` และ `CustomerCode` เป็น 10 หลักเต็มโดยเติม `0` ข้างหน้า
 API **เติมให้เอง** ก่อนตรวจและก่อนบันทึก
 
+**กฎคือ: เติมให้เฉพาะ field ที่มี conversion routine** (ถึงจะไม่ได้เรียกใช้ routine ตรง ๆ ก็ตาม)
+· `GlAccount` และ `CustomerCode` มี ALPHA จึงเติมให้
+· ⚠️ **`ChequeBankBranch` ไม่มี conversion routine จึงไม่เติมให้** — ต้นทางต้องส่งมาให้ตรงกับ
+ที่ SAP เก็บเป๊ะ ไม่งั้นจะได้ `008` ทั้งที่ธนาคารมีอยู่จริง
+
 ```
 ส่ง  11011214   →  SAP เก็บ  0011011214
 ส่ง  0011011214 →  SAP เก็บ  0011011214    (ส่งมาเต็มก็ได้ ผลเหมือนกัน)
@@ -226,7 +231,7 @@ API แปลงคำเป็น SAP payment method code ให้เอง
 | `ZARI002/005` | Duplicate Salesforce item ID &1 |
 | `ZARI002/006` | Item &1: partial flag must be X or blank |
 | `ZARI002/007` | Payment amount &1 does not match item total &2 — ⬜ ยังไม่เปิดใช้ (OQ-05) |
-| `ZARI002/008` | Bank/branch &1 does not exist — ⬜ ยังไม่เปิดใช้ (OQ-01) |
+| `ZARI002/008` | Bank/branch &1 does not exist |
 | `ZARI002/009` | Invalid payment data for payment &1. Please verify — ⬜ ไม่ได้เปิดใช้ (ยกเลิกการตรวจ format ตัวเลข 2026-09-04) |
 | `ZARI002/010` | Duplicate: payment &1 with billing document &2 exists |
 | `ZARI002/011` | Payment &1: received amount must be greater than zero |

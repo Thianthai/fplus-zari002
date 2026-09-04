@@ -29,7 +29,7 @@ API field ↔ table field · **JSON ใช้ CamelCase · table ใช้ snake
 | `ChequeNo` | `cheque_no` | `char(8)` | `String(8)` | in | (✔) | บังคับเมื่อจ่ายด้วยเช็ค |
 | `IssueDate` | `issue_date` | `dats` | `Date` | in | (✔) | บังคับเมื่อจ่ายด้วยเช็ค |
 | `DueOn` | `due_on` | `dats` | `Date` | in | (✔) | บังคับเมื่อจ่ายด้วยเช็ค · ต้องไม่ก่อน `IssueDate` |
-| `ChequeBankBranch` | `cheque_bank_branch` | `char(15)` | `String(15)` | in | (✔) | บังคับเมื่อจ่ายด้วยเช็ค · ยังไม่ validate (OQ-01) |
+| `ChequeBankBranch` | `cheque_bank_branch` | `char(15)` | `String(15)` | in | (✔) | บังคับเมื่อจ่ายด้วยเช็ค · validate กับ `I_Bank_2-BankInternalID` (CHAR 15 เท่ากัน) · **ไม่ pad** — field ไม่มี conversion routine |
 | `Currency` | `currency` | `cuky` | `String(5)` | out | – | ดึงจาก `I_CompanyCode` เสมอ (ธุรกิจใช้สกุลเดียว) |
 | `RoundingDiff` | `rounding_diff` | `curr(23,2)` | `Decimal` | in | – | ติดลบได้ |
 | `AdvancePayment` | `advance_payment` | `curr(23,2)` | `Decimal` | in | – | ติดลบได้ |
@@ -132,7 +132,7 @@ CN ติดลบได้ · แต่ **ผลรวม `AmountPaid` ขอ�
 | `check_payment_method` | header | `202` `203` | ✅ |
 | `check_amount_paid_total` | header | `011` | ✅ |
 | `check_duplicate` | header | `010` | ✅ นิยามชัดแล้ว |
-| `check_cheque_bank_branch` | header | `008` | 🟨 ที่ว่าง — OQ-01 |
+| `check_bank` | header | `008` | ✅ เฉพาะตอนจ่ายด้วยเช็ค |
 | `check_payment_total` | header | `007` | 🟨 ที่ว่าง — OQ-05 |
 | `check_item_ids` | item | `005` `111` | ✅ |
 | `check_item_mandatory` | item | `006` `112`–`118` | ✅ |

@@ -295,7 +295,7 @@ duplicate — การแก้ต้องทำฝั่ง SAP
 | `check_payment_method` | `sap_payment_method` | `I_PaymentMethod` เช็คแค่ว่า code มีจริง · ถ้าแปลงไม่ได้ (คำที่ไม่รู้จัก) ต้องแจ้งคำที่ส่งมาในข้อความด้วย |
 | `check_customer_code` | `customer_code` (Item) | `I_Customer` |
 | `check_ar_open_item` | `accounting_document` (Item) | **ที่ว่างไว้ ยังไม่ใส่ logic** — ตรวจว่ารายการยังไม่ถูกรับชำระหรือ reverse · ต้องหา released view ที่มีสถานะนี้ก่อน (OQ-08) |
-| `check_cheque_bank_branch` | `cheque_bankbranch` | **ที่ว่างไว้ ยังไม่ใส่ logic** — โครงสร้างของ field ยังไม่ชัด (`0040129` ไม่มีใน `I_Bank_2`) ดู `04_field_mapping.md` §7.2 |
+| `check_bank` | `cheque_bank_branch` | เทียบกับ `I_Bank_2-BankInternalID` คู่กับ country ของ company code · **ตรวจเฉพาะตอนจ่ายด้วยเช็ค** เพราะวิธีอื่น field นี้ว่างได้ |
 
 **ไม่เช็คเครื่องหมายจำนวนเงิน** — sample จริงมี `rounding_diff = -1.00` และ
 `advance_payment = -100.00` ซึ่งถูกต้องตามธุรกิจ · ปล่อยให้ ZARE002 ไปเจอเองตอน post
@@ -411,7 +411,7 @@ released CDS view ใช้ได้ครบทั้ง 6 ตัว ชื่�
 | `I_Currency` | `THB` ✅ |
 | `I_PaymentMethod` | TH มี 10 code — ดูตารางข้างล่าง |
 | `I_Customer` | **8 ราย** (2026-08-28 เพิ่มจากเดิม 3): `1000000002` `1000000003` `1000000004` `1000000006` `1100000002` `1200000001` `1200000002` `2000000002` |
-| `I_Bank_2` | key = `BankCountry` + `BankInternalID` · ค่าบน tenant เป็น **รหัส 3 หลัก**: `002 004 006 008 009 011 014 017 018 020` |
+| `I_Bank_2` | key = `BankCountry` + `BankInternalID` (CHAR 15) · ⚠️ ค่าที่เห็นบน tenant ตอน spike **ไม่ใช่ master data ตัวจริง** |
 
 ⚠️ **customer ที่ sample ของ SFDC ใช้ยังไม่ครบ** — `1000000001` `1000000005` `1000000013`
 `1000000020` `1000000021` ยังไม่มีใน master data · `check_customer_code` จะ reject sample
@@ -456,8 +456,9 @@ repository object (class / CDS / BDEF) ใช้ร่วมกันข้า�
 
 - **leading zero**: pad `11011214` → `0011011214` แล้ว **เจอครบ 3/3** บน company code `2000`
   → determination ที่ pad ก่อน validate ทำงานถูกต้องแน่นอน
-- **`cheque_bankbranch`**: `004` มีใน `I_Bank_2` แต่ `0040129` **ไม่มี** → ยืนยันว่า field นี้
-  ไม่ใช่ `BankInternalID` ล้วน เป็น bank + branch ประกอบกัน
+- ~~**`cheque_bankbranch`**: `004` มีใน `I_Bank_2` แต่ `0040129` ไม่มี → เป็น bank + branch~~
+  **ข้อสรุปนี้ผิด (แก้ 2026-09-04)** — อ่านจาก master data ชุดที่ยังไม่ถูกต้องบน tenant
+  · `BankInternalID` เป็น **CHAR 15** เท่ากับ `cheque_bank_branch` เทียบ 1:1 ได้ตรง ๆ
 
 
 ---
