@@ -41,7 +41,7 @@ CLASS zcl_zari002_validator DEFINITION
       RETURNING VALUE(rv_result) TYPE ztar_i002_pymt-gl_account.
 
     "! 100–106 · field บังคับของ header
-    CLASS-METHODS check_mandatory
+    CLASS-METHODS check_payment_mandatory
       IMPORTING is_payment        TYPE ty_payment
       RETURNING VALUE(rt_finding) TYPE tt_finding.
 
@@ -104,7 +104,7 @@ CLASS zcl_zari002_validator IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD check_mandatory.
+  METHOD check_payment_mandatory.
 
     IF is_payment-salesforce_id IS INITIAL.
       APPEND VALUE #( msgno = '100'
@@ -273,60 +273,50 @@ CLASS zcl_zari002_validator IMPLEMENTATION.
 
   METHOD check_item_mandatory.
 
-    DATA(lv_id) = CONV string( is_item-salesforce_item_id ).
-
     IF is_item-customer_code IS INITIAL.
       APPEND VALUE #( msgno = '112'
-                      msgv1 = lv_id
                       field = 'customer_code'
                     ) TO rt_finding.
     ENDIF.
 
     IF is_item-accounting_document IS INITIAL.
       APPEND VALUE #( msgno = '113'
-                      msgv1 = lv_id
                       field = 'accounting_document'
                     ) TO rt_finding.
     ENDIF.
 
     IF is_item-billing_document IS INITIAL.
       APPEND VALUE #( msgno = '114'
-                      msgv1 = lv_id
                       field = 'billing_document'
                     ) TO rt_finding.
     ENDIF.
 
     IF is_item-invoice_posting_date IS INITIAL.
       APPEND VALUE #( msgno = '115'
-                      msgv1 = lv_id
                       field = 'invoice_posting_date'
                     ) TO rt_finding.
     ENDIF.
 
     IF is_item-invoice_amount IS INITIAL.
       APPEND VALUE #( msgno = '116'
-                      msgv1 = lv_id
                       field = 'invoice_amount'
                     ) TO rt_finding.
     ENDIF.
 
     IF is_item-amount_paid IS INITIAL.
       APPEND VALUE #( msgno = '117'
-                      msgv1 = lv_id
                       field = 'amount_paid'
                     ) TO rt_finding.
     ENDIF.
 
     IF is_item-sale_submit_date IS INITIAL.
       APPEND VALUE #( msgno = '118'
-                      msgv1 = lv_id
                       field = 'sale_submit_date'
                     ) TO rt_finding.
     ENDIF.
 
     IF is_item-partial_amount IS NOT INITIAL AND is_item-partial_amount <> 'X'.
       APPEND VALUE #( msgno = '006'
-                      msgv1 = lv_id
                       field = 'partial_amount'
                     ) TO rt_finding.
     ENDIF.

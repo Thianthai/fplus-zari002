@@ -178,11 +178,11 @@ CLASS ltc_validator IMPLEMENTATION.
 * =====================================================================
 
   METHOD complete_header_is_ok.
-    assert_clean( zcl_zari002_validator=>check_mandatory( valid_payment( ) ) ).
+    assert_clean( zcl_zari002_validator=>check_payment_mandatory( valid_payment( ) ) ).
   ENDMETHOD.
 
   METHOD empty_header_reports_all.
-    DATA(lt_finding) = zcl_zari002_validator=>check_mandatory( VALUE #( ) ).
+    DATA(lt_finding) = zcl_zari002_validator=>check_payment_mandatory( VALUE #( ) ).
 
     cl_abap_unit_assert=>assert_equals( exp = 7 act = lines( lt_finding ) ).
     assert_has( it_finding = lt_finding iv_msgno = '100' ).
@@ -193,7 +193,7 @@ CLASS ltc_validator IMPLEMENTATION.
     DATA(ls_payment) = valid_payment( ).
     CLEAR ls_payment-gl_account.
 
-    DATA(lt_finding) = zcl_zari002_validator=>check_mandatory( ls_payment ).
+    DATA(lt_finding) = zcl_zari002_validator=>check_payment_mandatory( ls_payment ).
 
     cl_abap_unit_assert=>assert_equals( exp = 1 act = lines( lt_finding ) ).
     cl_abap_unit_assert=>assert_equals( exp = '104' act = lt_finding[ 1 ]-msgno ).

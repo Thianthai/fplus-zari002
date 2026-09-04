@@ -48,7 +48,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZARI002</ARBGB>
      <MSGNR>006</MSGNR>
-     <TEXT>Item &amp;1: partial flag must be X or blank</TEXT>
+     <TEXT>Partial flag must be X or blank</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -162,43 +162,43 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZARI002</ARBGB>
      <MSGNR>112</MSGNR>
-     <TEXT>Item &amp;1: customer code is required</TEXT>
+     <TEXT>Customer code is required</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZARI002</ARBGB>
      <MSGNR>113</MSGNR>
-     <TEXT>Item &amp;1: accounting document is required</TEXT>
+     <TEXT>Accounting document is required</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZARI002</ARBGB>
      <MSGNR>114</MSGNR>
-     <TEXT>Item &amp;1: billing document is required</TEXT>
+     <TEXT>Billing document is required</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZARI002</ARBGB>
      <MSGNR>115</MSGNR>
-     <TEXT>Item &amp;1: invoice posting date is required</TEXT>
+     <TEXT>Invoice posting date is required</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZARI002</ARBGB>
      <MSGNR>116</MSGNR>
-     <TEXT>Item &amp;1: invoice amount is required</TEXT>
+     <TEXT>Invoice amount is required</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZARI002</ARBGB>
      <MSGNR>117</MSGNR>
-     <TEXT>Item &amp;1: amount paid is required</TEXT>
+     <TEXT>Amount paid is required</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZARI002</ARBGB>
      <MSGNR>118</MSGNR>
-     <TEXT>Item &amp;1: sale submit date is required</TEXT>
+     <TEXT>Sale submit date is required</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -234,13 +234,13 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZARI002</ARBGB>
      <MSGNR>205</MSGNR>
-     <TEXT>Item &amp;1: customer &amp;2 does not exist</TEXT>
+     <TEXT>Customer &amp;1 does not exist</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZARI002</ARBGB>
      <MSGNR>206</MSGNR>
-     <TEXT>Item &amp;1: document &amp;2 already cleared or reversed</TEXT>
+     <TEXT>Document &amp;1 already cleared or reversed</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>

@@ -57,7 +57,7 @@ CLASS zcl_zari002_master_data IMPLEMENTATION.
 
     ENDLOOP.
 
-    SELECT FROM I_GLAccountInCompanyCode
+    SELECT FROM I_GLAccountInCompanyCode WITH PRIVILEGED ACCESS
       FIELDS CompanyCode AS company_code,
              GLAccount   AS gl_account
       WHERE CompanyCode IN @lr_company_code

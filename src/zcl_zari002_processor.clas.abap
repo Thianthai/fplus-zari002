@@ -264,7 +264,7 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
   METHOD validate.
 
     " 1. Validate Header -----------------------------------------------
-    APPEND LINES OF to_errors( zcl_zari002_validator=>check_mandatory( is_payment )
+    APPEND LINES OF to_errors( zcl_zari002_validator=>check_payment_mandatory( is_payment )
                              ) TO rt_error.
 
     APPEND LINES OF to_errors( zcl_zari002_validator=>check_dates( is_payment )
@@ -398,8 +398,7 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
       AND line_exists( lt_unknown_cust[ table_line = <lfs_item>-customer_code ] ).
         APPEND VALUE #( msgno              = '205'
                         msgtx              = message_text( iv_msgno = '205'
-                                                           iv_v1    = |{ <lfs_item>-salesforce_item_id }|
-                                                           iv_v2    = |{ <lfs_item>-customer_code }| )
+                                                           iv_v1    = |{ <lfs_item>-customer_code }| )
                         salesforce_id      = is_payment-salesforce_id
                         salesforce_item_id = <lfs_item>-salesforce_item_id
                         field              = zcl_zari002_json=>to_json_name( 'customer_code' )
