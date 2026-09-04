@@ -179,14 +179,7 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
     ENDLOOP.
 
     rs_result-success = xsdbool( rs_result-rejected = 0 ).
-
-    IF rs_result-rejected = 0.
-      rs_result-status = message_text( iv_msgno = '000'
-                                       iv_v1    = `Success` ).
-    ELSE.
-      rs_result-status = message_text( iv_msgno = '000'
-                                       iv_v1    = `Error` ).
-    ENDIF.
+    rs_result-status  = COND #( WHEN rs_result-success = abap_true THEN `Success` ELSE `Error` ).
 
   ENDMETHOD.
 
@@ -316,7 +309,6 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
 *   ---- ที่ว่างรอคำตอบ ----
 *   check_amount_format       → 009 (OQ-10)
 *   check_payment_total       → 007 (OQ-05)
-*   check_cheque_bank_branch  → 008 (OQ-01)
 *   check_ar_open_item        → 206 (OQ-08)
 
   ENDMETHOD.
@@ -328,6 +320,7 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
     DATA lt_gl_key       TYPE zif_zari002_master_data=>tt_gl_key.
     DATA lt_pm_key       TYPE zif_zari002_master_data=>tt_payment_method_key.
     DATA lt_customer     TYPE zif_zari002_master_data=>tt_customer.
+    DATA lt_bank_key     TYPE zif_zari002_master_data=>tt_bank_key.
 
     " Company Code
     IF is_payment-company_code IS NOT INITIAL.
@@ -389,6 +382,25 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
                                                       iv_v2    = |{ lv_country }| )
                         salesforce_id = is_payment-salesforce_id
                         field         = zcl_zari002_json=>to_json_name( 'payment_method' )
+                      ) TO rt_error.
+      ENDIF.
+    ENDIF.
+
+    " Bank / Branch — ตรวจเฉพาะตอนจ่ายด้วยเช็คเท่านั้น
+    IF is_payment-sap_payment_method  = zcl_zari002_validator=>gc_pymt_method_cheque
+    AND is_payment-cheque_bank_branch IS NOT INITIAL
+    AND lv_country                    IS NOT INITIAL.
+
+      INSERT VALUE #( country = lv_country
+                      bank    = is_payment-cheque_bank_branch
+                    ) INTO TABLE lt_bank_key.
+
+      IF go_master_data->find_unknown_banks( lt_bank_key ) IS NOT INITIAL.
+        APPEND VALUE #( msgno         = '008'
+                        msgtx         = message_text( iv_msgno = '008'
+                                                      iv_v1    = |{ is_payment-cheque_bank_branch }| )
+                        salesforce_id = is_payment-salesforce_id
+                        field         = zcl_zari002_json=>to_json_name( 'cheque_bank_branch' )
                       ) TO rt_error.
       ENDIF.
     ENDIF.

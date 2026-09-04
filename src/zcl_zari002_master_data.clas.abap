@@ -125,7 +125,7 @@ CLASS zcl_zari002_master_data IMPLEMENTATION.
     lr_customer = VALUE #( FOR <lfs_cust> IN it_customer
                            ( sign = 'I' option = 'EQ' low = <lfs_cust> ) ).
 
-    SELECT FROM I_Customer
+    SELECT FROM I_Customer WITH PRIVILEGED ACCESS
       FIELDS Customer AS customer
       WHERE Customer IN @lr_customer
       INTO TABLE @DATA(lt_existing).
@@ -133,6 +133,48 @@ CLASS zcl_zari002_master_data IMPLEMENTATION.
     LOOP AT it_customer ASSIGNING FIELD-SYMBOL(<lfs_c>).
       IF NOT line_exists( lt_existing[ customer = <lfs_c> ] ).
         INSERT <lfs_c> INTO TABLE rt_result.
+      ENDIF.
+    ENDLOOP.
+
+  ENDMETHOD.
+
+
+  METHOD zif_zari002_master_data~find_unknown_banks.
+
+    DATA lr_country TYPE RANGE OF zif_zari002_master_data=>ty_country.
+    DATA lr_bank    TYPE RANGE OF zif_zari002_master_data=>ty_bank.
+
+    IF it_bank_key IS INITIAL.
+      RETURN.
+    ENDIF.
+
+*   จำกัดขอบเขตด้วย 2 range แล้วค่อยจับคู่ในหน่วยความจำ
+*   เพราะ SQL เทียบคู่ (country, bank) พร้อมกันไม่ได้
+    LOOP AT it_bank_key ASSIGNING FIELD-SYMBOL(<lfs_bank>).
+
+      IF NOT line_exists( lr_country[ low = <lfs_bank>-country ] ).
+        APPEND VALUE #( sign = 'I' option = 'EQ' low = <lfs_bank>-country )
+               TO lr_country.
+      ENDIF.
+
+      IF NOT line_exists( lr_bank[ low = <lfs_bank>-bank ] ).
+        APPEND VALUE #( sign = 'I' option = 'EQ' low = <lfs_bank>-bank )
+               TO lr_bank.
+      ENDIF.
+
+    ENDLOOP.
+
+    SELECT FROM I_Bank_2 WITH PRIVILEGED ACCESS
+      FIELDS BankCountry    AS country,
+             BankInternalID AS bank
+      WHERE BankCountry    IN @lr_country
+        AND BankInternalID IN @lr_bank
+      INTO TABLE @DATA(lt_existing).
+
+    LOOP AT it_bank_key ASSIGNING <lfs_bank>.
+      IF NOT line_exists( lt_existing[ country = <lfs_bank>-country
+                                       bank    = <lfs_bank>-bank ] ).
+        INSERT <lfs_bank> INTO TABLE rt_result.
       ENDIF.
     ENDLOOP.
 

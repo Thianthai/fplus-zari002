@@ -30,6 +30,14 @@ CLASS ltd_master_data IMPLEMENTATION.
     ENDLOOP.
   ENDMETHOD.
 
+  METHOD zif_zari002_master_data~find_unknown_banks.
+    LOOP AT it_bank_key ASSIGNING FIELD-SYMBOL(<lfs_b>).
+      IF NOT ( <lfs_b>-country = 'TH' AND <lfs_b>-bank = '0040129' ).
+        INSERT <lfs_b> INTO TABLE rt_result.
+      ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
+
   METHOD zif_zari002_master_data~find_unknown_customers.
     LOOP AT it_customer ASSIGNING FIELD-SYMBOL(<lfs_c>).
       IF <lfs_c> <> '1000000002'.
@@ -71,20 +79,24 @@ CLASS ltc_processor DEFINITION FINAL
     CLASS-METHODS class_teardown.
     METHODS setup.
 
-    METHODS valid_request_is_saved    FOR TESTING.
-    METHODS batch_and_currency_set    FOR TESTING.
-    METHODS gl_account_is_padded      FOR TESTING.
-    METHODS unknown_company_fails     FOR TESTING.
-    METHODS nothing_saved_on_error    FOR TESTING.
-    METHODS duplicate_is_rejected     FOR TESTING.
-    METHODS broken_json_gives_012     FOR TESTING.
-    METHODS callback_one_row_per_item FOR TESTING.
-    METHODS callback_carries_error    FOR TESTING.
+    METHODS valid_request_is_saved     FOR TESTING.
+    METHODS batch_and_currency_set     FOR TESTING.
+    METHODS gl_account_is_padded       FOR TESTING.
+    METHODS unknown_company_fails      FOR TESTING.
+    METHODS nothing_saved_on_error     FOR TESTING.
+    METHODS duplicate_is_rejected      FOR TESTING.
+    METHODS broken_json_gives_012      FOR TESTING.
+    METHODS unknown_bank_fails_008     FOR TESTING.
+    METHODS bank_skipped_if_not_cheque FOR TESTING.
+    METHODS callback_one_row_per_item  FOR TESTING.
+    METHODS callback_carries_error     FOR TESTING.
 
     METHODS sample_json
-      IMPORTING iv_company_code  TYPE string DEFAULT `2000`
-                iv_doc_no        TYPE string DEFAULT `1000000001`
-      RETURNING VALUE(rv_result) TYPE string.
+      IMPORTING iv_company_code   TYPE string DEFAULT `2000`
+                iv_doc_no         TYPE string DEFAULT `1000000001`
+                iv_payment_method TYPE string DEFAULT `Cheque`
+                iv_bank_branch    TYPE string DEFAULT `0040129`
+      RETURNING VALUE(rv_result)  TYPE string.
 
     METHODS has_msgno
       IMPORTING it_error         TYPE zcl_zari002_processor=>tt_error
@@ -127,11 +139,11 @@ CLASS ltc_processor IMPLEMENTATION.
       `      "CompanyCode": "` && iv_company_code && `",`        &&
       `      "PostingDate": "2026-08-15",`                       &&
       `      "GlAccount": "11011214",`                           &&
-      `      "PaymentMethod": "Cheque",`                         &&
+      `      "PaymentMethod": "` && iv_payment_method && `",`   &&
       `      "ChequeNo": "10020185",`                            &&
       `      "IssueDate": "2026-07-15",`                         &&
       `      "DueOn": "2026-08-31",`                             &&
-      `      "ChequeBankBranch": "0040129",`                     &&
+      `      "ChequeBankBranch": "` && iv_bank_branch && `",`   &&
       `      "PaymentAmount": "9650.00",`                        &&
       `      "Items": [`                                         &&
       `        { "SalesforceItemId": "IT0000000000000001",`      &&
@@ -259,6 +271,29 @@ CLASS ltc_processor IMPLEMENTATION.
 
     cl_abap_unit_assert=>assert_equals( exp = abap_false act = ls_out-success ).
     cl_abap_unit_assert=>assert_true( has_msgno( it_error = ls_out-errors iv_msgno = '012' ) ).
+
+  ENDMETHOD.
+
+
+  METHOD unknown_bank_fails_008.
+
+    DATA(ls_out) = go_cut->process( sample_json( iv_bank_branch = `9999999` ) ).
+
+    cl_abap_unit_assert=>assert_equals( exp = abap_false act = ls_out-success ).
+    cl_abap_unit_assert=>assert_true( has_msgno( it_error = ls_out-errors iv_msgno = '008' ) ).
+
+  ENDMETHOD.
+
+
+  METHOD bank_skipped_if_not_cheque.
+
+*   จ่ายด้วยวิธีอื่น field นี้ว่างได้ ต้องไม่มี 008
+    DATA(ls_out) = go_cut->process( sample_json( iv_payment_method = `Transfer`
+                                                 iv_bank_branch    = `` ) ).
+
+    cl_abap_unit_assert=>assert_false(
+      act = has_msgno( it_error = ls_out-errors iv_msgno = '008' )
+      msg = 'ไม่ได้จ่ายด้วยเช็ค ไม่ควรตรวจ bank' ).
 
   ENDMETHOD.
 

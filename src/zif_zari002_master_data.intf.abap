@@ -7,7 +7,8 @@ INTERFACE zif_zari002_master_data
     ty_payment_method TYPE ztar_i002_pymt-sap_payment_method,
     ty_currency       TYPE ztar_i002_pymt-currency,
     ty_customer       TYPE ztar_i002_item-customer_code,
-    ty_country        TYPE c LENGTH 3.
+    ty_country        TYPE c LENGTH 3,
+    ty_bank           TYPE ztar_i002_pymt-cheque_bank_branch.
 
   TYPES:
     "! company code + ข้อมูลที่ derive ต่อได้
@@ -27,7 +28,13 @@ INTERFACE zif_zari002_master_data
     BEGIN OF ty_payment_method_key,
       country        TYPE ty_country,
       payment_method TYPE ty_payment_method,
-    END OF ty_payment_method_key.
+    END OF ty_payment_method_key,
+
+    "! bank ผูกกับประเทศ เหมือน payment method
+    BEGIN OF ty_bank_key,
+      country TYPE ty_country,
+      bank    TYPE ty_bank,
+    END OF ty_bank_key.
 
   TYPES:
     tt_company_code       TYPE SORTED TABLE OF ty_company_code
@@ -39,7 +46,9 @@ INTERFACE zif_zari002_master_data
     tt_payment_method_key TYPE SORTED TABLE OF ty_payment_method_key
                           WITH UNIQUE KEY country payment_method,
     tt_customer           TYPE SORTED TABLE OF ty_customer
-                          WITH UNIQUE KEY table_line.
+                          WITH UNIQUE KEY table_line,
+    tt_bank_key           TYPE SORTED TABLE OF ty_bank_key
+                          WITH UNIQUE KEY country bank.
 
   "! อ่าน currency และ country ของ company code
   "! ใช้ทั้งใน setPaymentDefaults (เอาค่าไปเติม) และ validateCompanyCode (เช็คว่ามีจริง)
@@ -62,5 +71,12 @@ INTERFACE zif_zari002_master_data
   METHODS find_unknown_customers
     IMPORTING it_customer      TYPE tt_customer
     RETURNING VALUE(rt_result) TYPE tt_customer.
+
+  "! คืน bank ที่ **ไม่มีจริง** ในประเทศนั้น
+  "! ค่าต้องตรงกับ I_Bank_2-BankInternalID เป๊ะ — field ไม่มี conversion routine
+  "! จึงไม่ pad ให้ ต้นทางต้องส่งมาถูกเอง
+  METHODS find_unknown_banks
+    IMPORTING it_bank_key      TYPE tt_bank_key
+    RETURNING VALUE(rt_result) TYPE tt_bank_key.
 
 ENDINTERFACE.
