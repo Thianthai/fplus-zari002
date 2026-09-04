@@ -280,7 +280,6 @@ duplicate — การแก้ต้องทำฝั่ง SAP
 | `check_cheque_fields` | Payment | ถ้า `sap_payment_method` = เช็ค → `cheque_no` `issue_date` `due_on` `cheque_bankbranch` ต้องครบ (ดูจาก code ที่แปลงแล้ว ไม่ใช่คำดิบ) |
 | `check_payment_total` | Payment | **ที่ว่างไว้ ยังไม่ใส่ logic** — เผื่อภายหลังต้องเทียบ `payment_amount` กับผลรวม `amount_paid` |
 | `check_amount_paid_total` | Payment | ผลรวม `amount_paid` ของทุก item ต้อง **> 0** |
-| `check_amount_format` | Payment | **ที่ว่างไว้ ยังไม่ใส่ logic** — OData จับค่าที่ไม่ใช่ตัวเลขไปก่อนแล้ว รอนิยามเงื่อนไข (OQ-10) |
 | `check_duplicate` | Payment | `payment_document_no` + `billing_document` ต้องไม่เคยมีใน table |
 | `check_number_of_items` | Payment | ต้องเท่ากับจำนวน `_Item` ที่ส่งมาจริง |
 | `check_dates` | Payment | `due_on` ต้องไม่ก่อน `issue_date` |

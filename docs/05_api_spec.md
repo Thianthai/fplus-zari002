@@ -142,7 +142,7 @@ field `Created*` / `LastChanged*` ทั้งหมด
 รับได้ทั้ง **ISO `"2026-08-15"`** และ **SAP `"20260815"`** — ให้ผลเหมือนกัน
 
 ⬜ ⚠️ ค่าที่ไม่ใช่วันที่เลย (เช่น `"abc"`) **ยังไม่ถูกตรวจ** จะกลายเป็นวันที่ขยะ —
-รวมอยู่ใน OQ-10 (การตรวจ format ที่ยังไม่ได้นิยาม)
+ดู OQ-10
 
 ### 6.1 Leading zero — ไม่ต้องเติมมา
 
@@ -227,7 +227,7 @@ API แปลงคำเป็น SAP payment method code ให้เอง
 | `ZARI002/006` | Item &1: partial flag must be X or blank |
 | `ZARI002/007` | Payment amount &1 does not match item total &2 — ⬜ ยังไม่เปิดใช้ (OQ-05) |
 | `ZARI002/008` | Bank/branch &1 does not exist — ⬜ ยังไม่เปิดใช้ (OQ-01) |
-| `ZARI002/009` | Invalid payment data for payment &1. Please verify — ⬜ ยังไม่เปิดใช้ (OQ-10) |
+| `ZARI002/009` | Invalid payment data for payment &1. Please verify — ⬜ ไม่ได้เปิดใช้ (ยกเลิกการตรวจ format ตัวเลข 2026-09-04) |
 | `ZARI002/010` | Duplicate: payment &1 with billing document &2 exists |
 | `ZARI002/011` | Payment &1: received amount must be greater than zero |
 | `ZARI002/012` | Request body is not valid JSON |

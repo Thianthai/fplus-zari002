@@ -132,7 +132,6 @@ CN ติดลบได้ · แต่ **ผลรวม `AmountPaid` ขอ�
 | `check_payment_method` | header | `202` `203` | ✅ |
 | `check_amount_paid_total` | header | `011` | ✅ |
 | `check_duplicate` | header | `010` | ✅ นิยามชัดแล้ว |
-| `check_amount_format` | header | `009` | 🟨 ที่ว่าง — OQ-10 |
 | `check_cheque_bank_branch` | header | `008` | 🟨 ที่ว่าง — OQ-01 |
 | `check_payment_total` | header | `007` | 🟨 ที่ว่าง — OQ-05 |
 | `check_item_ids` | item | `005` `111` | ✅ |
