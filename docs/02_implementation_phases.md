@@ -178,3 +178,4 @@ serialize response (`Field` / `Item` / ข้อความจาก message cl
 | 7.3 | Troubleshooting guide — รวมเคส OQ-14 (ใบที่ post ไม่ผ่านส่งซ้ำไม่ได้) และเคส callback ล้ม | ⬜ |
 | 7.4 | Technical spec สำหรับ RICEFW document | ⬜ |
 | 7.5 | ส่งมอบ contract ของ table ให้ทีม **ZARE002** | ⬜ |
+| 7.6 | 🔴 **ลบ `ZCL_ZARI002_SPIKE`** — utility เคลียร์ table ที่ใช้ระหว่าง Phase 6 · `DELETE FROM` ไม่มี `WHERE` ห้ามหลุดไปกับของส่งมอบ และจะติด ATC ที่ 6.11 ถ้ายังอยู่ | ⬜ |

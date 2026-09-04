@@ -35,7 +35,7 @@
 | OQ-18 | response ของ API เราเองควรมีอะไร ในเมื่อผลจริงส่งผ่าน callback แล้ว | Salesforce | Phase 4 | `05_api_spec.md` §8 ยังเปิดไว้ | ⬜ |
 
 | OQ-19 | business role ที่ `SBPA_DEV` ต้องมี เพื่ออ่าน `I_GLAccountInCompanyCode` และ `I_Customer` — catalog ไหนบ้าง และจะจำกัด company code แค่ `2000` ได้ไหม | ผู้ใช้ + FI | Phase 5 | **บล็อกการเทสทั้งหมด** — ทุก request ติด `201` + `205` จนกว่าจะแก้ | ⬜ |
-| OQ-20 | test data จาก `ZCL_ZARI002_SPIKE_EML` ค้างอยู่บน client 100 (`payment_document_no = 1000000001`) — เคลียร์ทิ้งหรือเปลี่ยนเลขที่ใช้เทส | ผู้ใช้ | Phase 6 | ทำให้เทส duplicate ปนกับของเก่า | ⬜ |
+| OQ-20 | test data ค้างบน client 100 — **ปิดแล้ว 2026-09-04** สร้าง `ZCL_ZARI002_SPIKE` เป็น utility เคลียร์ 2 table · เก็บไว้ใช้ระหว่าง Phase 6 แล้วลบทิ้งที่ **Phase 7.6** | — | Phase 6 | — | ✅ |
 
 | OQ-21 | test class ของ `ZCL_ZARI002_JSON` — **ปิดแล้ว 2026-09-02** สร้างใหม่ 16 test ครอบคลุมหลาย payment, `RequestId`, วันที่ 4 รูปแบบ, field ที่ไม่ส่งมาในใบที่ 2 · เขียวครบ | — | Phase 6 | — | ✅ |
 | OQ-22 | `request_id` ที่ SFDC ส่งมายาวเกิน `char(20)` จะถูกตัดเงียบ ๆ — ต้องตรวจความยาวและ reject หรือปล่อย | Salesforce | Phase 6 | ถ้าถูกตัด SFDC จะหา request ของตัวเองใน SAP ไม่เจอ | ⬜ |

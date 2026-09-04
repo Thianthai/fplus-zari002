@@ -54,6 +54,7 @@
 |--------|------|------|-------|--------|
 | `ZCL_ZARI002_HTTP` | Handler — `IF_HTTP_SERVICE_EXTENSION` | `src/zcl_zari002_http.clas.abap` | 4 | ✅ |
 | `ZARI002_INCOMING_PYMT` | HTTP Service | `src/zari002_incoming_pymt.http.xml` | 4 | ✅ |
+| `ZCL_ZARI002_SPIKE` | ⚠️ **ชั่วคราว** — `if_oo_adt_classrun` เคลียร์ 2 table ระหว่างเทส · `DELETE FROM` แบบไม่มี `WHERE` **ห้ามรันบน client ที่มีข้อมูลจริง** · **ลบทิ้งใน Phase 7.6** | `src/zcl_zari002_spike.clas.abap` | 6 | 🟨 temporary |
 
 > **RAP ถูกถอดออกทั้งหมดเมื่อ 2026-08-31** — CDS view, behavior definition, behavior pool,
 > projection view และ behavior projection ถูกลบ · เหตุผลอยู่ใน `01_architecture.md` §2
