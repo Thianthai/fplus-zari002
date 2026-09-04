@@ -22,8 +22,9 @@ CLASS zcl_zari002_processor DEFINITION
       tt_error TYPE STANDARD TABLE OF ty_error WITH EMPTY KEY,
 
       BEGIN OF ty_result,
-        request_id TYPE ztar_i002_pymt-request_id,
         success    TYPE abap_bool,
+        request_id TYPE ztar_i002_pymt-request_id,
+        status     TYPE string,
         accepted   TYPE i,
         rejected   TYPE i,
         errors     TYPE tt_error,
@@ -178,6 +179,14 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
     ENDLOOP.
 
     rs_result-success = xsdbool( rs_result-rejected = 0 ).
+
+    IF rs_result-rejected = 0.
+      rs_result-status = message_text( iv_msgno = '000'
+                                       iv_v1    = `Success` ).
+    ELSE.
+      rs_result-status = message_text( iv_msgno = '000'
+                                       iv_v1    = `Error` ).
+    ENDIF.
 
   ENDMETHOD.
 

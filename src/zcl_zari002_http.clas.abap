@@ -63,8 +63,9 @@ CLASS zcl_zari002_http DEFINITION
 
       BEGIN OF ty_response,
         request_id TYPE string,
-        accepted   TYPE i,
-        rejected   TYPE i,
+        status     TYPE string,
+*        accepted   TYPE i,
+*        rejected   TYPE i,
         errors     TYPE tt_error,
       END OF ty_response.
 
@@ -134,8 +135,9 @@ CLASS zcl_zari002_http IMPLEMENTATION.
     DATA(ls_result) = NEW zcl_zari002_processor( )->process( io_http_request->get_text( ) ).
 
     DATA(ls_response) = VALUE ty_response( request_id = |{ ls_result-request_id }|
-                                           accepted   = ls_result-accepted
-                                           rejected   = ls_result-rejected
+                                           status     = ls_result-status
+*                                           accepted   = ls_result-accepted
+*                                           rejected   = ls_result-rejected
                                            errors     = VALUE #( FOR <lfs_error> IN ls_result-errors
                                                                ( code               = |ZARI002/{ <lfs_error>-msgno }|
                                                                  message            = <lfs_error>-msgtx
