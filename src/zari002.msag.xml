@@ -59,12 +59,6 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZARI002</ARBGB>
-     <MSGNR>008</MSGNR>
-     <TEXT>Bank/branch &amp;1 does not exist</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZARI002</ARBGB>
      <MSGNR>010</MSGNR>
      <TEXT>Duplicate: payment &amp;1 with billing document &amp;2 exists</TEXT>
     </T100>
