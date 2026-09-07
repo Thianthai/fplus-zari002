@@ -259,7 +259,7 @@ API แปลงคำเป็น SAP payment method code ให้เอง
 | `ZARI002/005` | Duplicate Salesforce item ID &1 |
 | `ZARI002/006` | Partial flag must be X or blank |
 | `ZARI002/007` | Payment amount &1 does not match item total &2 — ⬜ ยังไม่เปิดใช้ (OQ-05) |
-| ~~`ZARI002/008`~~ | ~~Bank/branch &1 does not exist~~ — **ย้ายไป `207` เมื่อ 2026-09-07** เพราะเป็นการตรวจ master data ไม่ใช่ business rule |
+| ~~`ZARI002/008`~~ | ~~Bank/branch &1 does not exist~~ — **ย้ายไป `207` แล้วลบทิ้ง 2026-09-07** เพราะเป็นการตรวจ master data ไม่ใช่ business rule · เลขนี้จะไม่ถูกนำกลับมาใช้ซ้ำ |
 | ~~`ZARI002/009`~~ | ~~Invalid payment data~~ — **ลบแล้ว 2026-09-07** ยกเลิกการตรวจ format ตัวเลข · เลขนี้จะไม่ถูกนำกลับมาใช้ซ้ำ |
 | `ZARI002/010` | Duplicate: payment &1 with billing document &2 exists |
 | `ZARI002/011` | Payment &1: received amount must be greater than zero |
