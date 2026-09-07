@@ -86,10 +86,12 @@ CLASS ltc_processor DEFINITION FINAL
     METHODS nothing_saved_on_error     FOR TESTING.
     METHODS duplicate_is_rejected      FOR TESTING.
     METHODS broken_json_gives_012      FOR TESTING.
-    METHODS unknown_bank_fails_008     FOR TESTING.
+    METHODS unknown_bank_fails_207     FOR TESTING.
     METHODS bank_skipped_if_not_cheque FOR TESTING.
     METHODS callback_one_row_per_item  FOR TESTING.
     METHODS callback_carries_error     FOR TESTING.
+    METHODS success_line_has_sf_id     FOR TESTING.
+    METHODS rejected_has_no_success    FOR TESTING.
 
     METHODS sample_json
       IMPORTING iv_company_code   TYPE string DEFAULT `2000`
@@ -180,9 +182,16 @@ CLASS ltc_processor IMPLEMENTATION.
 
     DATA(ls_out) = go_cut->process( sample_json( ) ).
 
-    cl_abap_unit_assert=>assert_initial(
-      act = ls_out-errors
-      msg = 'ข้อมูลถูกต้องทั้งหมด ไม่ควรมี error' ).
+    cl_abap_unit_assert=>assert_equals(
+      exp = 1
+      act = lines( ls_out-results )
+      msg = 'ข้อมูลถูกต้อง ต้องได้บรรทัดสำเร็จใบเดียว ไม่มี error' ).
+
+    cl_abap_unit_assert=>assert_equals(
+      exp = zcl_zari002_processor=>gc_msg_success
+      act = ls_out-results[ 1 ]-msgno
+      msg = 'บรรทัดสำเร็จต้องใช้ message 300' ).
+
     cl_abap_unit_assert=>assert_equals( exp = abap_true act = ls_out-success ).
 
     SELECT COUNT(*) FROM ztar_i002_pymt INTO @DATA(lv_header).
@@ -233,7 +242,7 @@ CLASS ltc_processor IMPLEMENTATION.
     DATA(ls_out) = go_cut->process( sample_json( iv_company_code = `9999` ) ).
 
     cl_abap_unit_assert=>assert_equals( exp = abap_false act = ls_out-success ).
-    cl_abap_unit_assert=>assert_true( has_msgno( it_error = ls_out-errors iv_msgno = '200' ) ).
+    cl_abap_unit_assert=>assert_true( has_msgno( it_error = ls_out-results iv_msgno = '200' ) ).
 
   ENDMETHOD.
 
@@ -260,7 +269,7 @@ CLASS ltc_processor IMPLEMENTATION.
     DATA(ls_out) = go_cut->process( sample_json( ) ).
 
     cl_abap_unit_assert=>assert_equals( exp = abap_false act = ls_out-success ).
-    cl_abap_unit_assert=>assert_true( has_msgno( it_error = ls_out-errors iv_msgno = '010' ) ).
+    cl_abap_unit_assert=>assert_true( has_msgno( it_error = ls_out-results iv_msgno = '010' ) ).
 
   ENDMETHOD.
 
@@ -270,17 +279,17 @@ CLASS ltc_processor IMPLEMENTATION.
     DATA(ls_out) = go_cut->process( `{ "SalesforceId": ` ).
 
     cl_abap_unit_assert=>assert_equals( exp = abap_false act = ls_out-success ).
-    cl_abap_unit_assert=>assert_true( has_msgno( it_error = ls_out-errors iv_msgno = '012' ) ).
+    cl_abap_unit_assert=>assert_true( has_msgno( it_error = ls_out-results iv_msgno = '012' ) ).
 
   ENDMETHOD.
 
 
-  METHOD unknown_bank_fails_008.
+  METHOD unknown_bank_fails_207.
 
     DATA(ls_out) = go_cut->process( sample_json( iv_bank_branch = `9999999` ) ).
 
     cl_abap_unit_assert=>assert_equals( exp = abap_false act = ls_out-success ).
-    cl_abap_unit_assert=>assert_true( has_msgno( it_error = ls_out-errors iv_msgno = '008' ) ).
+    cl_abap_unit_assert=>assert_true( has_msgno( it_error = ls_out-results iv_msgno = '008' ) ).
 
   ENDMETHOD.
 
@@ -292,7 +301,7 @@ CLASS ltc_processor IMPLEMENTATION.
                                                  iv_bank_branch    = `` ) ).
 
     cl_abap_unit_assert=>assert_false(
-      act = has_msgno( it_error = ls_out-errors iv_msgno = '008' )
+      act = has_msgno( it_error = ls_out-results iv_msgno = '008' )
       msg = 'ไม่ได้จ่ายด้วยเช็ค ไม่ควรตรวจ bank' ).
 
   ENDMETHOD.
@@ -326,6 +335,32 @@ CLASS ltc_processor IMPLEMENTATION.
     cl_abap_unit_assert=>assert_not_initial(
       act = go_notify->gt_sent[ 1 ]-error_message
       msg = 'error ระดับ payment ต้องถูกส่งไปกับทุกบรรทัด ไม่งั้น SFDC เห็นแค่ E เฉย ๆ' ).
+
+  ENDMETHOD.
+
+
+  METHOD success_line_has_sf_id.
+
+    DATA(ls_out) = go_cut->process( sample_json( ) ).
+
+    cl_abap_unit_assert=>assert_equals(
+      exp = 'SF0000000000000001'
+      act = ls_out-results[ 1 ]-salesforce_id
+      msg = 'SBPA ต้องรู้ว่าใบไหนเข้าไปแล้ว จะได้ไม่ส่งซ้ำจนติด 010' ).
+
+  ENDMETHOD.
+
+
+  METHOD rejected_has_no_success.
+
+    DATA(ls_out) = go_cut->process( sample_json( iv_company_code = `9999` ) ).
+
+    LOOP AT ls_out-results ASSIGNING FIELD-SYMBOL(<lfs_line>).
+      cl_abap_unit_assert=>assert_differs(
+        exp = zcl_zari002_processor=>gc_msg_success
+        act = <lfs_line>-msgno
+        msg = 'ใบที่ตกต้องไม่มีบรรทัดสำเร็จปนมา' ).
+    ENDLOOP.
 
   ENDMETHOD.
 

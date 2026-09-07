@@ -65,12 +65,6 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZARI002</ARBGB>
-     <MSGNR>009</MSGNR>
-     <TEXT>Invalid payment data for payment &amp;1. Please verify.</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZARI002</ARBGB>
      <MSGNR>010</MSGNR>
      <TEXT>Duplicate: payment &amp;1 with billing document &amp;2 exists</TEXT>
     </T100>
@@ -241,6 +235,18 @@
      <ARBGB>ZARI002</ARBGB>
      <MSGNR>206</MSGNR>
      <TEXT>Document &amp;1 already cleared or reversed</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
+     <MSGNR>207</MSGNR>
+     <TEXT>Bank/branch &amp;1 does not exist</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
+     <MSGNR>300</MSGNR>
+     <TEXT>Payment saved successfully</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>

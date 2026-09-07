@@ -27,8 +27,12 @@ CLASS zcl_zari002_processor DEFINITION
         status     TYPE string,
         accepted   TYPE i,
         rejected   TYPE i,
-        errors     TYPE tt_error,
+        results    TYPE tt_error,
       END OF ty_result.
+
+    CONSTANTS:
+      "! บรรทัดที่ใช้เลขนี้คือใบที่บันทึกสำเร็จ ไม่ใช่ error
+      gc_msg_success TYPE symsgno VALUE '300'.
 
     "! ฉีด dependency ได้เพื่อให้ unit test ไม่แตะ master data จริงและไม่ยิง HTTP
     METHODS constructor
@@ -122,7 +126,7 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
         rs_result-success = abap_false.
         APPEND VALUE #( msgno = '012'
                         msgtx = message_text( '012' )
-                      ) TO rs_result-errors.
+                      ) TO rs_result-results.
         RETURN.
     ENDTRY.
 
@@ -166,9 +170,13 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
 
       IF lt_error IS INITIAL.
         rs_result-accepted = rs_result-accepted + 1.
+*       ใบที่สำเร็จ 1 ใบ 1 บรรทัด — SBPA จะรู้ว่าใบไหนเข้าไปแล้ว จะได้ไม่ส่งซ้ำจนติด 010
+        APPEND VALUE #( msgno         = gc_msg_success
+                        msgtx         = message_text( gc_msg_success )
+                        salesforce_id = ls_payment-salesforce_id ) TO rs_result-results.
       ELSE.
         rs_result-rejected = rs_result-rejected + 1.
-        APPEND LINES OF lt_error TO rs_result-errors.
+        APPEND LINES OF lt_error TO rs_result-results.
       ENDIF.
 
       " 3.4 Callback ---------------------------------------------------
@@ -179,7 +187,7 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
     ENDLOOP.
 
     rs_result-success = xsdbool( rs_result-rejected = 0 ).
-    rs_result-status  = COND #( WHEN rs_result-success = abap_true THEN `Success` ELSE `Error` ).
+    rs_result-status  = COND #( WHEN rs_result-success = abap_true THEN `S` ELSE `E` ).
 
   ENDMETHOD.
 
@@ -196,7 +204,7 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
         cs_result-success = abap_false.
         APPEND VALUE #( msgno = '000'
                         msgtx = lo_uuid_error->get_longtext( )
-                      ) TO cs_result-errors.
+                      ) TO cs_result-results.
         RETURN.
     ENDTRY.
 
@@ -240,7 +248,7 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
           cs_result-success = abap_false.
           APPEND VALUE #( msgno = '000'
                           msgtx = lo_uuid_error->get_longtext( )
-                        ) TO cs_result-errors.
+                        ) TO cs_result-results.
           RETURN.
       ENDTRY.
 
@@ -396,8 +404,8 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
                     ) INTO TABLE lt_bank_key.
 
       IF go_master_data->find_unknown_banks( lt_bank_key ) IS NOT INITIAL.
-        APPEND VALUE #( msgno         = '008'
-                        msgtx         = message_text( iv_msgno = '008'
+        APPEND VALUE #( msgno         = '207'
+                        msgtx         = message_text( iv_msgno = '207'
                                                       iv_v1    = |{ is_payment-cheque_bank_branch }| )
                         salesforce_id = is_payment-salesforce_id
                         field         = zcl_zari002_json=>to_json_name( 'cheque_bank_branch' )

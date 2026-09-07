@@ -52,21 +52,22 @@ CLASS zcl_zari002_http DEFINITION
 
     " Response Type ----------------------------------------------------
     TYPES:
-      BEGIN OF ty_error,
+      BEGIN OF ty_result,
+        status             TYPE string,
         code               TYPE string,
         message            TYPE string,
         salesforce_id      TYPE string,
         salesforce_item_id TYPE string,
         field              TYPE string,
-      END OF ty_error,
-      tt_error TYPE STANDARD TABLE OF ty_error WITH EMPTY KEY,
+      END OF ty_result,
+      tt_result TYPE STANDARD TABLE OF ty_result WITH EMPTY KEY,
 
       BEGIN OF ty_response,
         request_id TYPE string,
         status     TYPE string,
 *        accepted   TYPE i,
 *        rejected   TYPE i,
-        errors     TYPE tt_error,
+        payments   TYPE tt_result,
       END OF ty_response.
 
     " Handle Methods ---------------------------------------------------
@@ -138,12 +139,14 @@ CLASS zcl_zari002_http IMPLEMENTATION.
                                            status     = ls_result-status
 *                                           accepted   = ls_result-accepted
 *                                           rejected   = ls_result-rejected
-                                           errors     = VALUE #( FOR <lfs_error> IN ls_result-errors
-                                                               ( code               = |ZARI002/{ <lfs_error>-msgno }|
-                                                                 message            = <lfs_error>-msgtx
-                                                                 salesforce_id      = <lfs_error>-salesforce_id
-                                                                 salesforce_item_id = <lfs_error>-salesforce_item_id
-                                                                 field              = <lfs_error>-field ) ) ).
+                                           payments   = VALUE #( FOR <lfs_line> IN ls_result-results
+                                                               ( status             = COND #( WHEN <lfs_line>-msgno = zcl_zari002_processor=>gc_msg_success
+                                                                                              THEN `S` ELSE `E` )
+                                                                 code               = |ZARI002/{ <lfs_line>-msgno }|
+                                                                 message            = <lfs_line>-msgtx
+                                                                 salesforce_id      = <lfs_line>-salesforce_id
+                                                                 salesforce_item_id = <lfs_line>-salesforce_item_id
+                                                                 field              = <lfs_line>-field ) ) ).
 
     co_http_response->set_header_field( i_name  = 'Content-Type'
                                         i_value = 'application/json' ).
