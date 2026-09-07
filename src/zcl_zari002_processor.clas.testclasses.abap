@@ -289,19 +289,18 @@ CLASS ltc_processor IMPLEMENTATION.
     DATA(ls_out) = go_cut->process( sample_json( iv_bank_branch = `9999999` ) ).
 
     cl_abap_unit_assert=>assert_equals( exp = abap_false act = ls_out-success ).
-    cl_abap_unit_assert=>assert_true( has_msgno( it_error = ls_out-results iv_msgno = '008' ) ).
+    cl_abap_unit_assert=>assert_true( has_msgno( it_error = ls_out-results iv_msgno = '207' ) ).
 
   ENDMETHOD.
 
 
   METHOD bank_skipped_if_not_cheque.
 
-*   จ่ายด้วยวิธีอื่น field นี้ว่างได้ ต้องไม่มี 008
     DATA(ls_out) = go_cut->process( sample_json( iv_payment_method = `Transfer`
                                                  iv_bank_branch    = `` ) ).
 
     cl_abap_unit_assert=>assert_false(
-      act = has_msgno( it_error = ls_out-results iv_msgno = '008' )
+      act = has_msgno( it_error = ls_out-results iv_msgno = '207' )
       msg = 'ไม่ได้จ่ายด้วยเช็ค ไม่ควรตรวจ bank' ).
 
   ENDMETHOD.
