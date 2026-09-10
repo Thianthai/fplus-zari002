@@ -27,7 +27,7 @@ CLASS zcl_zari002_processor DEFINITION
         status     TYPE string,
         accepted   TYPE i,
         rejected   TYPE i,
-        results    TYPE tt_error,
+        errors     TYPE tt_error,
       END OF ty_result.
 
     CONSTANTS:
@@ -95,6 +95,11 @@ CLASS zcl_zari002_processor DEFINITION
                 iv_v4            TYPE string OPTIONAL
       RETURNING VALUE(rv_result) TYPE string.
 
+    "! สรุปผลรวมของทั้ง request จากตัวนับ — ต้องเรียกก่อน RETURN ทุกทาง
+    "! ไม่งั้นทางที่ออกก่อนจะคืน Status เป็นค่าว่าง
+    METHODS set_outcome
+      CHANGING cs_result TYPE ty_result.
+
 ENDCLASS.
 
 
@@ -123,10 +128,10 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
         zcl_zari002_json=>parse_json_request( EXPORTING iv_body    = iv_body
                                               IMPORTING es_request = ls_request ).
       CATCH zcx_zari002_error.
-        rs_result-success = abap_false.
         APPEND VALUE #( msgno = '012'
                         msgtx = message_text( '012' )
-                      ) TO rs_result-results.
+                      ) TO rs_result-errors.
+        set_outcome( CHANGING cs_result = rs_result ).
         RETURN.
     ENDTRY.
 
@@ -138,24 +143,33 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
 
     rs_result-request_id = ls_request-request_id.
 
-    " 3. Process -------------------------------------------------------
+    " 3. Empty Payment -------------------------------------------------
+    IF ls_request-payments IS INITIAL.
+      APPEND VALUE #( msgno = '013'
+                      msgtx = message_text( '013' )
+                    ) TO rs_result-errors.
+      set_outcome( CHANGING cs_result = rs_result ).
+      RETURN.
+    ENDIF.
+
+    " 4. Process -------------------------------------------------------
     LOOP AT ls_request-payments ASSIGNING FIELD-SYMBOL(<lfs_payment>).
 
       CLEAR: ls_payment, lt_item[].
       MOVE-CORRESPONDING <lfs_payment>       TO ls_payment.
       MOVE-CORRESPONDING <lfs_payment>-items TO lt_item.
 
-      " 3.1 Normalize --------------------------------------------------
+      " 4.1 Normalize --------------------------------------------------
       normalize( EXPORTING iv_request_id = CONV #( ls_request-request_id )
                  CHANGING  cs_payment    = ls_payment
                            ct_item       = lt_item
                            cs_result     = rs_result ).
 
-      " 3.2 Validate ---------------------------------------------------
+      " 4.2 Validate ---------------------------------------------------
       DATA(lt_error) = validate( is_payment = ls_payment
                                  it_item    = lt_item ).
 
-      " 3.3 Save -------------------------------------------------------
+      " 4.3 Save -------------------------------------------------------
       IF lt_error IS INITIAL.
         IF save( is_payment = ls_payment
                  it_item    = lt_item ) = abap_false.
@@ -170,24 +184,19 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
 
       IF lt_error IS INITIAL.
         rs_result-accepted = rs_result-accepted + 1.
-*       ใบที่สำเร็จ 1 ใบ 1 บรรทัด — SBPA จะรู้ว่าใบไหนเข้าไปแล้ว จะได้ไม่ส่งซ้ำจนติด 010
-        APPEND VALUE #( msgno         = gc_msg_success
-                        msgtx         = message_text( gc_msg_success )
-                        salesforce_id = ls_payment-salesforce_id ) TO rs_result-results.
       ELSE.
         rs_result-rejected = rs_result-rejected + 1.
-        APPEND LINES OF lt_error TO rs_result-results.
+        APPEND LINES OF lt_error TO rs_result-errors.
       ENDIF.
 
-      " 3.4 Callback ---------------------------------------------------
+      " 4.4 Callback ---------------------------------------------------
       send_callback( is_payment = ls_payment
                      it_item    = lt_item
                      it_error   = lt_error ).
 
     ENDLOOP.
 
-    rs_result-success = xsdbool( rs_result-rejected = 0 ).
-    rs_result-status  = COND #( WHEN rs_result-success = abap_true THEN `S` ELSE `E` ).
+    set_outcome( CHANGING cs_result = rs_result ).
 
   ENDMETHOD.
 
@@ -204,7 +213,7 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
         cs_result-success = abap_false.
         APPEND VALUE #( msgno = '000'
                         msgtx = lo_uuid_error->get_longtext( )
-                      ) TO cs_result-results.
+                      ) TO cs_result-errors.
         RETURN.
     ENDTRY.
 
@@ -248,7 +257,7 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
           cs_result-success = abap_false.
           APPEND VALUE #( msgno = '000'
                           msgtx = lo_uuid_error->get_longtext( )
-                        ) TO cs_result-results.
+                        ) TO cs_result-errors.
           RETURN.
       ENDTRY.
 
@@ -565,6 +574,20 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
     MESSAGE ID 'ZARI002' TYPE 'E' NUMBER iv_msgno
     WITH iv_v1 iv_v2 iv_v3 iv_v4
     INTO rv_result.
+
+  ENDMETHOD.
+
+
+  METHOD set_outcome.
+
+*   สำเร็จ = มีอย่างน้อย 1 ใบเข้า table · ตกบางใบยังได้ HTTP 200
+*   จะเป็น 400 ก็ต่อเมื่อไม่มีอะไรเข้าเลย
+    cs_result-success = xsdbool( cs_result-accepted > 0 ).
+
+    cs_result-status = COND #(
+      WHEN cs_result-accepted > 0 AND cs_result-rejected = 0 THEN message_text( '300' )
+      WHEN cs_result-accepted > 0                            THEN message_text( '301' )
+      ELSE                                                        message_text( '302' ) ).
 
   ENDMETHOD.
 

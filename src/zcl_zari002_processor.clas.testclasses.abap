@@ -90,8 +90,7 @@ CLASS ltc_processor DEFINITION FINAL
     METHODS bank_skipped_if_not_cheque FOR TESTING.
     METHODS callback_one_row_per_item  FOR TESTING.
     METHODS callback_carries_error     FOR TESTING.
-    METHODS success_line_has_sf_id     FOR TESTING.
-    METHODS rejected_has_no_success    FOR TESTING.
+    METHODS empty_payments_gives_013 FOR TESTING.
 
     METHODS sample_json
       IMPORTING iv_company_code   TYPE string DEFAULT `2000`
@@ -182,15 +181,10 @@ CLASS ltc_processor IMPLEMENTATION.
 
     DATA(ls_out) = go_cut->process( sample_json( ) ).
 
-    cl_abap_unit_assert=>assert_equals(
-      exp = 1
-      act = lines( ls_out-results )
-      msg = 'ข้อมูลถูกต้อง ต้องได้บรรทัดสำเร็จใบเดียว ไม่มี error' ).
-
-    cl_abap_unit_assert=>assert_equals(
-      exp = zcl_zari002_processor=>gc_msg_success
-      act = ls_out-results[ 1 ]-msgno
-      msg = 'บรรทัดสำเร็จต้องใช้ message 300' ).
+    cl_abap_unit_assert=>assert_initial(
+      act = ls_out-errors
+      msg = 'ข้อมูลถูกต้องทั้งหมด ไม่ควรมี error' ).
+    cl_abap_unit_assert=>assert_equals( exp = abap_true act = ls_out-success ).
 
     cl_abap_unit_assert=>assert_equals( exp = abap_true act = ls_out-success ).
 
@@ -242,7 +236,7 @@ CLASS ltc_processor IMPLEMENTATION.
     DATA(ls_out) = go_cut->process( sample_json( iv_company_code = `9999` ) ).
 
     cl_abap_unit_assert=>assert_equals( exp = abap_false act = ls_out-success ).
-    cl_abap_unit_assert=>assert_true( has_msgno( it_error = ls_out-results iv_msgno = '200' ) ).
+    cl_abap_unit_assert=>assert_true( has_msgno( it_error = ls_out-errors iv_msgno = '200' ) ).
 
   ENDMETHOD.
 
@@ -269,7 +263,7 @@ CLASS ltc_processor IMPLEMENTATION.
     DATA(ls_out) = go_cut->process( sample_json( ) ).
 
     cl_abap_unit_assert=>assert_equals( exp = abap_false act = ls_out-success ).
-    cl_abap_unit_assert=>assert_true( has_msgno( it_error = ls_out-results iv_msgno = '010' ) ).
+    cl_abap_unit_assert=>assert_true( has_msgno( it_error = ls_out-errors iv_msgno = '010' ) ).
 
   ENDMETHOD.
 
@@ -279,7 +273,10 @@ CLASS ltc_processor IMPLEMENTATION.
     DATA(ls_out) = go_cut->process( `{ "SalesforceId": ` ).
 
     cl_abap_unit_assert=>assert_equals( exp = abap_false act = ls_out-success ).
-    cl_abap_unit_assert=>assert_true( has_msgno( it_error = ls_out-results iv_msgno = '012' ) ).
+    cl_abap_unit_assert=>assert_true( has_msgno( it_error = ls_out-errors iv_msgno = '012' ) ).
+    cl_abap_unit_assert=>assert_not_initial(
+      act = ls_out-status
+      msg = 'parse พังก็ต้องมี Status ไม่ใช่ค่าว่าง' ).
 
   ENDMETHOD.
 
@@ -289,7 +286,7 @@ CLASS ltc_processor IMPLEMENTATION.
     DATA(ls_out) = go_cut->process( sample_json( iv_bank_branch = `9999999` ) ).
 
     cl_abap_unit_assert=>assert_equals( exp = abap_false act = ls_out-success ).
-    cl_abap_unit_assert=>assert_true( has_msgno( it_error = ls_out-results iv_msgno = '207' ) ).
+    cl_abap_unit_assert=>assert_true( has_msgno( it_error = ls_out-errors iv_msgno = '207' ) ).
 
   ENDMETHOD.
 
@@ -300,7 +297,7 @@ CLASS ltc_processor IMPLEMENTATION.
                                                  iv_bank_branch    = `` ) ).
 
     cl_abap_unit_assert=>assert_false(
-      act = has_msgno( it_error = ls_out-results iv_msgno = '207' )
+      act = has_msgno( it_error = ls_out-errors iv_msgno = '207' )
       msg = 'ไม่ได้จ่ายด้วยเช็ค ไม่ควรตรวจ bank' ).
 
   ENDMETHOD.
@@ -338,28 +335,12 @@ CLASS ltc_processor IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD success_line_has_sf_id.
+  METHOD empty_payments_gives_013.
 
-    DATA(ls_out) = go_cut->process( sample_json( ) ).
+    DATA(ls_out) = go_cut->process( `{ "RequestId": "REQ-TEST-0001", "Payments": [] }` ).
 
-    cl_abap_unit_assert=>assert_equals(
-      exp = 'SF0000000000000001'
-      act = ls_out-results[ 1 ]-salesforce_id
-      msg = 'SBPA ต้องรู้ว่าใบไหนเข้าไปแล้ว จะได้ไม่ส่งซ้ำจนติด 010' ).
-
-  ENDMETHOD.
-
-
-  METHOD rejected_has_no_success.
-
-    DATA(ls_out) = go_cut->process( sample_json( iv_company_code = `9999` ) ).
-
-    LOOP AT ls_out-results ASSIGNING FIELD-SYMBOL(<lfs_line>).
-      cl_abap_unit_assert=>assert_differs(
-        exp = zcl_zari002_processor=>gc_msg_success
-        act = <lfs_line>-msgno
-        msg = 'ใบที่ตกต้องไม่มีบรรทัดสำเร็จปนมา' ).
-    ENDLOOP.
+    cl_abap_unit_assert=>assert_equals( exp = abap_false act = ls_out-success ).
+    cl_abap_unit_assert=>assert_true( has_msgno( it_error = ls_out-errors iv_msgno = '013' ) ).
 
   ENDMETHOD.
 
