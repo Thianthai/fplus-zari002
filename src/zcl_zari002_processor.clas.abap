@@ -30,10 +30,6 @@ CLASS zcl_zari002_processor DEFINITION
         errors     TYPE tt_error,
       END OF ty_result.
 
-    CONSTANTS:
-      "! บรรทัดที่ใช้เลขนี้คือใบที่บันทึกสำเร็จ ไม่ใช่ error
-      gc_msg_success TYPE symsgno VALUE '300'.
-
     "! ฉีด dependency ได้เพื่อให้ unit test ไม่แตะ master data จริงและไม่ยิง HTTP
     METHODS constructor
       IMPORTING io_master_data TYPE REF TO zif_zari002_master_data OPTIONAL
