@@ -183,9 +183,13 @@ item ไหนมีปัญหา
 | Table | admin field |
 |---|---|
 | `ZTAR_I002_PYMT` | `created_by` `created_at` `last_changed_by` **`last_changed_at`** `local_last_changed_at` |
-| `ZTAR_I002_ITEM` | `created_by` `created_at` `last_changed_by` — `local_last_changed_at` |
+| `ZTAR_I002_ITEM` | `created_by` `created_at` `last_changed_by` **`last_changed_at`** `local_last_changed_at` |
 
-เป็น pattern มาตรฐานของ RAP ห้ามไป "แก้ให้เท่ากัน" ความหมายของ 2 field ต่างกัน:
+**แก้ 2026-09-10** — เดิม item **ไม่มี** `last_changed_at` โดยตั้งใจ เพราะ RICEFW นี้ไม่มี draft
+จึงไม่มีอะไรใช้มัน · ZARE002 ทำ RAP UI ที่มี draft และต้องใช้ field นี้ จึงเพิ่มเข้าไปให้
+· ตารางเป็น contract ร่วมกัน 3 RICEFW การเพิ่ม field จึงกระทบทุกฝั่งที่อ่านโครงสร้างนี้
+
+ความหมายของ 2 field ต่างกัน ห้ามไป "แก้ให้เท่ากัน":
 
 - `local_last_changed_at` (`abp_locinst_lastchange_tstmpl`) = **instance ตัวนี้ตัวเดียว** ถูกแก้เมื่อไหร่ → ใช้เป็น `etag master`
 - `last_changed_at` (`abp_lastchange_tstmpl`) = instance นี้ **หรือลูกตัวใดก็ได้ในสายพันธุ์** ถูกแก้เมื่อไหร่ → ตั้งใจไว้ให้เป็น `total etag`

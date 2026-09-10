@@ -65,7 +65,7 @@ API field ↔ table field · **JSON ใช้ CamelCase · table ใช้ snake
 | `PartialAmount` | `partial_amount` | `char(1)` | `String(1)` | in | – | **flag ไม่ใช่จำนวนเงิน** — `X` = จ่ายบางส่วน |
 | `SaleSubmitDate` | `sale_submit_date` | `dats` | `Date` | in | ✔ | |
 | `RejectReason` | `reject_reason` | `char(200)` | `String(200)` | out | – | **ZARI002 ไม่เคยเขียน** — เป็นของ ZARE002 |
-| `CreatedBy` `CreatedAt` `LastChangedBy` `LocalLastChangedAt` | admin fields | | | out | – | managed · ไม่มี `LastChangedAt` (ดู `01_architecture.md` §3.4) |
+| `CreatedBy` `CreatedAt` `LastChangedBy` `LastChangedAt` `LocalLastChangedAt` | admin fields | | | out | – | managed · **`LastChangedAt` เพิ่มเมื่อ 2026-09-10** ให้ RAP draft ของ ZARE002 ใช้ (เดิมตั้งใจไม่ใส่) |
 
 
 **Input field: 10** — mandatory 8 · optional 2 (`BillingNoteNo` `PartialAmount`)

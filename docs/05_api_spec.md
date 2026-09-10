@@ -213,11 +213,11 @@ API แปลงคำเป็น SAP payment method code ให้เอง
 
 ```json
 {
-  "RequestId": "20260907_101500",
-  "Status": "S",
-  "Payments": [
-    { "Status": "S", "Code": "ZARI002/300", "Message": "Payment saved successfully",
-      "SalesforceId": "SF0000000000000001", "SalesforceItemId": "", "Field": "" }
+  "RequestId": "20260910_101500",
+  "Status": "Some payments saved successfully",
+  "Errors": [
+    { "Code": "ZARI002/200", "Message": "Company code 9999 does not exist",
+      "SalesforceId": "SF0000000000000002", "SalesforceItemId": "", "Field": "CompanyCode" }
   ]
 }
 ```
@@ -225,22 +225,27 @@ API แปลงคำเป็น SAP payment method code ให้เอง
 | Field | ความหมาย |
 |---|---|
 | `RequestId` | ค่าที่ผู้เรียกส่งมา · ถ้าไม่ส่ง SAP สร้างให้เป็น `YYYYMMDD_hhmmss` |
-| `Status` | `S` = ทุกใบเข้าครบ · `E` = มีอย่างน้อย 1 ใบตก |
-| `Payments[].Status` | `S` = ใบนี้บันทึกแล้ว · `E` = บรรทัดนี้เป็น error |
-| `Payments[].Code` | `ZARI002/nnn` ดู §8.3 |
-| `Payments[].SalesforceItemId` | มีค่าเฉพาะ error ระดับ item · ว่างเมื่อเป็นระดับ payment |
-| `Payments[].Field` | ชื่อ field แบบ PascalCase ที่ผิด · ว่างเมื่อไม่ผูกกับ field ใด |
+| `Status` | ผลรวมของทั้ง request — 1 ใน 3 ค่า ดู §8.2 |
+| `Errors` | **เฉพาะรายการที่ไม่ผ่าน** · ใบที่สำเร็จไม่มีบรรทัดของตัวเอง |
+| `Errors[].SalesforceItemId` | มีค่าเฉพาะ error ระดับ item · ว่างเมื่อเป็นระดับ payment |
+| `Errors[].Field` | ชื่อ field แบบ PascalCase ที่ผิด · ว่างเมื่อไม่ผูกกับ field ใด |
 
-### 8.2 จำนวนบรรทัดใน `Payments`
+### 8.2 `Status` กับ HTTP code
 
-**ใบที่สำเร็จได้ 1 บรรทัด** (`Code` = `300`) ส่วน**ใบที่ตกได้บรรทัดละ 1 error** — ใบเดียว
-ผิด 3 อย่างจะได้ 3 บรรทัด · เรียงตามลำดับใบที่ส่งเข้ามา
+| สถานการณ์ | HTTP | `Status` |
+|---|---|---|
+| ทุกใบเข้า table | `200` | `All payments saved successfully` |
+| เข้าบางใบ ตกบางใบ | `200` | `Some payments saved successfully` |
+| ตกทุกใบ | `400` | `No payments were saved` |
+| JSON พัง (`012`) | `400` | `No payments were saved` |
+| `Payments` ว่าง (`013`) | `400` | `No payments were saved` |
 
-🔴 **`Status` = `E` ไม่ได้แปลว่าไม่มีอะไรเข้าเลย** — แต่ละใบ commit แยกกัน ใบที่ผ่านเข้า table
-ไปแล้วจริง ๆ · ผู้เรียกต้องส่งกลับมา**เฉพาะใบที่ได้ `Status` = `E`** ถ้าส่งทั้งชุดซ้ำ ใบที่เข้าไปแล้ว
+**`200` แปลว่ามีอย่างน้อย 1 ใบเข้า table ไม่ได้แปลว่าเข้าครบ** — ต้องอ่าน `Status` เสมอ
+
+🔴 **ใบที่สำเร็จไม่ปรากฏใน response** — ผู้เรียกต้องหาเอาจากการหักลบ: ใบที่ส่งไปแล้ว
+**ไม่โผล่ใน `Errors`** คือใบที่เข้า table แล้ว · แต่ละใบ commit แยกกัน ใบที่ผ่านเข้าไปจริง
+แม้ `Status` จะไม่ใช่ success · **ส่งกลับมาเฉพาะใบที่มี error** ถ้าส่งทั้งชุดซ้ำ ใบที่เข้าไปแล้ว
 จะติด `010` (ดู OQ-23)
-
-**HTTP status**: `200` เมื่อ `Status` = `S` · `400` เมื่อ `Status` = `E`
 
 ### 8.3 Message code ทั้งหมด
 
@@ -264,6 +269,7 @@ API แปลงคำเป็น SAP payment method code ให้เอง
 | `ZARI002/010` | Duplicate: payment &1 with billing document &2 exists |
 | `ZARI002/011` | Payment &1: received amount must be greater than zero |
 | `ZARI002/012` | Request body is not valid JSON |
+| `ZARI002/013` | Request must contain at least one payment |
 
 **`1xx` — field ที่บังคับ**
 
@@ -306,11 +312,13 @@ API แปลงคำเป็น SAP payment method code ให้เอง
 
 `202` = คำที่ส่งมาไม่อยู่ในรายการแปลง (ดู §6.2) · `203` = แปลงได้แต่ code ไม่มีใน SAP
 
-**`3xx` — ผลลัพธ์ที่ไม่ใช่ error**
+**`3xx` — ผลรวมของ request** ใช้เป็นค่าของ `Status` ไม่เคยโผล่ใน `Errors`
 
 | Code | ข้อความ |
 |---|---|
-| `ZARI002/300` | Payment saved successfully |
+| `ZARI002/300` | All payments saved successfully |
+| `ZARI002/301` | Some payments saved successfully |
+| `ZARI002/302` | No payments were saved |
 
 **`900` — ข้อผิดพลาดทางเทคนิค**
 
