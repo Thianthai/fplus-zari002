@@ -91,12 +91,14 @@ CLASS ltc_processor DEFINITION FINAL
     METHODS callback_one_row_per_item  FOR TESTING.
     METHODS callback_carries_error     FOR TESTING.
     METHODS empty_payments_gives_013 FOR TESTING.
+    METHODS header_error_carries_sf_id FOR TESTING.
 
     METHODS sample_json
       IMPORTING iv_company_code   TYPE string DEFAULT `2000`
                 iv_doc_no         TYPE string DEFAULT `1000000001`
                 iv_payment_method TYPE string DEFAULT `Cheque`
                 iv_bank_branch    TYPE string DEFAULT `0040129`
+                iv_cheque_no      TYPE string DEFAULT `10020185`
       RETURNING VALUE(rv_result)  TYPE string.
 
     METHODS has_msgno
@@ -141,7 +143,7 @@ CLASS ltc_processor IMPLEMENTATION.
       `      "PostingDate": "2026-08-15",`                       &&
       `      "GlAccount": "11011214",`                           &&
       `      "PaymentMethod": "` && iv_payment_method && `",`   &&
-      `      "ChequeNo": "10020185",`                            &&
+      `      "ChequeNo": "` && iv_cheque_no && `",`   &&
       `      "IssueDate": "2026-07-15",`                         &&
       `      "DueOn": "2026-08-31",`                             &&
       `      "ChequeBankBranch": "` && iv_bank_branch && `",`   &&
@@ -341,6 +343,19 @@ CLASS ltc_processor IMPLEMENTATION.
 
     cl_abap_unit_assert=>assert_equals( exp = abap_false act = ls_out-success ).
     cl_abap_unit_assert=>assert_true( has_msgno( it_error = ls_out-errors iv_msgno = '013' ) ).
+
+  ENDMETHOD.
+
+
+  METHOD header_error_carries_sf_id.
+
+*   107 เป็น error ระดับ header — SalesforceId มีอยู่ ต้องถูกส่งกลับไปด้วย
+    DATA(ls_out) = go_cut->process( sample_json( iv_cheque_no = `` ) ).
+
+    cl_abap_unit_assert=>assert_equals(
+      exp = 'SF0000000000000001'
+      act = ls_out-errors[ msgno = '107' ]-salesforce_id
+      msg = 'error ระดับ header ต้องระบุ SalesforceId เมื่อมีข้อมูล' ).
 
   ENDMETHOD.
 

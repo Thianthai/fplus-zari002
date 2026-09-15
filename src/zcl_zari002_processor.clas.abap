@@ -279,26 +279,32 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
   METHOD validate.
 
     " 1. Validate Header -----------------------------------------------
-    APPEND LINES OF to_errors( zcl_zari002_validator=>check_payment_mandatory( is_payment )
+    APPEND LINES OF to_errors( it_finding       = zcl_zari002_validator=>check_payment_mandatory( is_payment )
+                               iv_salesforce_id = is_payment-salesforce_id
                              ) TO rt_error.
 
-    APPEND LINES OF to_errors( zcl_zari002_validator=>check_dates( is_payment )
+    APPEND LINES OF to_errors( it_finding       = zcl_zari002_validator=>check_dates( is_payment )
+                               iv_salesforce_id = is_payment-salesforce_id
                              ) TO rt_error.
 
-    APPEND LINES OF to_errors( zcl_zari002_validator=>check_cheque_fields( is_payment )
+    APPEND LINES OF to_errors( it_finding       = zcl_zari002_validator=>check_cheque_fields( is_payment )
+                               iv_salesforce_id = is_payment-salesforce_id
                              ) TO rt_error.
 
-    APPEND LINES OF to_errors( zcl_zari002_validator=>check_number_of_items(
-                                 iv_number_of_items = is_payment-number_of_items_in_payment
-                                 iv_item_count      = lines( it_item ) )
+    APPEND LINES OF to_errors( it_finding       = zcl_zari002_validator=>check_number_of_items(
+                                                    iv_number_of_items = is_payment-number_of_items_in_payment
+                                                    iv_item_count      = lines( it_item ) )
+                               iv_salesforce_id = is_payment-salesforce_id
                              ) TO rt_error.
 
-    APPEND LINES OF to_errors( zcl_zari002_validator=>check_amount_paid_total(
-                                 iv_salesforce_id = is_payment-salesforce_id
-                                 it_item          = it_item )
+    APPEND LINES OF to_errors( it_finding       = zcl_zari002_validator=>check_amount_paid_total(
+                                                    iv_salesforce_id = is_payment-salesforce_id
+                                                    it_item          = it_item )
+                               iv_salesforce_id = is_payment-salesforce_id
                              ) TO rt_error.
 
-    APPEND LINES OF to_errors( zcl_zari002_validator=>check_item_ids( it_item )
+    APPEND LINES OF to_errors( it_finding       = zcl_zari002_validator=>check_item_ids( it_item )
+                               iv_salesforce_id = is_payment-salesforce_id
                              ) TO rt_error.
 
     " 2. Validate Item -------------------------------------------------
@@ -549,6 +555,7 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
 
   METHOD to_errors.
 
+*   item id: finding ที่ระบุเองมาก่อน (check ที่วนหลาย item) ถ้าไม่มีค่อยใช้ของผู้เรียก
     LOOP AT it_finding ASSIGNING FIELD-SYMBOL(<lfs_finding>).
       APPEND VALUE #( msgno              = <lfs_finding>-msgno
                       msgtx              = message_text( iv_msgno = <lfs_finding>-msgno
@@ -557,7 +564,9 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
                                                          iv_v3    = <lfs_finding>-msgv3
                                                          iv_v4    = <lfs_finding>-msgv4 )
                       salesforce_id      = iv_salesforce_id
-                      salesforce_item_id = iv_salesforce_item_id
+                      salesforce_item_id = COND #( WHEN <lfs_finding>-salesforce_item_id IS NOT INITIAL
+                                                   THEN <lfs_finding>-salesforce_item_id
+                                                   ELSE iv_salesforce_item_id )
                       field              = zcl_zari002_json=>to_json_name( <lfs_finding>-field )
                     ) TO rt_error.
     ENDLOOP.

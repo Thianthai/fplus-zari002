@@ -47,6 +47,7 @@ CLASS ltc_validator DEFINITION FINAL
     METHODS distinct_item_ids_are_ok  FOR TESTING.
     METHODS duplicate_id_reports_005  FOR TESTING.
     METHODS blank_id_reported_once    FOR TESTING.
+    METHODS duplicate_item_carries_id FOR TESTING.
 
     " ---- check_item_mandatory ----
     METHODS complete_item_is_ok       FOR TESTING.
@@ -346,6 +347,20 @@ CLASS ltc_validator IMPLEMENTATION.
       act = lines( lt_finding )
       msg = 'ไม่มี id ให้อ้าง ออกซ้ำหลายรอบก็ไม่ได้ข้อมูลเพิ่ม' ).
     assert_has( it_finding = lt_finding iv_msgno = '111' ).
+  ENDMETHOD.
+
+  METHOD duplicate_item_carries_id.
+
+    DATA(ls_item) = valid_item( ).
+    ls_item-salesforce_item_id = 'IT0000000000000009'.
+
+    DATA(lt_finding) = zcl_zari002_validator=>check_item_ids( VALUE #( ( ls_item ) ( ls_item ) ) ).
+
+    cl_abap_unit_assert=>assert_equals(
+      exp = 'IT0000000000000009'
+      act = lt_finding[ msgno = '005' ]-salesforce_item_id
+      msg = 'finding 005 ต้องบอกเองว่า item ไหนซ้ำ' ).
+
   ENDMETHOD.
 
 * =====================================================================

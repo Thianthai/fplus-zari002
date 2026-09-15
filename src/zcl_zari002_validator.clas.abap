@@ -13,12 +13,13 @@ CLASS zcl_zari002_validator DEFINITION
     TYPES:
       "! ผลการตรวจ 1 ข้อ — ผู้เรียกแปลงเป็น message ต่อ
       BEGIN OF ty_finding,
-        msgno TYPE symsgno,
-        msgv1 TYPE string,
-        msgv2 TYPE string,
-        msgv3 TYPE string,
-        msgv4 TYPE string,
-        field TYPE string,
+        msgno              TYPE symsgno,
+        msgv1              TYPE string,
+        msgv2              TYPE string,
+        msgv3              TYPE string,
+        msgv4              TYPE string,
+        field              TYPE string,
+        salesforce_item_id TYPE ztar_i002_item-salesforce_item_id,
       END OF ty_finding,
       tt_finding TYPE STANDARD TABLE OF ty_finding WITH EMPTY KEY.
 
@@ -260,9 +261,12 @@ CLASS zcl_zari002_validator IMPLEMENTATION.
 
       INSERT <lfs_item>-salesforce_item_id INTO TABLE lt_seen.
       IF sy-subrc <> 0.
-        APPEND VALUE #( msgno = '005'
-                        msgv1 = |{ <lfs_item>-salesforce_item_id }|
-                        field = 'salesforce_item_id'
+*       check นี้วนหลาย item ในครั้งเดียว ผู้เรียกส่ง item id ค่าเดียวให้ไม่ได้
+*       finding จึงต้องบอกเองว่าเป็นของ item ไหน
+        APPEND VALUE #( msgno              = '005'
+                        msgv1              = |{ <lfs_item>-salesforce_item_id }|
+                        field              = 'salesforce_item_id'
+                        salesforce_item_id = <lfs_item>-salesforce_item_id
                       ) TO rt_finding.
       ENDIF.
 
