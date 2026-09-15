@@ -45,11 +45,13 @@ CLASS zcl_zari002_processor DEFINITION
     DATA go_master_data TYPE REF TO zif_zari002_master_data.
     DATA go_notify      TYPE REF TO zcl_zari003_sfdc_notify.
 
+    "! เตรียม payment ให้พร้อมลง table — UUID · key padding · แปลง payment method · admin field
+    "! ถ้า UUID สร้างไม่ได้ คืน error กลับมาแบบเดียวกับ validate( ) ให้ process( ) รวมเข้าเส้นทางเดียวกัน
     METHODS normalize
-      IMPORTING iv_request_id TYPE ztar_i002_pymt-request_id
-      CHANGING  cs_payment    TYPE ztar_i002_pymt
-                ct_item       TYPE tt_item
-                cs_result     TYPE ty_result.
+      IMPORTING iv_request_id   TYPE ztar_i002_pymt-request_id
+      CHANGING  cs_payment      TYPE ztar_i002_pymt
+                ct_item         TYPE tt_item
+      RETURNING VALUE(rt_error) TYPE tt_error.
 
     METHODS validate
       IMPORTING is_payment      TYPE ztar_i002_pymt
@@ -156,14 +158,15 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
       MOVE-CORRESPONDING <lfs_payment>-items TO lt_item.
 
       " 4.1 Normalize --------------------------------------------------
-      normalize( EXPORTING iv_request_id = CONV #( ls_request-request_id )
-                 CHANGING  cs_payment    = ls_payment
-                           ct_item       = lt_item
-                           cs_result     = rs_result ).
+      DATA(lt_error) = normalize( EXPORTING iv_request_id = CONV #( ls_request-request_id )
+                                  CHANGING  cs_payment    = ls_payment
+                                            ct_item       = lt_item ).
 
-      " 4.2 Validate ---------------------------------------------------
-      DATA(lt_error) = validate( is_payment = ls_payment
-                                 it_item    = lt_item ).
+      " 4.2 Validate — ข้ามถ้า normalize พัง ไม่งั้นจะได้ error ซ้อนจาก field ที่ยังไม่ได้เตรียม
+      IF lt_error IS INITIAL.
+        lt_error = validate( is_payment = ls_payment
+                             it_item    = lt_item ).
+      ENDIF.
 
       " 4.3 Save -------------------------------------------------------
       IF lt_error IS INITIAL.
@@ -206,10 +209,10 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
     TRY.
         cs_payment-payment_uuid = cl_system_uuid=>create_uuid_x16_static( ).
       CATCH cx_uuid_error INTO DATA(lo_uuid_error).
-        cs_result-success = abap_false.
-        APPEND VALUE #( msgno = '000'
-                        msgtx = lo_uuid_error->get_longtext( )
-                      ) TO cs_result-errors.
+        APPEND VALUE #( msgno         = '000'
+                        msgtx         = lo_uuid_error->get_text( )
+                        salesforce_id = cs_payment-salesforce_id
+                      ) TO rt_error.
         RETURN.
     ENDTRY.
 
@@ -250,10 +253,11 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
       TRY.
           <lfs_item>-item_uuid = cl_system_uuid=>create_uuid_x16_static( ).
         CATCH cx_uuid_error INTO lo_uuid_error.
-          cs_result-success = abap_false.
-          APPEND VALUE #( msgno = '000'
-                          msgtx = lo_uuid_error->get_longtext( )
-                        ) TO cs_result-errors.
+          APPEND VALUE #( msgno              = '000'
+                          msgtx              = lo_uuid_error->get_text( )
+                          salesforce_id      = cs_payment-salesforce_id
+                          salesforce_item_id = <lfs_item>-salesforce_item_id
+                        ) TO rt_error.
           RETURN.
       ENDTRY.
 
@@ -326,7 +330,6 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
                                    ) TO rt_error.
 
 *   ---- ที่ว่างรอคำตอบ ----
-*   check_amount_format       → 009 (OQ-10)
 *   check_payment_total       → 007 (OQ-05)
 *   check_ar_open_item        → 206 (OQ-08)
 
