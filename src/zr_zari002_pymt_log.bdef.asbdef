@@ -1,0 +1,105 @@
+managed implementation in class zbp_r_zari002_pymt_log unique;
+strict ( 2 );
+
+// อ่านอย่างเดียว — processor เขียนผ่าน INSERT ตรง ไม่ผ่าน EML
+// authorization master มีเพราะ strict mode บังคับ ไม่ได้มีไว้คุมสิทธิ์จริง (คุมที่ business catalog)
+define behavior for ZR_ZARI002_PYMT_LOG alias PaymentLog
+persistent table ztar_i002_hdrlog
+lock master
+authorization master ( global )
+{
+  field ( numbering : managed, readonly ) PaymentUUID;
+  field ( readonly ) CreatedBy, CreatedAt, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+
+  association _ItemLog;
+  association _MessageLog;
+
+  mapping for ztar_i002_hdrlog
+  {
+    PaymentUUID            = payment_uuid;
+    RequestId              = request_id;
+    RequestBody            = request_body;
+    SalesforceId           = salesforce_id;
+    PaymentDocumentNo      = payment_document_no;
+    NumberOfItemsInPayment = number_of_items_in_payment;
+    CompanyCode            = company_code;
+    PostingDate            = posting_date;
+    GlAccount              = gl_account;
+    PaymentMethod          = payment_method;
+    SapPaymentMethod       = sap_payment_method;
+    ChequeNo               = cheque_no;
+    IssueDate              = issue_date;
+    DueOn                  = due_on;
+    ChequeBankBranch       = cheque_bank_branch;
+    Currency               = currency;
+    RoundingDiff           = rounding_diff;
+    AdvancePayment         = advance_payment;
+    Fees                   = fees;
+    PaymentAmount          = payment_amount;
+    Status                 = status;
+    SalesforceStatus       = salesforce_status;
+    SalesforceMessage      = salesforce_message;
+    CreatedBy              = created_by;
+    CreatedAt              = created_at;
+    LastChangedBy          = last_changed_by;
+    LastChangedAt          = last_changed_at;
+    LocalLastChangedAt     = local_last_changed_at;
+  }
+}
+
+define behavior for ZI_ZARI002_ITEM_LOG alias ItemLog
+persistent table ztar_i002_itmlog
+lock dependent by _PaymentLog
+authorization dependent by _PaymentLog
+{
+  field ( numbering : managed, readonly ) ItemUUID;
+  field ( readonly ) PaymentUUID, LocalLastChangedAt;
+
+  association _PaymentLog;
+
+  mapping for ztar_i002_itmlog
+  {
+    ItemUUID           = item_uuid;
+    PaymentUUID        = payment_uuid;
+    SalesforceItemId   = salesforce_item_id;
+    CustomerCode       = customer_code;
+    BillingNoteNo      = billing_note_no;
+    AccountingDocument = accounting_document;
+    BillingDocument    = billing_document;
+    InvoicePostingDate = invoice_posting_date;
+    Currency           = currency;
+    InvoiceAmount      = invoice_amount;
+    AmountPaid         = amount_paid;
+    PartialAmount      = partial_amount;
+    SaleSubmitDate     = sale_submit_date;
+    RejectReason       = reject_reason;
+    CreatedBy          = created_by;
+    CreatedAt          = created_at;
+    LastChangedBy      = last_changed_by;
+    LastChangedAt      = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZI_ZARI002_MSG_LOG alias MessageLog
+persistent table ztar_i002_msglog
+lock dependent by _PaymentLog
+authorization dependent by _PaymentLog
+{
+  field ( numbering : managed, readonly ) MessageUUID;
+  field ( readonly ) PaymentUUID, LocalLastChangedAt;
+
+  association _PaymentLog;
+
+  mapping for ztar_i002_msglog
+  {
+    MessageUUID        = message_uuid;
+    PaymentUUID        = payment_uuid;
+    MsgSeq             = msg_seq;
+    MessageArea        = message_area;
+    SalesforceItemId   = salesforce_item_id;
+    Status             = status;
+    Message            = message;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}

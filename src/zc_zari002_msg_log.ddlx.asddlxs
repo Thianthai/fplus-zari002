@@ -1,0 +1,60 @@
+@Metadata.layer: #CORE
+
+@UI: {
+  headerInfo: {
+    typeName:       'Message',
+    typeNamePlural: 'Messages',
+    title:       { type: #STANDARD, value: 'MessageArea' },
+    description: { type: #STANDARD, value: 'SalesforceItemId' }
+  },
+  presentationVariant: [{ sortOrder:      [{ by: 'MsgSeq', direction: #ASC }],
+                          visualizations: [{ type: #AS_LINEITEM }] }]
+}
+annotate entity ZC_ZARI002_MSG_LOG
+  with
+{
+  @UI.facet: [
+    { id: 'MessageData', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE,
+      label: 'Message', position: 10 }
+  ]
+
+  @UI.hidden: true
+  MessageUUID;
+
+  @UI.hidden: true
+  PaymentUUID;
+
+  @UI: {
+    lineItem:       [{ position: 10, importance: #HIGH }],
+    identification: [{ position: 10 }]
+  }
+  MsgSeq;
+
+  @UI: {
+    lineItem:       [{ position: 20, importance: #HIGH }],
+    identification: [{ position: 20 }]
+  }
+  MessageArea;
+
+  @UI: {
+    lineItem:       [{ position: 30, importance: #HIGH }],
+    identification: [{ position: 30 }]
+  }
+  SalesforceItemId;
+
+  @UI: {
+    lineItem:       [{ position: 40, importance: #MEDIUM }],
+    identification: [{ position: 40 }]
+  }
+  Status;
+
+  @UI: {
+    lineItem:       [{ position: 50, importance: #HIGH }],
+    multiLineText:  true,
+    identification: [{ position: 50 }]
+  }
+  Message;
+
+  @UI.hidden: true
+  LocalLastChangedAt;
+}

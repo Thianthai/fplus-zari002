@@ -9,7 +9,10 @@ CLASS zcl_zari002_processor DEFINITION
       ty_request TYPE zcl_zari002_http=>ty_request,
       ty_payment TYPE ztar_i002_pymt,
       ty_item    TYPE ztar_i002_item,
-      tt_item    TYPE STANDARD TABLE OF ztar_i002_item WITH EMPTY KEY.
+      tt_item    TYPE STANDARD TABLE OF ztar_i002_item WITH EMPTY KEY,
+      ty_hdr_log TYPE ztar_i002_hdrlog,
+      tt_itm_log TYPE STANDARD TABLE OF ztar_i002_itmlog WITH EMPTY KEY,
+      tt_msg_log TYPE STANDARD TABLE OF ztar_i002_msglog WITH EMPTY KEY.
 
     TYPES:
       BEGIN OF ty_error,
@@ -97,6 +100,43 @@ CLASS zcl_zari002_processor DEFINITION
     "! ไม่งั้นทางที่ออกก่อนจะคืน Status เป็นค่าว่าง
     METHODS set_outcome
       CHANGING cs_result TYPE ty_result.
+
+    "! เขียน log 3 table สำหรับ payment ใบนี้ ทั้งผ่านและตก — LUW แยกจาก business save
+    "! ล้มแล้วต้องไม่ทำ request หลักพัง (log เป็นของรอง)
+    METHODS save_log
+      IMPORTING is_payment TYPE ty_payment
+                it_item    TYPE tt_item
+                it_error   TYPE tt_error
+                is_raw     TYPE zcl_zari002_http=>ty_payment.
+
+    "! HDRLOG จาก payment ที่ normalize แล้ว · status = ผลรับของ ZARI002 ไม่ใช่ผล post
+    METHODS to_hdr_log
+      IMPORTING is_payment       TYPE ty_payment
+                it_error         TYPE tt_error
+                is_raw           TYPE zcl_zari002_http=>ty_payment
+      RETURNING VALUE(rs_result) TYPE ty_hdr_log.
+
+    "! ITMLOG — field ชื่อตรงกับ ZTAR_I002_ITEM ทั้งหมด
+    METHODS to_itm_log
+      IMPORTING it_item          TYPE tt_item
+      RETURNING VALUE(rt_result) TYPE tt_itm_log.
+
+    "! MSGLOG 1 row ต่อ 1 error · area ตัดสินจาก salesforce_item_id · ใบผ่านไม่มี row
+    METHODS to_msg_log
+      IMPORTING is_payment       TYPE ty_payment
+                it_error         TYPE tt_error
+      RETURNING VALUE(rt_result) TYPE tt_msg_log
+      RAISING   cx_uuid_error.
+
+    "! JSON ของ payment ใบนี้ตามที่ SBPA ส่งมา serialize จาก structure ดิบก่อน normalize
+    METHODS to_request_body
+      IMPORTING is_raw           TYPE zcl_zari002_http=>ty_payment
+      RETURNING VALUE(rv_result) TYPE ztar_i002_hdrlog-request_body.
+
+    "! จัด JSON compact ให้ขึ้นบรรทัดและย่อหน้า เพื่อให้อ่านได้ในหน้า monitor
+    METHODS to_pretty_json
+      IMPORTING iv_json          TYPE string
+      RETURNING VALUE(rv_result) TYPE string.
 
 ENDCLASS.
 
@@ -188,7 +228,16 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
         APPEND LINES OF lt_error TO rs_result-errors.
       ENDIF.
 
-      " 4.4 Callback ---------------------------------------------------
+      " 4.4 Log — ทุกใบ ทั้งผ่านและตก ------------------------------------
+      "     ข้ามถ้าไม่มี UUID (normalize สร้างไม่ได้) เพราะไม่มี key ให้เขียน
+      IF ls_payment-payment_uuid IS NOT INITIAL.
+        save_log( is_payment = ls_payment
+                  it_item    = lt_item
+                  it_error   = lt_error
+                  is_raw     = <lfs_payment> ).
+      ENDIF.
+
+      " 4.5 Callback ---------------------------------------------------
       send_callback( is_payment = ls_payment
                      it_item    = lt_item
                      it_error   = lt_error ).
@@ -596,6 +645,193 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
       WHEN cs_result-accepted > 0 AND cs_result-rejected = 0 THEN message_text( '300' )
       WHEN cs_result-accepted > 0                            THEN message_text( '301' )
       ELSE                                                        message_text( '302' ) ).
+
+  ENDMETHOD.
+
+
+  METHOD save_log.
+
+    TRY.
+        DATA(ls_hdr_log) = to_hdr_log( is_payment = is_payment
+                                       it_error   = it_error
+                                       is_raw     = is_raw ).
+        DATA(lt_itm_log) = to_itm_log( it_item ).
+        DATA(lt_msg_log) = to_msg_log( is_payment = is_payment
+                                       it_error   = it_error ).
+
+        INSERT ztar_i002_hdrlog FROM @ls_hdr_log.
+        IF sy-subrc <> 0.
+          ROLLBACK WORK.
+          RETURN.
+        ENDIF.
+
+*       ตารางลูกว่างเป็นเรื่องปกติ — INSERT FROM TABLE ที่ไม่มีแถวคืน sy-subrc = 4
+        IF lt_itm_log IS NOT INITIAL.
+          INSERT ztar_i002_itmlog FROM TABLE @lt_itm_log.
+          IF sy-subrc <> 0.
+            ROLLBACK WORK.
+            RETURN.
+          ENDIF.
+        ENDIF.
+
+        IF lt_msg_log IS NOT INITIAL.
+          INSERT ztar_i002_msglog FROM TABLE @lt_msg_log.
+          IF sy-subrc <> 0.
+            ROLLBACK WORK.
+            RETURN.
+          ENDIF.
+        ENDIF.
+
+        COMMIT WORK AND WAIT.
+
+      CATCH cx_root.
+*       log เขียนไม่ได้ก็ปล่อย — business save commit ไปแล้ว ไม่กระทบ
+        ROLLBACK WORK.
+    ENDTRY.
+
+  ENDMETHOD.
+
+
+  METHOD to_hdr_log.
+
+    MOVE-CORRESPONDING is_payment TO rs_result.
+
+    rs_result-status             = COND #( WHEN it_error IS INITIAL THEN 'S' ELSE 'E' ).
+    rs_result-request_body       = to_request_body( is_raw ).
+    CLEAR: rs_result-salesforce_status,
+           rs_result-salesforce_message.
+
+  ENDMETHOD.
+
+
+  METHOD to_itm_log.
+
+    LOOP AT it_item ASSIGNING FIELD-SYMBOL(<lfs_item>).
+*     item ที่ไม่มี UUID เขียนไม่ได้ (normalize สร้างไม่ได้) — ข้ามเฉพาะแถวนั้น
+      IF <lfs_item>-item_uuid IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      APPEND CORRESPONDING #( <lfs_item> ) TO rt_result.
+    ENDLOOP.
+
+  ENDMETHOD.
+
+
+  METHOD to_msg_log.
+
+    LOOP AT it_error ASSIGNING FIELD-SYMBOL(<lfs_error>).
+
+      APPEND VALUE #( message_uuid          = cl_system_uuid=>create_uuid_x16_static( )
+                      payment_uuid          = is_payment-payment_uuid
+                      msg_seq               = sy-tabix
+                      message_area          = COND #( WHEN <lfs_error>-salesforce_item_id IS NOT INITIAL
+                                                      THEN 'ITEM' ELSE 'HEADER' )
+                      salesforce_item_id    = <lfs_error>-salesforce_item_id
+                      status                = 'E'
+                      message               = |ZARI002/{ <lfs_error>-msgno } { <lfs_error>-msgtx }|
+                      created_by            = is_payment-created_by
+                      created_at            = is_payment-created_at
+                      last_changed_by       = is_payment-last_changed_by
+                      last_changed_at       = is_payment-last_changed_at
+                      local_last_changed_at = is_payment-local_last_changed_at
+                    ) TO rt_result.
+
+    ENDLOOP.
+
+  ENDMETHOD.
+
+
+  METHOD to_request_body.
+
+    TRY.
+        rv_result = to_pretty_json( xco_cp_json=>data->from_abap( is_raw
+                      )->apply( VALUE #( ( xco_cp_json=>transformation->underscore_to_pascal_case ) )
+                      )->to_string( ) ).
+      CATCH cx_root.
+        CLEAR rv_result.
+    ENDTRY.
+
+  ENDMETHOD.
+
+
+  METHOD to_pretty_json.
+
+*   HTML ยุบ space นำหน้าบรรทัดทิ้ง ใช้ non-breaking space แทนเพื่อให้ indent ติดไปด้วย
+    DATA(lv_nbsp)   = cl_abap_conv_codepage=>create_in( )->convert( CONV xstring( 'C2A0' ) ).
+    DATA(lv_indent) = lv_nbsp && lv_nbsp.
+
+    DATA lt_line      TYPE string_table.
+    DATA lv_line      TYPE string.
+    DATA lv_level     TYPE i.
+    DATA lv_in_string TYPE abap_bool.
+    DATA lv_escaped   TYPE abap_bool.
+    DATA lv_off       TYPE i.
+
+    DATA(lv_len) = strlen( iv_json ).
+
+    WHILE lv_off < lv_len.
+
+      DATA(lv_char) = substring( val = iv_json off = lv_off len = 1 ).
+
+*     ---- อยู่ใน string literal ปล่อยผ่านทุกตัวอักษร ----
+      IF lv_in_string = abap_true.
+        lv_line = lv_line && lv_char.
+        IF lv_escaped = abap_true.
+          lv_escaped = abap_false.
+        ELSEIF lv_char = `\`.
+          lv_escaped = abap_true.
+        ELSEIF lv_char = `"`.
+          lv_in_string = abap_false.
+        ENDIF.
+        lv_off = lv_off + 1.
+        CONTINUE.
+      ENDIF.
+
+*     ---- นอก string literal ----
+      CASE lv_char.
+
+        WHEN `"`.
+          lv_in_string = abap_true.
+          lv_line      = lv_line && lv_char.
+
+        WHEN `{` OR `[`.
+          DATA(lv_next) = COND string( WHEN lv_off + 1 < lv_len
+                                       THEN substring( val = iv_json off = lv_off + 1 len = 1 ) ).
+*         container ว่างเขียนติดกันไปเลย
+          IF ( lv_char = `{` AND lv_next = `}` ) OR ( lv_char = `[` AND lv_next = `]` ).
+            lv_line = lv_line && lv_char && lv_next.
+            lv_off  = lv_off + 2.
+            CONTINUE.
+          ENDIF.
+          lv_line = lv_line && lv_char.
+          APPEND lv_line TO lt_line.
+          lv_level = lv_level + 1.
+          lv_line  = repeat( val = lv_indent occ = lv_level ).
+
+        WHEN `}` OR `]`.
+          APPEND lv_line TO lt_line.
+          lv_level = lv_level - 1.
+          lv_line  = repeat( val = lv_indent occ = lv_level ) && lv_char.
+
+        WHEN `,`.
+          lv_line = lv_line && lv_char.
+          APPEND lv_line TO lt_line.
+          lv_line = repeat( val = lv_indent occ = lv_level ).
+
+        WHEN `:`.
+          lv_line = lv_line && lv_char && ` `.
+
+        WHEN OTHERS.
+          lv_line = lv_line && lv_char.
+
+      ENDCASE.
+
+      lv_off = lv_off + 1.
+
+    ENDWHILE.
+
+    APPEND lv_line TO lt_line.
+    rv_result = concat_lines_of( table = lt_line sep = |\n| ).
 
   ENDMETHOD.
 

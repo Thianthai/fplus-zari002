@@ -1,0 +1,100 @@
+@Metadata.layer: #CORE
+
+@UI: {
+  headerInfo: {
+    typeName:       'Item',
+    typeNamePlural: 'Items',
+    title:       { type: #STANDARD, value: 'SalesforceItemId' },
+    description: { type: #STANDARD, value: 'BillingDocument' }
+  },
+  presentationVariant: [{ sortOrder:      [{ by: 'SalesforceItemId', direction: #ASC }],
+                          visualizations: [{ type: #AS_LINEITEM }] }]
+}
+annotate entity ZC_ZARI002_ITEM_LOG
+  with
+{
+  @UI.facet: [
+    { id: 'ItemData', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE,
+      label: 'Item', position: 10 }
+  ]
+
+  @UI.hidden: true
+  ItemUUID;
+
+  @UI.hidden: true
+  PaymentUUID;
+
+  @UI: {
+    lineItem:       [{ position: 10, importance: #HIGH }],
+    identification: [{ position: 10 }]
+  }
+  SalesforceItemId;
+
+  @UI: {
+    lineItem:       [{ position: 20, importance: #HIGH }],
+    identification: [{ position: 20 }]
+  }
+  CustomerCode;
+
+  @UI: {
+    lineItem:       [{ position: 30, importance: #MEDIUM }],
+    identification: [{ position: 30 }]
+  }
+  BillingNoteNo;
+
+  @UI: {
+    lineItem:       [{ position: 40, importance: #HIGH }],
+    identification: [{ position: 40 }]
+  }
+  AccountingDocument;
+
+  @UI: {
+    lineItem:       [{ position: 50, importance: #HIGH }],
+    identification: [{ position: 50 }]
+  }
+  BillingDocument;
+
+  @UI: {
+    lineItem:       [{ position: 60, importance: #MEDIUM }],
+    identification: [{ position: 60 }]
+  }
+  InvoicePostingDate;
+
+  @UI.identification: [{ position: 70 }]
+  Currency;
+
+  @UI: {
+    lineItem:       [{ position: 70, importance: #HIGH }],
+    identification: [{ position: 80 }]
+  }
+  InvoiceAmount;
+
+  @UI: {
+    lineItem:       [{ position: 80, importance: #HIGH }],
+    identification: [{ position: 90 }]
+  }
+  AmountPaid;
+
+  @UI: {
+    lineItem:       [{ position: 90, importance: #MEDIUM }],
+    identification: [{ position: 100 }]
+  }
+  PartialAmount;
+
+  @UI.identification: [{ position: 110 }]
+  SaleSubmitDate;
+
+  @UI.identification: [{ position: 120 }]
+  RejectReason;
+
+  @UI.hidden: true
+  CreatedBy;
+  @UI.hidden: true
+  CreatedAt;
+  @UI.hidden: true
+  LastChangedBy;
+  @UI.hidden: true
+  LastChangedAt;
+  @UI.hidden: true
+  LocalLastChangedAt;
+}

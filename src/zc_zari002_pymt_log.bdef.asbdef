@@ -1,0 +1,18 @@
+projection;
+strict ( 2 );
+
+define behavior for ZC_ZARI002_PYMT_LOG alias PaymentLog
+{
+  use association _ItemLog;
+  use association _MessageLog;
+}
+
+define behavior for ZC_ZARI002_ITEM_LOG alias ItemLog
+{
+  use association _PaymentLog;
+}
+
+define behavior for ZC_ZARI002_MSG_LOG alias MessageLog
+{
+  use association _PaymentLog;
+}

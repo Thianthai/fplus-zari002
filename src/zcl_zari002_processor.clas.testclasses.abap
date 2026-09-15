@@ -92,6 +92,9 @@ CLASS ltc_processor DEFINITION FINAL
     METHODS callback_carries_error     FOR TESTING.
     METHODS empty_payments_gives_013 FOR TESTING.
     METHODS header_error_carries_sf_id FOR TESTING.
+    METHODS log_written_for_saved     FOR TESTING.
+    METHODS log_written_for_rejected  FOR TESTING.
+    METHODS log_msg_carries_item_id   FOR TESTING.
 
     METHODS sample_json
       IMPORTING iv_company_code   TYPE string DEFAULT `2000`
@@ -114,7 +117,10 @@ CLASS ltc_processor IMPLEMENTATION.
   METHOD class_setup.
     go_osql = cl_osql_test_environment=>create(
                 i_dependency_list = VALUE #( ( 'ZTAR_I002_PYMT' )
-                                             ( 'ZTAR_I002_ITEM' ) ) ).
+                                             ( 'ZTAR_I002_ITEM' )
+                                             ( 'ZTAR_I002_HDRLOG' )
+                                             ( 'ZTAR_I002_ITMLOG' )
+                                             ( 'ZTAR_I002_MSGLOG' ) ) ).
   ENDMETHOD.
 
   METHOD class_teardown.
@@ -356,6 +362,61 @@ CLASS ltc_processor IMPLEMENTATION.
       exp = 'SF0000000000000001'
       act = ls_out-errors[ msgno = '107' ]-salesforce_id
       msg = 'error ระดับ header ต้องระบุ SalesforceId เมื่อมีข้อมูล' ).
+
+  ENDMETHOD.
+
+
+  METHOD log_written_for_saved.
+
+    go_cut->process( sample_json( ) ).
+
+    SELECT SINGLE FROM ztar_i002_hdrlog FIELDS status, request_body INTO @DATA(ls_hdr).
+    SELECT COUNT(*) FROM ztar_i002_itmlog INTO @DATA(lv_item).
+    SELECT COUNT(*) FROM ztar_i002_msglog INTO @DATA(lv_msg).
+
+    cl_abap_unit_assert=>assert_equals( exp = 'S' act = ls_hdr-status ).
+    cl_abap_unit_assert=>assert_not_initial( act = ls_hdr-request_body
+                                             msg = 'ต้องเก็บ JSON ของใบนี้' ).
+    cl_abap_unit_assert=>assert_equals( exp = 2 act = lv_item ).
+    cl_abap_unit_assert=>assert_equals( exp = 0 act = lv_msg
+                                        msg = 'ใบผ่านต้องไม่มี message log' ).
+
+  ENDMETHOD.
+
+
+  METHOD log_written_for_rejected.
+
+    DATA(ls_out) = go_cut->process( sample_json( iv_company_code = `9999` ) ).
+
+    SELECT SINGLE FROM ztar_i002_hdrlog FIELDS status INTO @DATA(lv_status).
+    SELECT FROM ztar_i002_msglog FIELDS msg_seq, message_area, message
+      ORDER BY msg_seq INTO TABLE @DATA(lt_msg).
+
+*   ใบตกต้องมี log เหมือนกัน — และเป็นใบที่ต้องดูมากที่สุด
+    cl_abap_unit_assert=>assert_equals( exp = 'E' act = lv_status ).
+    cl_abap_unit_assert=>assert_equals( exp = lines( ls_out-errors ) act = lines( lt_msg )
+                                        msg = 'message log ต้องครบเท่า error' ).
+    cl_abap_unit_assert=>assert_equals( exp = 'HEADER' act = lt_msg[ 1 ]-message_area ).
+    cl_abap_unit_assert=>assert_true( act = xsdbool( lt_msg[ 1 ]-message CS 'ZARI002/200' )
+                                      msg = 'message ต้องขึ้นต้นด้วย code' ).
+
+  ENDMETHOD.
+
+
+  METHOD log_msg_carries_item_id.
+
+*   customer 9999999999 ไม่มีใน test double → 205 ระดับ item
+    DATA(lv_json) = replace( val  = sample_json( )
+                             sub  = `"CustomerCode": "1000000002"`
+                             with = `"CustomerCode": "9999999999"`
+                             occ  = 1 ).
+    go_cut->process( lv_json ).
+
+    SELECT SINGLE FROM ztar_i002_msglog FIELDS message_area, salesforce_item_id
+      WHERE message_area = 'ITEM' INTO @DATA(ls_msg).
+
+    cl_abap_unit_assert=>assert_equals( exp = 'IT0000000000000001' act = ls_msg-salesforce_item_id
+                                        msg = 'error ระดับ item ต้องบอกว่า item ไหน' ).
 
   ENDMETHOD.
 

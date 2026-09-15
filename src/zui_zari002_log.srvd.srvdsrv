@@ -1,0 +1,6 @@
+@EndUserText.label: 'Incoming Payments - Log Monitor'
+define service ZUI_ZARI002_LOG {
+  expose ZC_ZARI002_PYMT_LOG as PaymentLog;
+  expose ZC_ZARI002_ITEM_LOG as ItemLog;
+  expose ZC_ZARI002_MSG_LOG  as MessageLog;
+}

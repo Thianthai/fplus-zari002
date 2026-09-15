@@ -1,0 +1,163 @@
+@Metadata.layer: #CORE
+
+@UI: {
+  headerInfo: {
+    typeName:       'Payment Log',
+    typeNamePlural: 'Payment Logs',
+    title:       { type: #STANDARD, value: 'SalesforceId' },
+    description: { type: #STANDARD, value: 'PaymentDocumentNo' }
+  },
+  presentationVariant: [{ sortOrder:      [{ by: 'CreatedAt', direction: #DESC }],
+                          visualizations: [{ type: #AS_LINEITEM }] }]
+}
+annotate entity ZC_ZARI002_PYMT_LOG
+  with
+{
+  @UI.facet: [
+    { id: 'PaymentTab', purpose: #STANDARD, type: #COLLECTION,
+      label: 'Payment', position: 10 },
+
+    { id: 'GeneralData', parentId: 'PaymentTab', type: #FIELDGROUP_REFERENCE,
+      label: 'General', position: 10, targetQualifier: 'GeneralData' },
+
+    { id: 'ChequeData', parentId: 'PaymentTab', type: #FIELDGROUP_REFERENCE,
+      label: 'Cheque', position: 20, targetQualifier: 'ChequeData' },
+
+    { id: 'AmountData', parentId: 'PaymentTab', type: #FIELDGROUP_REFERENCE,
+      label: 'Amounts', position: 30, targetQualifier: 'AmountData' },
+
+    { id: 'ResultData', parentId: 'PaymentTab', type: #FIELDGROUP_REFERENCE,
+      label: 'Result', position: 40, targetQualifier: 'ResultData' },
+
+    { id: 'AdminData', parentId: 'PaymentTab', type: #FIELDGROUP_REFERENCE,
+      label: 'Administrative Data', position: 50, targetQualifier: 'AdminData' },
+
+    { id: 'ItemFacet', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Items', position: 20, targetElement: '_ItemLog' },
+
+    { id: 'MessageFacet', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Messages', position: 30, targetElement: '_MessageLog' },
+
+    { id: 'BodyFacet', purpose: #STANDARD, type: #FIELDGROUP_REFERENCE,
+      label: 'Request Body (JSON)', position: 40, targetQualifier: 'RequestBody' }
+  ]
+
+  @UI.hidden: true
+  PaymentUUID;
+
+  @UI: {
+    lineItem:       [{ position: 10, importance: #HIGH }],
+    selectionField: [{ position: 10 }],
+    fieldGroup:     [{ qualifier: 'GeneralData', position: 10 }]
+  }
+  RequestId;
+
+  @UI: {
+    multiLineText: true,
+    fieldGroup:    [{ qualifier: 'RequestBody', position: 10 }]
+  }
+  RequestBody;
+
+  @UI: {
+    lineItem:       [{ position: 20, importance: #HIGH }],
+    selectionField: [{ position: 20 }],
+    fieldGroup:     [{ qualifier: 'GeneralData', position: 20 }]
+  }
+  SalesforceId;
+
+  @UI: {
+    lineItem:   [{ position: 30, importance: #HIGH }],
+    fieldGroup: [{ qualifier: 'GeneralData', position: 30 }]
+  }
+  PaymentDocumentNo;
+
+  @UI.fieldGroup: [{ qualifier: 'GeneralData', position: 40 }]
+  NumberOfItemsInPayment;
+
+  @UI: {
+    lineItem:       [{ position: 40, importance: #HIGH }],
+    selectionField: [{ position: 30 }],
+    fieldGroup:     [{ qualifier: 'GeneralData', position: 50 }]
+  }
+  CompanyCode;
+
+  @UI: {
+    lineItem:   [{ position: 50, importance: #MEDIUM }],
+    fieldGroup: [{ qualifier: 'GeneralData', position: 60 }]
+  }
+  PostingDate;
+
+  @UI.fieldGroup: [{ qualifier: 'GeneralData', position: 70 }]
+  GlAccount;
+
+  @UI: {
+    lineItem:   [{ position: 60, importance: #MEDIUM }],
+    fieldGroup: [{ qualifier: 'GeneralData', position: 80 }]
+  }
+  PaymentMethod;
+
+  @UI.fieldGroup: [{ qualifier: 'GeneralData', position: 90 }]
+  SapPaymentMethod;
+
+  @UI.fieldGroup: [{ qualifier: 'ChequeData', position: 10 }]
+  ChequeNo;
+
+  @UI.fieldGroup: [{ qualifier: 'ChequeData', position: 20 }]
+  IssueDate;
+
+  @UI.fieldGroup: [{ qualifier: 'ChequeData', position: 30 }]
+  DueOn;
+
+  @UI.fieldGroup: [{ qualifier: 'ChequeData', position: 40 }]
+  ChequeBankBranch;
+
+  @UI.fieldGroup: [{ qualifier: 'AmountData', position: 10 }]
+  Currency;
+
+  @UI.fieldGroup: [{ qualifier: 'AmountData', position: 20 }]
+  RoundingDiff;
+
+  @UI.fieldGroup: [{ qualifier: 'AmountData', position: 30 }]
+  AdvancePayment;
+
+  @UI.fieldGroup: [{ qualifier: 'AmountData', position: 40 }]
+  Fees;
+
+  @UI: {
+    lineItem:   [{ position: 70, importance: #HIGH }],
+    fieldGroup: [{ qualifier: 'AmountData', position: 50 }]
+  }
+  PaymentAmount;
+
+  @UI: {
+    lineItem:       [{ position: 80, importance: #HIGH }],
+    selectionField: [{ position: 40 }],
+    fieldGroup:     [{ qualifier: 'ResultData', position: 10 }]
+  }
+  Status;
+
+  @UI.fieldGroup: [{ qualifier: 'ResultData', position: 20 }]
+  SalesforceStatus;
+
+  @UI.fieldGroup: [{ qualifier: 'ResultData', position: 30 }]
+  SalesforceMessage;
+
+  @UI: {
+    lineItem:       [{ position: 90, importance: #HIGH }],
+    selectionField: [{ position: 50 }],
+    fieldGroup:     [{ qualifier: 'AdminData', position: 10 }]
+  }
+  CreatedAt;
+
+  @UI.fieldGroup: [{ qualifier: 'AdminData', position: 20 }]
+  CreatedBy;
+
+  @UI.fieldGroup: [{ qualifier: 'AdminData', position: 30 }]
+  LastChangedAt;
+
+  @UI.fieldGroup: [{ qualifier: 'AdminData', position: 40 }]
+  LastChangedBy;
+
+  @UI.hidden: true
+  LocalLastChangedAt;
+}
