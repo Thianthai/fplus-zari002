@@ -1,0 +1,34 @@
+{
+  "formatVersion": "2",
+  "header": {
+    "description": "Interface Log for Incoming Payments",
+    "originalLanguage": "en",
+    "abapLanguageVersion": "cloudDevelopment"
+  },
+  "generalInformation": {
+    "appType": "ui5",
+    "catalogId": "SAP_TC_ALV5_DEFAULT"
+  },
+  "ui5AppDetails": {
+    "appId": "com.fplus.fi.ar.zari002log"
+  },
+  "navigation": {
+    "targetMappingId": "ZARI002LOG_UI5R_TM",
+    "semanticObject": "ZARI002LOG",
+    "action": "manage",
+    "desktop": true,
+    "tablet": true,
+    "phone": true
+  },
+  "tiles": [
+    {
+      "id": "ZARI002LOG_UI5R_AL",
+      "tileType": "static",
+      "standard": {
+        "title": "Interface Log for Incoming Payments",
+        "subtitle": "ZARI002",
+        "keywords": "ZARI002"
+      }
+    }
+  ]
+}
