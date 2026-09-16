@@ -164,33 +164,20 @@ serialize response (`Field` / `Item` / ข้อความจาก message cl
 
 ---
 
-## Phase 6 — Test & hardening
+## Phase 6 — Test & hardening → **ข้าม (2026-09-16)**
 
-| # | งาน | Status |
-|---|-----|--------|
-| 6.1 | Positive: 1 header/1 item · 1 header/N item · optional field ว่าง | ⬜ |
-| 6.2 | Negative — format: mandatory ขาด, type ผิด, วันที่ผิดรูป, JSON พัง | ⬜ |
-| 6.3 | Negative — consistency: `number_of_items_in_payment` ไม่ตรง, `salesforce_item_id` ซ้ำ, ไม่มี item | ⬜ |
-| 6.4 | Negative — master data: company code / GL / payment method / customer ไม่มีจริง | ⬜ |
-| 6.5 | **Duplicate**: ส่งชุดเดิมซ้ำ → ได้ message `010` ครบทุกบรรทัด | ⬜ |
-| 6.6 | **Rollback**: item ใบเดียวผิด → ต้องไม่มี row ค้างทั้ง 2 table | ⬜ |
-| 6.7 | **Notify**: ยิงถูกทั้งกรณี S และ E · 🔴 **ปลายทางล่มแล้ว request ของ ZARI002 ต้องไม่พัง** — ข้อหลังเทสได้เลยไม่ต้องรอปลายทางจริง | ⬜ |
-| 6.8 | Volume test — หาจำนวน item/call ที่ปลอดภัย (ปิด OQ-07) | ⬜ |
-| 6.9 | **หลาย payment ต่อ request**: ใบเดียวตกใน 3 ใบ → `Accepted 2` / `Rejected 1` และใบที่ตกต้องไม่มี row ค้าง | ⬜ |
-| 6.10 | **หลาย payment**: ส่ง payment ซ้ำกันเองภายใน request เดียว → ใบที่สองต้องติด `010` (ใบแรก commit ไปแล้ว) | ⬜ |
-| 6.11 | ATC check (Clean Core / released API) ผ่านหมด | ⬜ |
+**ตัดสินใจไม่ทำเป็น phase แยก** — functional team กับ SBPA เทสจริงร่วมกันบน tenant มาระยะหนึ่งแล้ว
+ให้ผลที่ตรงกว่า test plan ที่เขียนล่วงหน้า · งานของเราคือ **รับ issue จากการเทสมาแก้** ทีละเรื่อง
+(แบบเดียวกับ `SalesforceId` ว่างบน error ระดับ header ที่เจอและแก้ไปเมื่อ 2026-09-15)
 
-### Unit test ที่มีแล้ว
+สิ่งที่ยังคุมอยู่: **unit test 33 ตัว / 3 class** รันทุกครั้งที่แก้ code · เขียวหมด
 
-| Class | Test | Status |
+ของใน Phase 6 เดิมที่**ไม่ใช่การเทส**และยังต้องทำ ย้ายไป Phase 7:
+
+| เดิม | ไปอยู่ที่ | เหตุผล |
 |---|---|---|
-| `ZCL_ZARI002_VALIDATOR` | ครอบคลุม check ทุกตัวที่ implement แล้ว | ✅ |
-| `ZCL_ZARI002_PROCESSOR` | ใช้ test double ผ่าน `ZIF_ZARI002_MASTER_DATA` — รันได้โดยไม่ต่อ SAP จริง | ✅ |
-| `ZCL_ZARI002_JSON` | 16 test — หลาย payment, `RequestId`, วันที่ 4 รูปแบบ, field ที่ไม่ส่งในใบที่ 2, JSON พัง, `to_json_name` | ✅ 2026-09-02 |
-| `ZCL_ZARI003_SFDC_NOTIFY` | ยังไม่มี — `build_payload( )` เทสได้เลย ส่วน `notify( )` ต้องมี seam ก่อน (OQ-17) | ⬜ |
-
-6.1 ถึง 6.3 และ 6.9 ถึง 6.10 เขียนเป็น unit test ได้เลยโดยไม่ต้องพึ่ง tenant
-ส่วน 6.4 ถึง 6.8 **ปลดบล็อกแล้ว** (OQ-19 ปิด) เหลือรอแค่ **OQ-04** master data ที่ยังโหลดไม่ครบบน tenant
+| 6.11 ATC check | **7.7** | เป็น gate ของ transport ไม่ใช่ test — จะติด `SPIKE` / `UTIL` แน่ ต้องลบก่อน (7.6) |
+| 6.8 Volume test | — ไม่ทำ | OQ-07 ตอบจากการใช้จริงแทน |
 
 ---
 
@@ -203,4 +190,5 @@ serialize response (`Field` / `Item` / ข้อความจาก message cl
 | 7.3 | Troubleshooting guide — รวมเคส OQ-14 (ใบที่ post ไม่ผ่านส่งซ้ำไม่ได้) และเคส callback ล้ม | ⬜ |
 | 7.4 | Technical spec สำหรับ RICEFW document | ⬜ |
 | 7.5 | ส่งมอบ contract ของ table ให้ทีม **ZARE002** | ⬜ |
-| 7.6 | 🔴 **ลบ `ZCL_ZARI002_SPIKE` และ `ZCL_ZARI002_UTIL`** — utility ชั่วคราวที่ใช้ระหว่าง Phase 6 · `DELETE` ตรง ๆ ห้ามหลุดไปกับของส่งมอบ และจะติด ATC ที่ 6.11 ถ้ายังอยู่ | ⬜ |
+| 7.6 | 🔴 **ลบ `ZCL_ZARI002_SPIKE` และ `ZCL_ZARI002_UTIL`** — utility ชั่วคราวที่ SBPA ใช้เคลียร์ข้อมูลระหว่างเทส · `DELETE` ตรง ๆ ห้ามหลุดไปกับของส่งมอบ · **ต้องทำก่อน 7.7** | ⬜ |
+| 7.7 | 🔴 **ATC check** (Clean Core / released API) ผ่านหมด — gate ก่อน transport · ย้ายมาจาก 6.11 | ⬜ |

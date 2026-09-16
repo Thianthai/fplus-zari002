@@ -15,7 +15,7 @@
 | OQ-04 | master data บน tenant ยังไม่ครบ — `I_Customer` ขึ้นเป็น **8 ราย** แล้ว (2026-08-28) แต่ customer ที่ sample ของ SFDC ใช้ (`1000000001` `1000000005` `1000000013` `1000000020` `1000000021`) ยังไม่มี | FI / ผู้ดูแล tenant | Phase 1 | **บล็อก Phase 7** — ยิง sample แล้วจะติด `validateCustomerCode` | 🟨 คืบหน้า |
 | OQ-05 | `payment_amount` ต้องเท่ากับผลรวม `amount_paid` ของทุก item หรือไม่ | Salesforce / FI | Phase 1 | `validatePaymentTotal` เป็นที่ว่างไว้แล้ว เพิ่ม logic ทีหลังได้ทันที | 🟨 |
 | OQ-06 | URL endpoint — **ปิดแล้ว 2026-08-31** `https://my442178-api.s4hana.cloud.sap/sap/bc/http/sap/zari002_incoming_pymt` · client `100` · Basic auth ด้วย `SBPA_DEV` | — | Phase 1 | — | ✅ |
-| OQ-07 | จำนวน item สูงสุดต่อ request | — | Phase 1 | กำหนดหลัง volume test Phase 7.7 | ⬜ |
+| OQ-07 | จำนวน item สูงสุดต่อ request | — | Phase 1 | **ไม่มี volume test แล้ว** (ข้าม Phase 6) — ตอบจากการใช้จริง ถ้าเจอปัญหาค่อยกำหนด | ⬜ |
 
 | OQ-08 | released CDS view ตัวไหนบอกได้ว่า accounting document ถูกรับชำระ/reverse แล้ว (`I_OperationalAcctgDocItem` / กลุ่ม journal entry) | ผู้ใช้ + FI | Phase 3 | `validateArOpenItem` เป็นที่ว่างไว้ · ถ้าไม่มี view ที่ released จะเขียน logic ไม่ได้เลย | ⬜ |
 | OQ-09 | duplicate check — **ปิดแล้ว 2026-08-28**: key = `payment_document_no` + `billing_document` เทียบทุกสถานะ · `salesforce_id` ไม่ใช่ key กันซ้ำ | — | Phase 3 | — | ✅ |
@@ -32,15 +32,15 @@
 | OQ-16 | payload เดียวที่มี 2 item ใช้ `billing_document` ตัวเดียวกัน — `validateItemDuplicate` ปล่อยผ่าน เพราะตอน validate ยังไม่มีอะไรใน table ให้ชน · **ต้องรู้ก่อนว่าธุรกิจมีเคสที่ 1 ใบแจ้งหนี้ถูกแบ่งจ่าย 2 บรรทัดในใบเดียวกันไหม** ถ้ามีจริงการกันไว้จะไปบล็อกของที่ถูกต้อง | Salesforce / business | Phase 4 | ไม่บล็อกอะไร — เป็น defensive check ไม่ใช่ requirement · ถ้าจะเพิ่มก็แค่เช็คภายใน `lt_item` ก่อนยิง SELECT | ⬜ |
 
 | OQ-17 | contract ของการยิงผลกลับไป SFDC — endpoint, auth, รูปแบบ JSON ตัวจริง ยังไม่มี · **เป็นของ ARI003 แต่บล็อก ZARI002 ด้วย** เพราะ `ZCL_ZARI003_SFDC_NOTIFY` ถูกเรียกใน process ของ ZARI002 · payload ตอนนี้เป็น array ล้วน อาจต้องมี wrapper | Salesforce | Phase 3 | class เป็น **draft ไม่มี test** · แก้ `build_payload( )` จุดเดียวเมื่อรู้รูปแบบจริง | ⬜ |
-| OQ-18 | response ของ API — **เปิดกลับ 2026-09-10** เคยปิดไปตอนใส่บรรทัดสำเร็จรายใบ แต่ตีความ functional ผิด · ตอนนี้กลับมาเป็น **error เท่านั้น** พร้อม `Status` 3 ค่าระดับ request · ที่ยังไม่ยืนยันคือ SBPA พอใจกับการหาใบที่สำเร็จด้วยการหักลบหรือไม่ | SBPA | Phase 4 | ไม่บล็อก — ใช้งานได้ตามที่เป็น | 🟨 |
+| OQ-18 | response ของ API — **ปิดแล้ว 2026-09-16** SBPA เทสจริงบนโครง error-only + `Status` 3 ค่า มาระยะหนึ่ง ไม่มี issue เรื่องโครงกลับมา · ถือว่ายอมรับ | — | Phase 4 | — | ✅ |
 
 | OQ-19 | สิทธิ์อ่าน master data ของ `SBPA_DEV` — **ปิดแล้ว 2026-09-04** ใช้ `WITH PRIVILEGED ACCESS` แทนการขอ business role · ทำกับ `I_GLAccountInCompanyCode` `I_Customer` `I_Bank_2` · `I_CompanyCode` กับ `I_PaymentMethod` query ได้อยู่แล้วไม่ต้องทำ | — | Phase 5 | — | ✅ |
 | OQ-20 | test data ค้างบน client 100 — **ปิดแล้ว 2026-09-04** สร้าง `ZCL_ZARI002_SPIKE` เป็น utility เคลียร์ 2 table · เก็บไว้ใช้ระหว่าง Phase 6 แล้วลบทิ้งที่ **Phase 7.6** | — | Phase 6 | — | ✅ |
 
 | OQ-21 | test class ของ `ZCL_ZARI002_JSON` — **ปิดแล้ว 2026-09-02** สร้างใหม่ 16 test ครอบคลุมหลาย payment, `RequestId`, วันที่ 4 รูปแบบ, field ที่ไม่ส่งมาในใบที่ 2 · เขียวครบ | — | Phase 6 | — | ✅ |
 | OQ-22 | `request_id` ยาวเกิน `char(20)` — **ปิดแล้ว 2026-09-16** ขยายเป็น `char(25)` ทั้ง `ZTAR_I002_PYMT` และ `ZTAR_I002_HDRLOG` · id ที่ SBPA ส่งจริง `20260915_105645_1056` เต็ม 20 พอดี | — | Phase 6 | — | ✅ |
-| OQ-25 | ใบที่ถูก reject **ไม่มีร่องรอยที่ไหนเลย** — ไม่ลง table และ `notify( )` เป็น fire and forget ไม่ retry ไม่ log · ถ้ายิงพลาดครั้งเดียว SFDC ไม่มีวันรู้ และ SAP ก็ตอบไม่ได้ว่า "ทำไมใบนี้ไม่เข้า" · ต้องมี log ขั้นต่ำไหม | ผู้ใช้ | Phase 5 | ไม่บล็อก — แต่เป็นภาระ support โดยตรง ซึ่งขัดกับเป้าหมายที่ตั้งไว้ตอน pivot มาใช้ HTTP Service | ⬜ |
-| OQ-26 | SBPA ส่ง `RequestId` มาให้จริงหรือไม่ · ถ้าส่ง ใช้ค่าอะไร (เลขไฟล์ Excel? run id ของ SBPA?) — ตอนนี้ SAP สร้างให้เองถ้าไม่ส่งมา | SBPA | Phase 5 | ไม่บล็อก — แต่ถ้า SBPA ไม่ส่ง จะตามรอยกลับไปหาไฟล์ต้นทางไม่ได้ | ⬜ |
+| OQ-25 | ใบที่ถูก reject ไม่มีร่องรอย — **ปิดแล้ว 2026-09-16 ด้วย Phase 5A** `HDRLOG` / `MSGLOG` เก็บทุกใบรวมใบตก พร้อม JSON ของใบนั้นและ error ทุกบรรทัด · ดูได้จาก monitor | — | Phase 5 | — | ✅ |
+| OQ-26 | SBPA ส่ง `RequestId` มาไหม — **ปิดแล้ว 2026-09-16** ส่งจริง รูปแบบ `20260915_105645_1056` (20 ตัว) · ขยาย field เป็น 25 แล้ว (OQ-22) | — | Phase 5 | — | ✅ |
 | OQ-23 | request ที่มีหลาย payment แล้วบางใบตก — ตอนนี้ใบที่ผ่าน**ถูก commit ไปแล้ว** ใบที่ตกไม่ถูกบันทึก · SBPA ต้องรับสภาพ "request สำเร็จบางส่วน" ได้และส่งเฉพาะใบที่ตกกลับมาใหม่ ไม่ใช่ส่งทั้ง request ซ้ำ (จะติด duplicate ทันที) | SBPA | Phase 5 | ไม่บล็อก — แต่ response **ไม่ได้บอกตรง ๆ** ว่าใบไหนเข้าไปแล้ว SBPA ต้องหักลบเอาจากใบที่ไม่โผล่ใน `Errors` (กลับมาเป็นแบบนี้ 2026-09-10) · ถ้า SBPA คาดหวัง all-or-nothing ต้องรื้อ `process( )` ให้ commit ครั้งเดียวตอนจบ | ⬜ |
 | OQ-24 | `notify( )` ถูกเรียก**ในลูป payment** = 1 request ที่มี 5 payment ยิง 5 ครั้ง · ควรเป็นครั้งเดียวต่อ request หรือไม่ | Salesforce | Phase 5 | ผูกกับ OQ-17 — ตอบพร้อมกันตอนได้ contract | ⬜ |
 
@@ -278,3 +278,24 @@ master data ทุกตัวไม่มีจริง ซึ่งผิด�
 
 **utility ชั่วคราวเพิ่มเป็น 2 ตัว** — `ZCL_ZARI002_SPIKE` (ลบทั้ง table) และ `ZCL_ZARI002_UTIL`
 (ลบใบเดียว hardcode) · ทั้งคู่อยู่ใน Phase 7.6 แล้ว
+
+
+### ข้าม Phase 6 — 2026-09-16
+
+functional + SBPA เทสจริงร่วมกันอยู่แล้ว จึงไม่ทำ test plan แยก · งานคือรับ issue มาแก้ทีละเรื่อง
+
+**ปิดไป 3 ข้อจากผลการใช้จริง** — OQ-25 (Phase 5A ตอบด้วย log) · OQ-26 (`RequestId` มาจริง)
+· OQ-18 (response ใช้งานได้ ไม่มี issue) · **OQ-22** ปิดไปแล้วก่อนหน้า
+
+**เหลือเปิด 12 ข้อ** — ไม่มีข้อไหนบล็อกการใช้งานตอนนี้:
+
+| กลุ่ม | ข้อ | รอใคร |
+|---|---|---|
+| business rule ที่ยังไม่นิยาม (ที่ว่างใน `validate( )`) | OQ-05 · 08 · 10 · 16 | FI / Salesforce |
+| master data / config | OQ-02 · 03 · 04 | FI |
+| callback ไป SFDC | OQ-17 · 24 | Salesforce / ARI003 |
+| พฤติกรรมที่ SBPA ต้องรู้ | OQ-14 · 23 | SBPA — เทสจริงจะบอกเอง |
+| volume | OQ-07 | ใช้จริง |
+
+**OQ-04 เปลี่ยนน้ำหนัก** — เคยเป็นตัวบล็อก Phase 6 · พอข้าม Phase 6 มันไม่บล็อกอะไรแล้ว
+แค่ต้องครบก่อน go-live
