@@ -62,6 +62,12 @@
   ถ้าประกาศ type ไม่ตรงจะได้ `The type "TABLE OF <flat>" ... is unsuitable for ... "TABLE OF <deep>"`
 - **`total etag` ประกาศได้เฉพาะ BO ที่มี draft** — BO แบบ API ไม่มี draft ให้ใช้ `lock master`
   เปล่า ๆ + `etag master <LocalLastChangedAt>` เท่านั้น
+- **BDEF managed ที่ CDS ใช้ CamelCase ต้องมี `mapping for <table> { ... }` ทุก entity**
+  ไม่งั้นติด warning `does not have a mapping to table` ทุก field ซึ่ง **transport ไม่ผ่าน**
+  (เจอ 2026-09-16 ที่ log monitor · ZSDE002 ยังไม่มี ต้องกลับไปเติม)
+- **`strict ( 2 )` บังคับ `authorization master/dependent` ทุก entity** — read-only BO ก็ต้องมี
+  behavior pool ที่ `get_global_authorizations` ว่าง ตัดไม่ได้
+- **key UUID ต้อง `field ( numbering : managed, readonly )`** แม้ BO ไม่มี `create`
 
 ## Git — การแบ่งงาน
 
@@ -124,5 +130,16 @@ SFDC ──(Excel)──▶ SBPA ──(HTTP POST)──▶ ZARI002 ──▶ ta
 **ผู้เรียก ZARI002 คือ SBPA ไม่ใช่ SFDC** — SFDC ส่ง Excel ให้ SBPA แล้ว SBPA อ่านไฟล์
 ยิงเข้ามา · response ของเราจบที่ SBPA **SFDC ไม่เคยเห็น** จึงต้องมี ARI003 แจ้งผลกลับแยก
 
-ZARI002 จึงเป็น **create อย่างเดียว ไม่มีขา outbound ไม่ต้องเปิด read** —
-การรายงานผลกลับไป SFDC เป็นหน้าที่ ARI003 ทั้งหมด
+ZARI002 จึงเป็น **create อย่างเดียว ไม่ต้องเปิด read** — ยกเว้น **log monitor** (Phase 5A)
+ที่เป็น RAP read-only บนชุดตาราง log แยกต่างหาก ไม่แตะตารางธุรกิจ
+
+### ทำไม ZARI002 ถึงเรียก class ของ ARI003 ตรง ๆ
+
+`ZCL_ZARI003_SFDC_NOTIFY` ถูกเรียกจาก `ZCL_ZARI002_PROCESSOR` ใน request เดียวกัน
+เพราะ **payment ที่ถูก reject มีตัวตนอยู่แค่ใน memory** — ไม่มี row ในตารางธุรกิจ
+พอ `process( )` จบก็หายไป · ถ้าจะบอก SFDC ว่าใบไหนตกและตกเพราะอะไร **ต้องยิงตอนที่ข้อมูล
+ยังอยู่ในมือเท่านั้น** (ตั้งแต่ Phase 5A มี log table แล้ว แต่ callback ยังยิง inline เหมือนเดิม
+เพราะ contract ยังไม่มา — OQ-17)
+
+**ความเป็นเจ้าของอยู่ที่ ARI003** (ชื่อ class · comm scenario · contract ของ payload)
+ZARI002 เป็นแค่ผู้เรียก — ตอนสร้าง object ของ ARI003 จริง ค่อยย้าย class ไป package `ZARI003`
