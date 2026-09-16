@@ -380,18 +380,18 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
 
 *   ---- ที่ว่างรอคำตอบ ----
 *   check_payment_total       → 007 (OQ-05)
-*   check_ar_open_item        → 206 (OQ-08)
 
   ENDMETHOD.
 
 
   METHOD check_master_data.
 
-    DATA lt_company_code TYPE zif_zari002_master_data=>tt_company_code.
-    DATA lt_gl_key       TYPE zif_zari002_master_data=>tt_gl_key.
-    DATA lt_pm_key       TYPE zif_zari002_master_data=>tt_payment_method_key.
-    DATA lt_customer     TYPE zif_zari002_master_data=>tt_customer.
-    DATA lt_bank_key     TYPE zif_zari002_master_data=>tt_bank_key.
+    DATA lt_company_code     TYPE zif_zari002_master_data=>tt_company_code.
+    DATA lt_gl_key           TYPE zif_zari002_master_data=>tt_gl_key.
+    DATA lt_pm_key           TYPE zif_zari002_master_data=>tt_payment_method_key.
+    DATA lt_customer         TYPE zif_zari002_master_data=>tt_customer.
+    DATA lt_bank_key         TYPE zif_zari002_master_data=>tt_bank_key.
+    DATA lt_billing_document TYPE zif_zari002_master_data=>tt_billing_document.
 
     " Company Code
     IF is_payment-company_code IS NOT INITIAL.
@@ -498,6 +498,29 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
       ENDIF.
     ENDLOOP.
 
+    " AR Open Item — billing document ต้องยังเปิดอยู่ใน FI (ยังไม่ถูก clear / reverse)
+    " ทำงานคู่กับ duplicate check: ใบที่ post แล้ว (S/W) จะถูกจับที่นี่ เพราะการ post ทำให้ clear
+    LOOP AT it_item ASSIGNING <lfs_item>.
+      IF <lfs_item>-billing_document IS NOT INITIAL.
+        INSERT <lfs_item>-billing_document INTO TABLE lt_billing_document.
+      ENDIF.
+    ENDLOOP.
+
+    DATA(lt_cleared) = go_master_data->find_cleared_documents( lt_billing_document ).
+
+    LOOP AT it_item ASSIGNING <lfs_item>.
+      IF <lfs_item>-billing_document IS NOT INITIAL
+      AND line_exists( lt_cleared[ table_line = <lfs_item>-billing_document ] ).
+        APPEND VALUE #( msgno              = '206'
+                        msgtx              = message_text( iv_msgno = '206'
+                                                           iv_v1    = |{ <lfs_item>-billing_document }| )
+                        salesforce_id      = is_payment-salesforce_id
+                        salesforce_item_id = <lfs_item>-salesforce_item_id
+                        field              = zcl_zari002_json=>to_json_name( 'billing_document' )
+                      ) TO rt_error.
+      ENDIF.
+    ENDLOOP.
+
   ENDMETHOD.
 
 
@@ -522,10 +545,16 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
       RETURN.
     ENDIF.
 
+*   status เป็นส่วนของ key — ใบเข้ามาใหม่เป็น N เสมอ จึงซ้ำเฉพาะเมื่อมี row N อยู่แล้ว
+*     E (post ไม่ผ่าน)  → ไม่ซ้ำ ส่งแก้เข้ามาใหม่ได้
+*     S/W (post แล้ว)   → ไม่ซ้ำที่นี่ แต่ AR open item check จับได้ เพราะ document ถูก clear แล้ว
+*     N (ยังไม่ทำอะไร)  → ซ้ำ
+*   ห้ามใช้โดยไม่มี AR open item check — ไม่งั้นใบ S ส่งซ้ำแล้ว post ซ้ำได้
     SELECT FROM ztar_i002_pymt AS p
            INNER JOIN ztar_i002_item AS i ON i~payment_uuid = p~payment_uuid
       FIELDS i~billing_document
       WHERE p~payment_document_no = @is_payment-payment_document_no
+        AND p~status              = @is_payment-status
         AND i~billing_document    IN @lr_billing
       INTO TABLE @DATA(lt_existing).
 

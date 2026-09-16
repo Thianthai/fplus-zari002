@@ -2,13 +2,14 @@ INTERFACE zif_zari002_master_data
   PUBLIC.
 
   TYPES:
-    ty_company_code   TYPE ztar_i002_pymt-company_code,
-    ty_gl_account     TYPE ztar_i002_pymt-gl_account,
-    ty_payment_method TYPE ztar_i002_pymt-sap_payment_method,
-    ty_currency       TYPE ztar_i002_pymt-currency,
-    ty_customer       TYPE ztar_i002_item-customer_code,
-    ty_country        TYPE c LENGTH 3,
-    ty_bank           TYPE ztar_i002_pymt-cheque_bank_branch.
+    ty_company_code     TYPE ztar_i002_pymt-company_code,
+    ty_gl_account       TYPE ztar_i002_pymt-gl_account,
+    ty_payment_method   TYPE ztar_i002_pymt-sap_payment_method,
+    ty_currency         TYPE ztar_i002_pymt-currency,
+    ty_customer         TYPE ztar_i002_item-customer_code,
+    ty_country          TYPE c LENGTH 3,
+    ty_bank             TYPE ztar_i002_pymt-cheque_bank_branch,
+    ty_billing_document TYPE ztar_i002_item-billing_document.
 
   TYPES:
     "! company code + ข้อมูลที่ derive ต่อได้
@@ -48,7 +49,9 @@ INTERFACE zif_zari002_master_data
     tt_customer           TYPE SORTED TABLE OF ty_customer
                           WITH UNIQUE KEY table_line,
     tt_bank_key           TYPE SORTED TABLE OF ty_bank_key
-                          WITH UNIQUE KEY country bank.
+                          WITH UNIQUE KEY country bank,
+    tt_billing_document   TYPE SORTED TABLE OF ty_billing_document
+                          WITH UNIQUE KEY table_line.
 
   "! อ่าน currency และ country ของ company code
   "! ใช้ทั้งใน setPaymentDefaults (เอาค่าไปเติม) และ validateCompanyCode (เช็คว่ามีจริง)
@@ -78,5 +81,11 @@ INTERFACE zif_zari002_master_data
   METHODS find_unknown_banks
     IMPORTING it_bank_key      TYPE tt_bank_key
     RETURNING VALUE(rt_result) TYPE tt_bank_key.
+
+  "! คืน billing document ที่**ไม่มี** open item ใน FI — ถูก clear / reverse / ไม่มีเลย
+  "! เงื่อนไขตาม functional spec ข้อ 3: FinancialAccountType = D · ClearingJournalEntry ว่าง
+  METHODS find_cleared_documents
+    IMPORTING it_billing_document TYPE tt_billing_document
+    RETURNING VALUE(rt_result)    TYPE tt_billing_document.
 
 ENDINTERFACE.

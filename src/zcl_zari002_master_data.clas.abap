@@ -180,4 +180,33 @@ CLASS zcl_zari002_master_data IMPLEMENTATION.
 
   ENDMETHOD.
 
+
+  METHOD zif_zari002_master_data~find_cleared_documents.
+
+    DATA lr_billing TYPE RANGE OF zif_zari002_master_data=>ty_billing_document.
+
+    IF it_billing_document IS INITIAL.
+      RETURN.
+    ENDIF.
+
+    lr_billing = VALUE #( FOR <lfs_doc> IN it_billing_document
+                          ( sign = 'I' option = 'EQ' low = <lfs_doc> ) ).
+
+*   เงื่อนไขตาม functional spec ข้อ 3 ไม่เพิ่มอะไร — เจอ row = document ยังเปิดอยู่
+*   ไม่เจอ = clear / reverse / ไม่มีใน FI → ผู้เรียกออก 206
+    SELECT FROM I_OperationalAcctgDocItem WITH PRIVILEGED ACCESS
+      FIELDS OriginalReferenceDocument AS billing_document
+      WHERE FinancialAccountType      = 'D'
+        AND OriginalReferenceDocument IN @lr_billing
+        AND ClearingJournalEntry      = @space
+      INTO TABLE @DATA(lt_open).
+
+    LOOP AT it_billing_document ASSIGNING FIELD-SYMBOL(<lfs_billing>).
+      IF NOT line_exists( lt_open[ billing_document = <lfs_billing> ] ).
+        INSERT <lfs_billing> INTO TABLE rt_result.
+      ENDIF.
+    ENDLOOP.
+
+  ENDMETHOD.
+
 ENDCLASS.

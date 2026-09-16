@@ -16,23 +16,25 @@ CLASS zcl_zari002_util IMPLEMENTATION.
 
   METHOD if_oo_adt_classrun~main.
 
-    SELECT SINGLE FROM ztar_i002_pymt
+    SELECT FROM ztar_i002_pymt
     FIELDS payment_uuid
-    WHERE payment_document_no = '1000000109'
-    INTO @DATA(lv_payment_uuid).
+    WHERE payment_document_no IN ( '1000000101', '1000000109', '1000000110', '1000000111', '1000000112' )
+    INTO TABLE @DATA(lt_header).
 
-    IF sy-subrc = 0.
-      DELETE FROM ztar_i002_pymt WHERE payment_uuid = @lv_payment_uuid.
+    LOOP AT lt_header INTO DATA(ls_header).
+
+      DELETE FROM ztar_i002_pymt WHERE payment_uuid = @ls_header-payment_uuid.
       IF sy-subrc <> 0.
         ROLLBACK WORK.
-        RETURN.
+        CONTINUE.
       ENDIF.
 
-      DELETE FROM ztar_i002_item WHERE payment_uuid = @lv_payment_uuid.
+      DELETE FROM ztar_i002_item WHERE payment_uuid = @ls_header-payment_uuid.
       IF sy-subrc = 0.
-        COMMIT WORK.
+        COMMIT WORK AND WAIT.
       ENDIF.
-    ENDIF.
+
+    ENDLOOP.
 
   ENDMETHOD.
 

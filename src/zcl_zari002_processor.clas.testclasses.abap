@@ -46,6 +46,15 @@ CLASS ltd_master_data IMPLEMENTATION.
     ENDLOOP.
   ENDMETHOD.
 
+  METHOD zif_zari002_master_data~find_cleared_documents.
+*   billing document ใน fixture ยังเปิดอยู่ · นอกนั้นถือว่า clear แล้ว
+    LOOP AT it_billing_document ASSIGNING FIELD-SYMBOL(<lfs_d>).
+      IF <lfs_d> <> '0090000000' AND <lfs_d> <> '0090000002'.
+        INSERT <lfs_d> INTO TABLE rt_result.
+      ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
+
 ENDCLASS.
 
 
@@ -95,6 +104,8 @@ CLASS ltc_processor DEFINITION FINAL
     METHODS log_written_for_saved     FOR TESTING.
     METHODS log_written_for_rejected  FOR TESTING.
     METHODS log_msg_carries_item_id   FOR TESTING.
+    METHODS cleared_document_fails_206 FOR TESTING.
+    METHODS rejected_row_can_be_resent FOR TESTING.
 
     METHODS sample_json
       IMPORTING iv_company_code   TYPE string DEFAULT `2000`
@@ -417,6 +428,44 @@ CLASS ltc_processor IMPLEMENTATION.
 
     cl_abap_unit_assert=>assert_equals( exp = 'IT0000000000000001' act = ls_msg-salesforce_item_id
                                         msg = 'error ระดับ item ต้องบอกว่า item ไหน' ).
+
+  ENDMETHOD.
+
+
+  METHOD cleared_document_fails_206.
+
+*   0090000009 ไม่อยู่ในรายการเปิดของ test double → ถือว่า clear แล้ว
+    DATA(lv_json) = replace( val  = sample_json( )
+                             sub  = `"BillingDocument": "0090000002"`
+                             with = `"BillingDocument": "0090000009"`
+                             occ  = 1 ).
+    DATA(ls_out) = go_cut->process( lv_json ).
+
+    cl_abap_unit_assert=>assert_equals( exp = abap_false act = ls_out-success ).
+    cl_abap_unit_assert=>assert_true( act = has_msgno( it_error = ls_out-errors iv_msgno = '206' ) ).
+    cl_abap_unit_assert=>assert_equals(
+      exp = 'IT0000000000000002'
+      act = ls_out-errors[ msgno = '206' ]-salesforce_item_id
+      msg = '206 ต้องระบุว่า item ไหน' ).
+
+  ENDMETHOD.
+
+
+  METHOD rejected_row_can_be_resent.
+
+*   เคส 1 ของ functional: รอบแรกลง table เป็น N → ZARE002 post ไม่ผ่านเป็น E → SF ส่งใหม่ต้องรับ
+    go_cut->process( sample_json( ) ).
+    UPDATE ztar_i002_pymt SET status = 'E' WHERE status = 'N'.
+
+    DATA(ls_out) = go_cut->process( sample_json( ) ).
+
+    cl_abap_unit_assert=>assert_equals( exp = abap_true act = ls_out-success
+                                        msg = 'ใบที่ post ไม่ผ่าน ต้องส่งแก้เข้ามาใหม่ได้' ).
+    cl_abap_unit_assert=>assert_false( act = has_msgno( it_error = ls_out-errors iv_msgno = '010' ) ).
+
+    SELECT COUNT(*) FROM ztar_i002_pymt INTO @DATA(lv_count).
+    cl_abap_unit_assert=>assert_equals( exp = 2 act = lv_count
+                                        msg = 'ต้องมี 2 row: E เดิม + N ใหม่' ).
 
   ENDMETHOD.
 
