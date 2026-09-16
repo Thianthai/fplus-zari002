@@ -284,7 +284,7 @@ duplicate — การแก้ต้องทำฝั่ง SAP
 | `check_cheque_fields` | Payment | ถ้า `sap_payment_method` = เช็ค → `cheque_no` `issue_date` `due_on` `cheque_bankbranch` ต้องครบ (ดูจาก code ที่แปลงแล้ว ไม่ใช่คำดิบ) |
 | `check_payment_total` | Payment | **ที่ว่างไว้ ยังไม่ใส่ logic** — เผื่อภายหลังต้องเทียบ `payment_amount` กับผลรวม `amount_paid` |
 | `check_amount_paid_total` | Payment | ผลรวม `amount_paid` ของทุก item ต้อง **> 0** |
-| `check_duplicate` | Payment | `payment_document_no` + `billing_document` ต้องไม่เคยมีใน table |
+| `check_duplicate` | Payment | `payment_document_no` + `billing_document` + **`status`** — ใบใหม่เป็น `N` เสมอ จึงซ้ำเฉพาะกับ row `N` · row `E` ไม่บล็อก (ส่งแก้ใหม่ได้) · row `S`/`W` ไม่บล็อกที่นี่แต่ `check_ar_open_item` จับเพราะ document ถูก clear แล้ว · **ห้ามแยกจากกัน** |
 | `check_number_of_items` | Payment | ต้องเท่ากับจำนวน `_Item` ที่ส่งมาจริง |
 | `check_dates` | Payment | `due_on` ต้องไม่ก่อน `issue_date` |
 | `check_item_ids` | Item | mandatory + ไม่ซ้ำกันเองภายใน payment เดียวกัน |
@@ -298,7 +298,7 @@ duplicate — การแก้ต้องทำฝั่ง SAP
 | `check_gl_account` | `gl_account` | `I_GLAccountInCompanyCode` |
 | `check_payment_method` | `sap_payment_method` | `I_PaymentMethod` เช็คแค่ว่า code มีจริง · ถ้าแปลงไม่ได้ (คำที่ไม่รู้จัก) ต้องแจ้งคำที่ส่งมาในข้อความด้วย |
 | `check_customer_code` | `customer_code` (Item) | `I_Customer` |
-| `check_ar_open_item` | `accounting_document` (Item) | **ที่ว่างไว้ ยังไม่ใส่ logic** — ตรวจว่ารายการยังไม่ถูกรับชำระหรือ reverse · ต้องหา released view ที่มีสถานะนี้ก่อน (OQ-08) |
+| `check_ar_open_item` | `billing_document` (Item) | `I_OperationalAcctgDocItem WITH PRIVILEGED ACCESS` — เจอ row `FinancialAccountType = D` + `OriginalReferenceDocument = billing_document` + `ClearingJournalEntry` ว่าง = ยังเปิดอยู่ · ไม่เจอ = clear/reverse/ไม่มี → `206` · เงื่อนไขตาม functional spec ข้อ 3 ไม่เพิ่ม company code |
 | `check_bank` | `cheque_bank_branch` | เทียบกับ `I_Bank_2-BankInternalID` คู่กับ country ของ company code · **ตรวจเฉพาะตอนจ่ายด้วยเช็ค** เพราะวิธีอื่น field นี้ว่างได้ |
 
 **ไม่เช็คเครื่องหมายจำนวนเงิน** — sample จริงมี `rounding_diff = -1.00` และ

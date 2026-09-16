@@ -17,7 +17,7 @@
 | OQ-06 | URL endpoint — **ปิดแล้ว 2026-08-31** `https://my442178-api.s4hana.cloud.sap/sap/bc/http/sap/zari002_incoming_pymt` · client `100` · Basic auth ด้วย `SBPA_DEV` | — | Phase 1 | — | ✅ |
 | OQ-07 | จำนวน item สูงสุดต่อ request | — | Phase 1 | **ไม่มี volume test แล้ว** (ข้าม Phase 6) — ตอบจากการใช้จริง ถ้าเจอปัญหาค่อยกำหนด | ⬜ |
 
-| OQ-08 | released CDS view ตัวไหนบอกได้ว่า accounting document ถูกรับชำระ/reverse แล้ว (`I_OperationalAcctgDocItem` / กลุ่ม journal entry) | ผู้ใช้ + FI | Phase 3 | `validateArOpenItem` เป็นที่ว่างไว้ · ถ้าไม่มี view ที่ released จะเขียน logic ไม่ได้เลย | ⬜ |
+| OQ-08 | view สำหรับ AR open item — **ปิดแล้ว 2026-09-17** functional spec ระบุ `I_OperationalAcctgDocItem` (C1 ✅) พร้อม 3 เงื่อนไข · implement เป็น `find_cleared_documents( )` → `206` · ⚠️ ต้องยืนยันตอนยิงจริงว่า `OriginalReferenceDocument` เก็บเลข billing 10 หลักตรง ๆ ไม่ใช่ AWKEY | — | Phase 3 | — | ✅ |
 | OQ-09 | duplicate check — **ปิดแล้ว 2026-08-28**: key = `payment_document_no` + `billing_document` เทียบทุกสถานะ · `salesforce_id` ไม่ใช่ key กันซ้ำ | — | Phase 3 | — | ✅ |
 | OQ-10 | ค่าที่ไม่ใช่วันที่ (เช่น `"abc"`) ยังไม่ถูกตรวจ — `to_internal_date( )` ตัดตัวคั่นแล้วส่งต่อ อาจกลายเป็นวันที่ขยะ · **เรื่องตัวเลขถูกยกเลิกแล้ว 2026-09-04** เหลือแค่วันที่ | Salesforce / SBPA | Phase 3 | ยังไม่มีใครดัก | ⬜ |
 
@@ -25,7 +25,7 @@
 
 | OQ-12 | แจ้ง SFDC เรื่อง contract เปลี่ยน — **ปิดแล้ว 2026-08-28**: SFDC ยังไม่เริ่ม implement · ส่วนเรื่อง response รายบรรทัดกลายเป็นคนละเรื่อง เพราะย้ายไปตอบผ่าน callback API ของ SFDC แทน (ดู OQ-17) | — | Phase 4 | — | ✅ |
 | OQ-13 | `ZD_STATUS` / `ZE_STATUS` — **ลบทิ้งแล้ว 2026-08-28** | — | Phase 4 | — | ✅ |
-| OQ-14 | ใบที่บันทึกสำเร็จแล้ว ZARE002 post ไม่ผ่าน → SFDC ส่งเข้ามาแก้ไม่ได้ (โดน duplicate) ต้องแก้ฝั่ง SAP · **ตกลงยอมรับแล้ว** แต่ต้องเขียนไว้ใน troubleshooting guide ให้ชัด | ผู้ใช้ | Phase 4 | Phase 8.3 | 🟨 |
+| OQ-14 | ใบที่ post ไม่ผ่านส่งซ้ำไม่ได้ — **ปิดแล้ว 2026-09-17** duplicate key เพิ่ม `status` · row `E` ไม่บล็อกอีกต่อไป SF ส่งแก้เข้ามาใหม่ได้ · ปลอดภัยเพราะ AR open item check จับใบที่ post แล้ว (`S`/`W`) แทน | — | Phase 4 | — | ✅ |
 
 | OQ-15 | description ของ object status — **แก้แล้ว 2026-08-28** เป็น `Request Status` / `Response Status` (รวม field label `Req Status` / `Res Status`) · `ZIF_ZARI002_MD_CHK` ได้ prefix แล้ว | — | Phase 4 | — | ✅ |
 
@@ -299,3 +299,24 @@ functional + SBPA เทสจริงร่วมกันอยู่แล�
 
 **OQ-04 เปลี่ยนน้ำหนัก** — เคยเป็นตัวบล็อก Phase 6 · พอข้าม Phase 6 มันไม่บล็อกอะไรแล้ว
 แค่ต้องครบก่อน go-live
+
+
+### Functional spec validation ข้อ 3 + 4 — 2026-09-17
+
+เทียบ code กับตาราง validation 7 ข้อใน sign-off document · **ของ ZARI002 5 ข้อ** (6–7 เป็น ZARE002)
+· ผ่าน 4 ขาด 1 (AR open item) และ duplicate key ต่างจาก spec (ไม่มี `status`)
+
+**ปิด OQ-08** — spec ตอบเองว่าใช้ `I_OperationalAcctgDocItem` เงื่อนไขอะไร · ค้างมาตั้งแต่ Phase 3
+เพราะไม่รู้ว่าต้องอ่าน view ไหน
+
+**ปิด OQ-14** — ผลพลอยได้จากการเพิ่ม `status` เข้า duplicate key · ใบ `E` ส่งแก้ใหม่ได้แล้ว
+ไม่ต้องแก้ฝั่ง SAP อย่างที่เคยยอมรับ
+
+**2 check นี้ต้องอยู่ด้วยกัน** — duplicate เทียบเฉพาะ `N` ปลอดภัยก็เพราะ AR check จับใบ `S`/`W`
+ที่ document ถูก clear แล้ว · ถ้าถอด AR check ออก ใบที่ post แล้วจะส่งซ้ำแล้ว post ซ้ำได้ทันที
+(3 เคสจาก functional บันทึกใน `01_architecture.md` ตาราง validation)
+
+**Deviation จาก spec ที่ตั้งใจ** — ข้อ 2 "format ตัวเลข" ไม่ทำ (ยกเลิก 2026-09-04) ให้ parse จับ
+เป็น `012` แทน · SBPA เทสอยู่ไม่มี issue
+
+**เหลือเปิด 10 ข้อ** — ที่ว่างใน `validate( )` เหลือตัวเดียว `check_payment_total` (OQ-05)

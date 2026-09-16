@@ -131,13 +131,13 @@ CN ติดลบได้ · แต่ **ผลรวม `AmountPaid` ขอ�
 | `check_gl_account` | header | `201` | ✅ |
 | `check_payment_method` | header | `202` `203` | ✅ |
 | `check_amount_paid_total` | header | `011` | ✅ |
-| `check_duplicate` | header | `010` | ✅ นิยามชัดแล้ว |
+| `check_duplicate` | header | `010` | ✅ key = `payment_document_no` + `billing_document` + **`status`** (2026-09-17) — ซ้ำเฉพาะกับ row `N` |
 | `check_bank` | header | `207` | ✅ เฉพาะตอนจ่ายด้วยเช็ค |
 | `check_payment_total` | header | `007` | 🟨 ที่ว่าง — OQ-05 |
 | `check_item_ids` | item | `005` `111` | ✅ |
 | `check_item_mandatory` | item | `006` `112`–`118` | ✅ |
 | `check_customer_code` | item | `205` | ✅ |
-| `check_ar_open_item` | item | `206` | 🟨 ที่ว่าง — OQ-08 |
+| `check_ar_open_item` | item | `206` | ✅ `I_OperationalAcctgDocItem` — `FinancialAccountType = D` · `OriginalReferenceDocument = billing_document` · `ClearingJournalEntry` ว่าง (2026-09-17) |
 
 **16 validation** (จากเดิม 17 — `validateSalesforceId` ถูกตัดออก ดู §6)
 
