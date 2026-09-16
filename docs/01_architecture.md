@@ -467,6 +467,76 @@ repository object (class / CDS / BDEF) ใช้ร่วมกันข้า�
 
 ---
 
+## 10A. Log & Monitor (2026-09-16)
+
+### ทำไมต้องมีชุดตารางที่ 2
+
+ตารางธุรกิจ `ZTAR_I002_PYMT` / `ZTAR_I002_ITEM` เขียน**เฉพาะใบที่ผ่าน** — ใบที่ตกไม่ทิ้งร่องรอย
+เพราะถ้าเก็บไว้ duplicate check จะไปชนใบที่แก้แล้วส่งใหม่ · แต่ support ต้องการเห็น**ทุกใบที่ยิงเข้ามา**
+โดยเฉพาะใบที่ตก
+
+ต่างจาก ZSDE002 ที่ตาราง log คือตารางหลักในตัวเดียว — ZARI002 มี 2 ชุดคู่ขนาน:
+
+| ชุด | เขียนเมื่อ | ใครอ่าน |
+|---|---|---|
+| ธุรกิจ `PYMT` / `ITEM` | เฉพาะใบผ่าน | ZARE002 post FI · ARI003 |
+| log `HDRLOG` / `ITMLOG` / `MSGLOG` | **ทุกใบ** ผ่านและตก | monitor UI · support |
+
+ใบผ่านมีทั้ง 2 ชุด ผูกกันด้วย `payment_uuid` เดียวกัน · ใบตกมีเฉพาะ log
+
+### จังหวะและ LUW
+
+```
+save( )       business · COMMIT #1   ← เฉพาะใบผ่าน
+save_log( )   log      · COMMIT #2   ← ทุกใบ
+send_callback( )
+```
+
+log เขียน**หลัง** business save เพราะต้องรู้ผลก่อนถึงใส่ `status` ถูก · และเขียน**ก่อน** callback
+เพราะเป็นของภายใน ควรเสร็จก่อนไปยิงของภายนอก · **LUW แยก** — log พังไม่ดึง business save
+ที่ commit แล้วกลับ · กรณีเลวร้ายสุด = ใบเข้า table แต่ไม่มี log ไม่มีทางกลับกัน
+
+`save_log( )` ครอบด้วย `TRY ... CATCH cx_root` — log เป็นของรอง ห้ามทำ request หลักพัง
+
+### ค่าใน log ต่างจากตารางธุรกิจตรงไหน
+
+| field | ตารางธุรกิจ | log |
+|---|---|---|
+| `HDRLOG-status` | `N` → ZARE002 เขียน `S`/`W`/`E` (ผล post) | **`S`/`E` ผลรับของ ZARI002** — `N`/`W` ไม่มีวันโผล่ |
+| `HDRLOG-salesforce_status` / `_message` | ARI003 เขียน | ว่างเสมอ |
+| `HDRLOG-request_body` | ไม่มี | JSON **ของใบนั้น** serialize จาก structure ดิบ + pretty-print · วันที่เป็น `20260815` เพราะ parse แปลงไปแล้ว |
+| `ITMLOG-reject_reason` | ZARE002 เขียน | ว่างเสมอ |
+| `MSGLOG-message` | — | `ZARI002/107 Cheque number is required ...` มี code นำหน้าให้ค้นได้ |
+| `MSGLOG-salesforce_item_id` | — | จาก error · ZSDE002 ไม่มี field นี้ จึงบอกไม่ได้ว่า error ของ item ไหน |
+
+**ใบผ่านไม่มี row ใน MSGLOG** — `HDRLOG-status = S` บอกแล้ว
+
+**request ที่ไม่มี payment (`012` JSON พัง · `013` array ว่าง) ไม่ถูก log** — ไม่มี `payment_uuid`
+ให้เขียน · ตกลงตาม ZSDE002
+
+### Monitor — RAP read-only
+
+```
+ZR_ZARI002_PYMT_LOG  root (hdrlog)  ─┬─ ZI_ZARI002_ITEM_LOG  (itmlog)
+                                     └─ ZI_ZARI002_MSG_LOG   (msglog)
+ZC_ZARI002_*  projection + metadata extension
+ZUI_ZARI002_LOG / _O4  service
+```
+
+BDEF `managed` · `strict ( 2 )` · **ไม่มี operation** — processor เขียนด้วย `INSERT` ตรง
+· `authorization master ( global )` + behavior pool ที่ handler ว่าง มีเพราะ strict บังคับ
+ไม่ได้คุมสิทธิ์จริง (คุมที่ business catalog `ZBC_ZARI002`)
+
+### 3 กับดักตอน activate BDEF (เจอจริง 2026-09-16)
+
+| อาการ | ทางออก |
+|---|---|
+| `every entity must be flagged as "authorization master" or "authorization dependent"` | `strict ( 2 )` บังคับ — ใส่ `authorization master ( global )` ที่ root และ `authorization dependent by` ที่ child + สร้าง behavior pool |
+| warning `Field ... does not have a mapping to table` ทุก field | CDS ใช้ CamelCase / table ใช้ snake_case → ต้องมี `mapping for <table> { CamelCase = snake_case; }` **ทุก entity** · warning นี้ **transport ไม่ผ่าน** |
+| warning `should be flagged as "numbering:managed"` | key UUID ต้อง `field ( numbering : managed, readonly )` แม้ไม่มี `create` |
+
+⚠️ **ZSDE002 ไม่มี `mapping for`** — ต้องกลับไปเติมก่อน transport
+
 ## 11. การแปลงชื่อ field ระหว่าง JSON กับ table
 
 `ZCL_ZARI002_JSON` เป็นที่เดียวที่รู้จักทั้ง 2 ฝั่ง — ใช้ transformation ของ `xco_cp_json`

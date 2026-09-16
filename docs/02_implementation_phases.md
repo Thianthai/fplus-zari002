@@ -139,6 +139,31 @@ serialize response (`Field` / `Item` / ข้อความจาก message cl
 
 ---
 
+## Phase 5A — Log & Monitor (เพิ่ม 2026-09-15 · เสร็จ 2026-09-16)
+
+ฟีเจอร์ที่เพิ่มหลังวางแผน — เก็บ log ทุก payment ที่ยิงเข้ามา (ผ่านและตก) + monitor UI ตามแบบ ZSDE002
+
+| # | งาน | Status |
+|---|-----|--------|
+| 5A.1 | Table 3 ตัว `HDRLOG` `ITMLOG` `MSGLOG` — MSGLOG เพิ่ม `salesforce_item_id` เหนือกว่า ZSDE002 | ✅ |
+| 5A.2 | CDS 6 + metadata extension 3 + BDEF 2 + behavior pool | ✅ |
+| 5A.3 | Service definition + binding + publish | ✅ |
+| 5A.4 | `save_log( )` ใน processor — หลัง save ก่อน callback · LUW แยก · ล้มไม่กระทบ request | ✅ |
+| 5A.5 | Fiori app + IAM app + business catalog (wizard) | ✅ |
+| 5A.6 | Test 3 ตัว บน `cl_osql_test_environment` | ✅ |
+| 5A.7 | ยิงจริงจาก Postman แล้วเปิด monitor เห็นข้อมูล | ✅ |
+
+**บทเรียนที่จดไว้**
+
+- **`strict ( 2 )` บังคับ `authorization master/dependent` ทุก entity** — read-only BO ก็ต้องมี behavior pool ที่มี `get_global_authorizations` ว่าง ๆ ตัดไม่ได้
+- **BDEF managed ที่ CDS ใช้ CamelCase ต้องมี `mapping for <table>` ทุก entity** ไม่งั้นติด warning ที่ **transport ไม่ผ่าน** · ZSDE002 ยังไม่มี ต้องกลับไปเติมก่อน transport
+- **key UUID ต้อง `numbering : managed`** แม้ไม่มี `create` — framework ถามว่า key เกิดมายังไง
+- request ที่ไม่มี payment (`012` `013`) **ไม่ถูก log** — ตกลงตาม ZSDE002
+
+**Exit criteria**: ยิงเข้ามาแล้วเห็นใน monitor ทั้งใบผ่านและใบตก ✅
+
+---
+
 ## Phase 6 — Test & hardening
 
 | # | งาน | Status |
@@ -178,4 +203,4 @@ serialize response (`Field` / `Item` / ข้อความจาก message cl
 | 7.3 | Troubleshooting guide — รวมเคส OQ-14 (ใบที่ post ไม่ผ่านส่งซ้ำไม่ได้) และเคส callback ล้ม | ⬜ |
 | 7.4 | Technical spec สำหรับ RICEFW document | ⬜ |
 | 7.5 | ส่งมอบ contract ของ table ให้ทีม **ZARE002** | ⬜ |
-| 7.6 | 🔴 **ลบ `ZCL_ZARI002_SPIKE`** — utility เคลียร์ table ที่ใช้ระหว่าง Phase 6 · `DELETE FROM` ไม่มี `WHERE` ห้ามหลุดไปกับของส่งมอบ และจะติด ATC ที่ 6.11 ถ้ายังอยู่ | ⬜ |
+| 7.6 | 🔴 **ลบ `ZCL_ZARI002_SPIKE` และ `ZCL_ZARI002_UTIL`** — utility ชั่วคราวที่ใช้ระหว่าง Phase 6 · `DELETE` ตรง ๆ ห้ามหลุดไปกับของส่งมอบ และจะติด ATC ที่ 6.11 ถ้ายังอยู่ | ⬜ |

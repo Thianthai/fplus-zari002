@@ -55,6 +55,7 @@
 | `ZCL_ZARI002_HTTP` | Handler — `IF_HTTP_SERVICE_EXTENSION` | `src/zcl_zari002_http.clas.abap` | 4 | ✅ |
 | `ZARI002_INCOMING_PYMT` | HTTP Service | `src/zari002_incoming_pymt.http.xml` | 4 | ✅ |
 | `ZCL_ZARI002_SPIKE` | ⚠️ **ชั่วคราว** — `if_oo_adt_classrun` เคลียร์ 2 table ระหว่างเทส · `DELETE FROM` แบบไม่มี `WHERE` **ห้ามรันบน client ที่มีข้อมูลจริง** · **ลบทิ้งใน Phase 7.6** | `src/zcl_zari002_spike.clas.abap` | 6 | 🟨 temporary |
+| `ZCL_ZARI002_UTIL` | ⚠️ **ชั่วคราว** — `if_oo_adt_classrun` ลบ payment ตัวเดียวโดย hardcode `payment_document_no` · ลบเฉพาะ business table **ไม่ลบ log** (ถูกแล้ว log เป็นประวัติ) · **ลบทิ้งใน Phase 7.6** | `src/zcl_zari002_util.clas.abap` | 6 | 🟨 temporary |
 
 > **RAP ถูกถอดออกทั้งหมดเมื่อ 2026-08-31** — CDS view, behavior definition, behavior pool,
 > projection view และ behavior projection ถูกลบ · เหตุผลอยู่ใน `01_architecture.md` §2
@@ -70,6 +71,32 @@
 
 > **Communication Scenario เป็น repository object** จึงขึ้น git ด้วย · ส่วน Communication
 > System / User / Arrangement เป็น config ใน Fiori **ไม่ขึ้น git** ต้องตั้งใหม่เองในทุกระบบ
+
+## Log & Monitor (Phase 5A — 2026-09-16)
+
+ชุดตารางที่ 2 แยกจากตารางธุรกิจ — เขียน**ทุก payment** ทั้งผ่านและตก · monitor เป็น RAP read-only ตามแบบ ZSDE002
+
+| Object | Type | ไฟล์ | Phase | Status |
+|--------|------|------|-------|--------|
+| `ZTAR_I002_HDRLOG` | Table — header log = `ZTAR_I002_PYMT` 28 field + `request_body` (JSON ของใบนั้น) | `src/ztar_i002_hdrlog.tabl.xml` | 5A | ✅ |
+| `ZTAR_I002_ITMLOG` | Table — item log = `ZTAR_I002_ITEM` ทุก field | `src/ztar_i002_itmlog.tabl.xml` | 5A | ✅ |
+| `ZTAR_I002_MSGLOG` | Table — message log 1 row/error · มี `salesforce_item_id` (ZSDE002 ไม่มี) | `src/ztar_i002_msglog.tabl.xml` | 5A | ✅ |
+| `ZR_ZARI002_PYMT_LOG` | CDS root view entity — composition → item, msg | `src/zr_zari002_pymt_log.ddls.asddls` | 5A | ✅ |
+| `ZI_ZARI002_ITEM_LOG` | CDS interface view — child | `src/zi_zari002_item_log.ddls.asddls` | 5A | ✅ |
+| `ZI_ZARI002_MSG_LOG` | CDS interface view — child | `src/zi_zari002_msg_log.ddls.asddls` | 5A | ✅ |
+| `ZC_ZARI002_PYMT_LOG` | CDS projection (root) + metadata extension | `src/zc_zari002_pymt_log.ddls.asddls` · `.ddlx.asddlxs` | 5A | ✅ |
+| `ZC_ZARI002_ITEM_LOG` | CDS projection + metadata extension | `src/zc_zari002_item_log.ddls.asddls` · `.ddlx.asddlxs` | 5A | ✅ |
+| `ZC_ZARI002_MSG_LOG` | CDS projection + metadata extension | `src/zc_zari002_msg_log.ddls.asddls` · `.ddlx.asddlxs` | 5A | ✅ |
+| `ZR_ZARI002_PYMT_LOG` | BDEF root — managed · `strict ( 2 )` · read-only · **มี `mapping for` ทุก entity** | `src/zr_zari002_pymt_log.bdef.asbdef` | 5A | ✅ |
+| `ZC_ZARI002_PYMT_LOG` | BDEF projection | `src/zc_zari002_pymt_log.bdef.asbdef` | 5A | ✅ |
+| `ZBP_R_ZARI002_PYMT_LOG` | Behavior pool — handler ว่าง มีเพราะ `strict` บังคับ `authorization master` | `src/zbp_r_zari002_pymt_log.clas.abap` | 5A | ✅ |
+| `ZUI_ZARI002_LOG` | Service definition | `src/zui_zari002_log.srvd.srvdsrv` | 5A | ✅ |
+| `ZUI_ZARI002_LOG_O4` | Service binding OData V4 UI | `src/zui_zari002_log_o4.srvb.xml` | 5A | ✅ |
+| `ZARI002LOG_UI5R` | Fiori app descriptor (wizard) | `src/zari002log_ui5r.uiad.json` | 5A | ✅ |
+| `ZIAM_ZARI002_LOG_EXT` | IAM app | `src/ziam_zari002_log_ext.sia6.xml` | 5A | ✅ |
+| `ZBC_ZARI002` | Business catalog + assignment | `src/zbc_zari002.sia1.xml` · `zbc_zari002_0001.sia7.xml` | 5A | ✅ |
+
+`ZCL_ZARI002_PROCESSOR` เพิ่ม method: `save_log` · `to_hdr_log` · `to_itm_log` · `to_msg_log` · `to_request_body` · `to_pretty_json`
 
 ## Configuration (ไม่ใช่ repository object — ไม่เข้า repo)
 
