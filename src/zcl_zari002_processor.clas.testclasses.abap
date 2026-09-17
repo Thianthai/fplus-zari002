@@ -24,7 +24,9 @@ CLASS ltd_master_data IMPLEMENTATION.
   METHOD zif_zari002_master_data~find_unknown_pymt_methods.
     LOOP AT it_payment_method_key ASSIGNING FIELD-SYMBOL(<lfs_k>).
       IF NOT ( <lfs_k>-country = 'TH'
-               AND ( <lfs_k>-payment_method = 'A' OR <lfs_k>-payment_method = 'T' ) ).
+               AND ( <lfs_k>-payment_method = 'A'
+                  OR <lfs_k>-payment_method = 'S'
+                  OR <lfs_k>-payment_method = 'T' ) ).
         INSERT <lfs_k> INTO TABLE rt_result.
       ENDIF.
     ENDLOOP.

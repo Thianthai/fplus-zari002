@@ -25,6 +25,7 @@ CLASS zcl_zari002_validator DEFINITION
 
     CONSTANTS:
       gc_pymt_method_cheque   TYPE ztar_i002_pymt-sap_payment_method VALUE 'A',
+      gc_pymt_method_cash     TYPE ztar_i002_pymt-sap_payment_method VALUE 'S',
       gc_pymt_method_transfer TYPE ztar_i002_pymt-sap_payment_method VALUE 'T'.
 
     "! แปลงคำจาก Salesforce เป็น SAP internal payment method code
@@ -89,9 +90,10 @@ CLASS zcl_zari002_validator IMPLEMENTATION.
 
   METHOD convert_payment_method.
 
-    " mapping ชั่วคราว — รู้แค่ 2 คำที่ Salesforce ยืนยันแล้ว (OQ-02)
+    "! 3 คำที่ Salesforce ยืนยันแล้ว 2026-09-18 (ปิด OQ-02) — code จาก I_PaymentMethod ของ TH
     rv_result = SWITCH #( to_upper( condense( CONV string( iv_payment_method ) ) )
                           WHEN 'CHEQUE'   THEN gc_pymt_method_cheque
+                          WHEN 'CASH'     THEN gc_pymt_method_cash
                           WHEN 'TRANSFER' THEN gc_pymt_method_transfer
                           ELSE space ).
 

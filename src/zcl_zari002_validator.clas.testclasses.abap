@@ -7,6 +7,7 @@ CLASS ltc_validator DEFINITION FINAL
 
     " ---- convert_payment_method ----
     METHODS cheque_maps_to_a          FOR TESTING.
+    METHODS cash_maps_to_s            FOR TESTING.
     METHODS transfer_maps_to_t        FOR TESTING.
     METHODS mapping_ignores_case      FOR TESTING.
     METHODS mapping_ignores_spaces    FOR TESTING.
@@ -127,6 +128,12 @@ CLASS ltc_validator IMPLEMENTATION.
       act = zcl_zari002_validator=>convert_payment_method( 'Cheque' ) ).
   ENDMETHOD.
 
+  METHOD cash_maps_to_s.
+    cl_abap_unit_assert=>assert_equals(
+      exp = 'S'
+      act = zcl_zari002_validator=>convert_payment_method( 'Cash' ) ).
+  ENDMETHOD.
+
   METHOD transfer_maps_to_t.
     cl_abap_unit_assert=>assert_equals(
       exp = 'T'
@@ -147,7 +154,7 @@ CLASS ltc_validator IMPLEMENTATION.
 
   METHOD unknown_word_maps_to_none.
     cl_abap_unit_assert=>assert_initial(
-      act = zcl_zari002_validator=>convert_payment_method( 'Cash' )
+      act = zcl_zari002_validator=>convert_payment_method( 'Bitcoin' )
       msg = 'คำที่ไม่รู้จักต้องคืนค่าว่าง ให้ validation ออก 202' ).
   ENDMETHOD.
 
