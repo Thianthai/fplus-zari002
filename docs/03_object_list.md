@@ -43,7 +43,7 @@
 | `ZCL_ZARI002_MASTER_DATA` | Class — implementation จริงบน released CDS view | `src/zcl_zari002_master_data.clas.abap` | 3 | ✅ |
 | `ZCL_ZARI002_VALIDATOR` | Class — validation format/mandatory/consistency + constant แปลง payment method · 31 unit test | `src/zcl_zari002_validator.clas.abap` | 3 | ✅ |
 | `ZCL_ZARI002_JSON` | Class — parse payload + แปลงชื่อ field 2 ทาง · 9 unit test | `src/zcl_zari002_json.clas.abap` | 3 | ✅ |
-| `ZCL_ZARI003_SFDC_NOTIFY` | Class — **เป็นของ ARI003** แต่ถูกเรียกใน process ของ ZARI002 · ยิงผลกลับไป SFDC · **draft ไม่มี test** รอ OQ-17 | `src/zcl_zari003_sfdc_notify.clas.abap` | 3 | 🟨 |
+| `ZCL_ZARI002_SFDC_NOTIFY` | Class — แจ้งผลการรับข้อมูล (S/E) ไป SFDC ผ่าน comm arrangement · `check_connection( )` พิสูจน์ auth · **draft ไม่มี test** รอ data API (OQ-17) · เคยชื่อ `ZARI003` 2–17 ก.ย. | `src/zcl_zari002_sfdc_notify.clas.abap` | 3 | 🟨 auth ✅ · data API ⬜ |
 | `ZCL_ZARI002_PROCESSOR` | Class — flow 5 ขั้น (parse → normalize → validate → save → callback) · 9 unit test | `src/zcl_zari002_processor.clas.abap` | 3 | ✅ |
 
 ทุก class มีไฟล์คู่: `*.clas.xml` (metadata) + `*.clas.testclasses.abap` (ABAP Unit)
@@ -103,6 +103,10 @@
 | สิ่งที่ต้องทำ | ที่ไหน | Phase | Status |
 |---|---|-------|--------|
 | Communication System `SBPA_DEV` | Fiori app | 5 | ✅ |
+| `ZARI002_PAYMENT_RESULT_REST` | Outbound Service (SCO3) — HTTP · `src/zari002_payment_result_rest.sco3.xml` | 5 | ✅ 2026-09-17 |
+| `ZCS_PAYMENT_RESULT` | Communication Scenario **outbound** (SCO1) — OAuth 2.0 client credentials · one instance per client · `src/zcs_payment_result.sco1.xml` | 5 | ✅ 2026-09-17 |
+| Communication System `SFDC_DEV` | Fiori app — **แชร์ข้าม RICEFW** · host sandbox · token endpoint URL เต็ม · outbound user OAuth 2.0 Form Field | 5 | ✅ 2026-09-17 |
+| Communication Arrangement `ZCA_PAYMENT_RESULT` | Fiori app — `ZCS_PAYMENT_RESULT` × `SFDC_DEV` · Check Connection ✅ · `check_connection( )` = 200 | 5 | ✅ 2026-09-17 |
 | Communication User `SBPA_DEV` | Fiori app | 5 | ✅ |
 | Communication Arrangement `ZCS_INCOMING_PYMT` (client 100) | Fiori app | 5 | ✅ |
 | Communication System + Arrangement ขา outbound | Fiori app | 5 | ⬜ |

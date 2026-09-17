@@ -40,8 +40,7 @@ SBPA ──POST JSON──▶ HTTP Service
                               ├─ validate    ZCL_ZARI002_VALIDATOR + ZIF_ZARI002_MASTER_DATA
                               ├─ save        ผ่าน → INSERT 2 table + COMMIT
                               │              ไม่ผ่าน → ไม่ INSERT อะไรของใบนั้นเลย
-                              └─ callback    ZCL_ZARI003_SFDC_NOTIFY → S/E รายบรรทัด
-                                             class เป็นของ ARI003 · ZARI002 แค่เรียก (§2.1)
+                              └─ notify      ZCL_ZARI002_SFDC_NOTIFY → ผลรับ S/E ไป SFDC (§2.2)
                          ▼
                     HTTP response  { RequestId, Accepted, Rejected, Errors[] }
 ```
@@ -55,42 +54,44 @@ SFDC ──(Excel file)──▶ SBPA ──(HTTP POST)──▶ ZARI002 ──�
                         ▲                        │
                         └────(HTTP response)─────┘   ← response จบแค่ SBPA
 
-SFDC ◀──(ARI003)── table
+SFDC ◀──(ZARI002 notify · ผลรับ S/E)── ZARI002
+SFDC ◀──(ZARI003 · ผล post)────────────── table ◀── ZARE002 post
 ```
 
 SFDC ส่งข้อมูลให้ SBPA เป็น **ไฟล์ Excel** · SBPA อ่านไฟล์แล้วยิงเข้ามาที่ HTTP service ของเรา
-**response ของเราจึงกลับไปหา SBPA เท่านั้น SFDC ไม่เคยเห็น** — จึงต้องมี **ARI003** เป็นขา
-outbound แยกต่างหากไว้แจ้งผลกลับไปที่ SFDC
+**response ของเราจึงกลับไปหา SBPA เท่านั้น SFDC ไม่เคยเห็น** — SFDC รู้ผลได้จาก 2 ทาง
+ที่เป็นคนละเรื่อง: **ZARI002 แจ้งผลการรับข้อมูล** (ใบนี้ลง table ไหม) และ **ZARI003 แจ้งผลการ post**
+(ZARE002 post ผ่านไหม)
 
-### 2.2 ขา outbound — เป็นของ ARI003 แต่ทำงานใน process ของ ZARI002
+### 2.2 ขา outbound ของ ZARI002 — แจ้งผลการรับข้อมูล
 
-ตอนแรกสรุปกันว่า ZARI002 ไม่ต้องมีขา outbound เลย เพราะ SBPA ได้ response แบบ synchronous
-อยู่แล้ว **แต่สรุปนั้นผิด** — มันตอบแค่ว่า SBPA รู้ผล ไม่ได้ตอบว่า SFDC รู้ผล
-
-**payment ที่ถูก reject มีตัวตนอยู่แค่ใน memory ระหว่าง request เท่านั้น** ไม่มี row ใน table
-ไม่มีร่องรอย พอ `process( )` จบก็หายไป · ถ้าจะบอก SFDC ว่าใบไหนตกและตกเพราะอะไร
-**ต้องยิงตอนที่ข้อมูลยังอยู่ในมือ** — คือใน process เดียวกันนี้ ไม่มีทางอื่น
-
-การแจ้งผลกลับไป SFDC เป็นหน้าที่ของ **ARI003** ตามเดิม เปลี่ยนแค่ความเป็นเจ้าของให้ชัด:
+**payment ที่ถูก reject ไม่มี row ในตารางธุรกิจ** — RICEFW ที่อ่านจาก table (ZARI003) จึงบอก SFDC
+ไม่ได้ว่าใบไหนตก · ZARI002 ต้องแจ้งเองตอนที่ข้อมูลยังอยู่ในมือ คือท้าย loop ของแต่ละ payment
 
 | | |
 |---|---|
-| ชื่อ class | `ZCL_ZARI003_SFDC_NOTIFY` — ชื่อบอกว่าเป็นของ ARI003 |
-| ใครเรียก | `ZCL_ZARI002_PROCESSOR` เรียกท้าย loop ของแต่ละ payment |
-| comm scenario | `ZARI003_OUT_CSCEN` / service `ZARI003_OUT_REST` — ของ ARI003 |
-| package | อยู่ `ZARI002` ไปก่อน · ย้ายไป `ZARI003` ตอน package นั้นมีจริง |
+| class | `ZCL_ZARI002_SFDC_NOTIFY` — ของ ZARI002 เอง |
+| ใครเรียก | `ZCL_ZARI002_PROCESSOR` → `send_callback( )` ท้าย loop หลัง log |
+| outbound service | `ZARI002_PAYMENT_RESULT_REST` (SCO3) |
+| comm scenario | `ZCS_PAYMENT_RESULT` — ชื่อกลาง · ZARI003 เพิ่ม service ของตัวเองในนี้ทีหลังได้ |
+| comm system | `SFDC_DEV` — **แชร์ข้าม RICEFW** มี inbound user ของ RICEFW อื่นอยู่ด้วย |
+| auth | **OAuth 2.0 client credentials โดย platform** — client id/secret อยู่ใน Communication System · token endpoint = URL เต็ม · Client Authentication = **Form Field** ตาม spec SFDC · ABAP ไม่เห็น token เลย |
+| พิสูจน์ | `check_connection( )` → `GET /services/data/` ผ่าน arrangement · `200` = ทั้ง chain ใช้ได้ |
+| data endpoint | ⬜ mock `/services/apexrest/PaymentResult` รอ spec (OQ-17) |
+
+**ชื่อเคยผิด** — ระหว่าง 2–17 ก.ย. class ชื่อ `ZCL_ZARI003_SFDC_NOTIFY` เพราะเข้าใจว่า outbound
+ทั้งหมดเป็นของ ARI003 · แก้แล้วเมื่อ 2026-09-17: ARI003 = ผล post · ผลรับ = ZARI002
 
 ทางเลือกที่ **ไม่** เลือกและเหตุผล:
 
-- ~~ให้ ARI003 อ่านจาก table แล้วยิงเอง~~ — ใบที่ตกไม่มีใน table จะอ่านอะไรไม่ได้เลย
-- ~~ให้ ZARI002 เก็บใบที่ตกลง table ด้วย~~ — ต้องรื้อ duplicate check ไม่งั้นพอแก้ข้อมูล
-  แล้วส่งเข้ามาใหม่จะติด `010` ตลอดกาล (ขัด OQ-09)
+- ~~ให้ ZARI003 อ่านจาก table แล้วยิงเอง~~ — ใบที่ตกไม่มีใน table จะอ่านอะไรไม่ได้เลย
+- ~~ให้ ZARI002 เก็บใบที่ตกลง table ธุรกิจ~~ — ต้องรื้อ duplicate check · (ตั้งแต่ Phase 5A ใบตก
+  อยู่ใน **log table** แล้ว แต่ notify ยังยิง inline เพราะ log ไม่ใช่ตารางที่ ZARI003 อ่าน)
+- ~~เขียน OAuth token flow เองใน ABAP~~ — ไม่มีที่เก็บ secret ที่ปลอดภัยใน ABAP Cloud
+  และ platform ทำให้อยู่แล้ว
 
-⚠️ **ยังเหลือช่องว่าง** — `notify( )` เป็น fire and forget ถ้ายิงไม่สำเร็จ ใบที่ถูก reject
-จะหายไปโดยไม่มีร่องรอยที่ไหนเลย ทั้งใน SAP และที่ SFDC (**OQ-25**)
-
-field ชื่อ `salesforce_id` / `salesforce_item_id` / `salesforce_status` / `salesforce_message`
-**ยังถูกต้องตามเดิม** เพราะเป็น id ที่มีต้นทางจาก SFDC จริง แค่เดินทางผ่าน SBPA เข้ามา
+⚠️ **ยังเหลือช่องว่าง** — `notify( )` เป็น fire and forget ถ้ายิงไม่สำเร็จไม่มีใครรู้ (บันทึกอยู่ใน
+log แล้วแต่ SFDC ไม่ได้รับ) · ตัดสินตอนได้ spec ว่าจะเขียนผลลง `salesforce_status` ไหม
 
 ### 1 request = หลาย payment (2026-08-31)
 

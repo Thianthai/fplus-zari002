@@ -31,7 +31,7 @@
 
 | OQ-16 | payload เดียวที่มี 2 item ใช้ `billing_document` ตัวเดียวกัน — `validateItemDuplicate` ปล่อยผ่าน เพราะตอน validate ยังไม่มีอะไรใน table ให้ชน · **ต้องรู้ก่อนว่าธุรกิจมีเคสที่ 1 ใบแจ้งหนี้ถูกแบ่งจ่าย 2 บรรทัดในใบเดียวกันไหม** ถ้ามีจริงการกันไว้จะไปบล็อกของที่ถูกต้อง | Salesforce / business | Phase 4 | ไม่บล็อกอะไร — เป็น defensive check ไม่ใช่ requirement · ถ้าจะเพิ่มก็แค่เช็คภายใน `lt_item` ก่อนยิง SELECT | ⬜ |
 
-| OQ-17 | contract ของการยิงผลกลับไป SFDC — endpoint, auth, รูปแบบ JSON ตัวจริง ยังไม่มี · **เป็นของ ARI003 แต่บล็อก ZARI002 ด้วย** เพราะ `ZCL_ZARI003_SFDC_NOTIFY` ถูกเรียกใน process ของ ZARI002 · payload ตอนนี้เป็น array ล้วน อาจต้องมี wrapper | Salesforce | Phase 3 | class เป็น **draft ไม่มี test** · แก้ `build_payload( )` จุดเดียวเมื่อรู้รูปแบบจริง | ⬜ |
+| OQ-17 | contract ยิงผลรับกลับ SFDC — **auth ปิดแล้ว 2026-09-17** OAuth 2.0 client credentials ผ่าน `ZCS_PAYMENT_RESULT` / `SFDC_DEV` · `check_connection( )` = 200 · **เหลือ data API**: endpoint · รูปแบบ JSON (ตอนนี้ mock `/services/apexrest/PaymentResult` + array ของ `ty_result`) | Salesforce | Phase 3 | `notify( )` ยิงไปที่ mock path → 404 เงียบ จนกว่าจะได้ spec | 🟨 |
 | OQ-18 | response ของ API — **ปิดแล้ว 2026-09-16** SBPA เทสจริงบนโครง error-only + `Status` 3 ค่า มาระยะหนึ่ง ไม่มี issue เรื่องโครงกลับมา · ถือว่ายอมรับ | — | Phase 4 | — | ✅ |
 
 | OQ-19 | สิทธิ์อ่าน master data ของ `SBPA_DEV` — **ปิดแล้ว 2026-09-04** ใช้ `WITH PRIVILEGED ACCESS` แทนการขอ business role · ทำกับ `I_GLAccountInCompanyCode` `I_Customer` `I_Bank_2` · `I_CompanyCode` กับ `I_PaymentMethod` query ได้อยู่แล้วไม่ต้องทำ | — | Phase 5 | — | ✅ |
@@ -293,7 +293,7 @@ functional + SBPA เทสจริงร่วมกันอยู่แล�
 |---|---|---|
 | business rule ที่ยังไม่นิยาม (ที่ว่างใน `validate( )`) | OQ-05 · 08 · 10 · 16 | FI / Salesforce |
 | master data / config | OQ-02 · 03 · 04 | FI |
-| callback ไป SFDC | OQ-17 · 24 | Salesforce / ARI003 |
+| แจ้งผลรับกลับ SFDC (ของ ZARI002) | OQ-17 · 24 | Salesforce |
 | พฤติกรรมที่ SBPA ต้องรู้ | OQ-14 · 23 | SBPA — เทสจริงจะบอกเอง |
 | volume | OQ-07 | ใช้จริง |
 
@@ -320,3 +320,27 @@ functional + SBPA เทสจริงร่วมกันอยู่แล�
 เป็น `012` แทน · SBPA เทสอยู่ไม่มี issue
 
 **เหลือเปิด 10 ข้อ** — ที่ว่างใน `validate( )` เหลือตัวเดียว `check_payment_total` (OQ-05)
+
+
+### Outbound ไป SFDC — auth เสร็จ · แก้ความเป็นเจ้าของ — 2026-09-17
+
+**ARI003 ไม่ใช่เจ้าของ outbound ของเรา** — ตั้งแต่ 2 ก.ย. เข้าใจว่า outbound ทั้งหมดเป็นของ ARI003
+class จึงชื่อ `ZCL_ZARI003_SFDC_NOTIFY` · ความจริง ARI003 = แจ้ง**ผลการ post** (อ่านจาก table)
+ส่วน**ผลการรับข้อมูล** (ใบนี้ลง table ไหม) เป็นของ ZARI002 เอง เพราะใบที่ตกไม่มีใน table
+ให้ใครอ่าน · rename กลับเป็น `ZCL_ZARI002_SFDC_NOTIFY` + outbound service `ZARI002_PAYMENT_RESULT_REST`
+· scenario / arrangement / system ชื่อกลาง ไม่ต้องแก้
+
+**OQ-17 ปิดครึ่งแรก (auth)** — เลือกให้ Communication Arrangement จัดการ OAuth 2.0 client
+credentials แทนเขียน token flow เอง · เหตุผลชี้ขาด: **ABAP Cloud ไม่มีที่เก็บ secret ที่ปลอดภัย**
+นอกจาก Communication System · ไม่มี auth class · `check_connection( )` = 200 พิสูจน์ทั้ง chain
+
+**บทเรียนตอน config** (บันทึกใน `01_architecture.md` §2.2 และ CLAUDE.md):
+- Outbound Service ต้องสร้างเป็น object แยก (SCO3) ก่อน scenario จะอ้างได้ · ADT เติม `_REST` ให้
+- Token Endpoint ใน Communication System ต้องเป็น **URL เต็ม** ไม่ใช่ path
+- Client Authentication = **Form Field** (ส่ง id/secret ใน body ตาม spec SFDC) ไม่ใช่ Basic
+- แก้ description ของ scenario ที่ publish แล้ว → กลายเป็น **unpublished** ต้อง Publish Locally ใหม่
+  (เกือบทำขาเข้า `ZCS_INCOMING_PYMT` ล่มโดยไม่รู้ตัว)
+- rename แล้วต้องไล่ constant ใน class ด้วย — `gc_service_id` ค้างชื่อเก่าทำให้ต่อไม่ถึงเงียบ ๆ
+
+**เหลือ OQ-17 ครึ่งหลัง**: data API spec จาก SFDC → แก้ `gc_path_result` + `build_payload( )`
+· และตัดสิน OQ-24 (ยิงต่อใบหรือต่อ request) กับว่าจะเขียนผลลง `salesforce_status` ไหม

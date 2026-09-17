@@ -112,11 +112,11 @@ reject แล้วไม่เหลือ row · duplicate ถูกจับ 
 | # | งาน | ฝั่ง | Status |
 |---|-----|------|--------|
 | 5.1 | Communication Scenario **inbound** `ZCS_INCOMING_PYMT` ผูก inbound service `ZARI002_INCOMING_PYMT_HTTP` | ผู้ใช้ | ✅ |
-| 5.2 | Communication Scenario **outbound** `ZARI003_OUT_CSCEN` — **ของ ARI003 แต่ ZARI002 ต้องใช้** เพราะเรียก `ZCL_ZARI003_SFDC_NOTIFY` ใน process เดียวกัน · ⚠️ `SBPA_DEV` เป็น **Inbound Only** ใช้ตัวเดิมไม่ได้ | ผู้ใช้ (ฝั่ง ARI003) | ⬜ รอ OQ-17 |
+| 5.2 | Communication Scenario **outbound** `ZCS_PAYMENT_RESULT` + Outbound Service `ZARI002_PAYMENT_RESULT_REST` — OAuth 2.0 client credentials | ผู้ใช้ (ADT) | ✅ 2026-09-17 |
 | 5.3 | Communication System `SBPA_DEV` / User `SBPA_DEV` / Arrangement `ZCS_INCOMING_PYMT` บน **IA5/100** | ผู้ใช้ (Fiori) | ✅ |
 | 5.4 | ~~Business role ให้ `SBPA_DEV`~~ — **แก้ด้วยวิธีอื่นแล้ว 2026-09-04** ใช้ `WITH PRIVILEGED ACCESS` ใน `ZCL_ZARI002_MASTER_DATA` ข้าม DCL ไปเลย ไม่ต้องขอ role · เหตุผล: มีแต่ SBPA เรียก ไม่ใช่ user จริง | — | ✅ |
 | 5.5 | ทดสอบ inbound จาก Postman นอก tenant | ร่วมกัน | 🟨 ยิงถึงแล้ว รอ 5.4 |
-| 5.6 | ทดสอบยิงผลกลับไป SFDC ที่ปลายทางจริง (รอ SFDC ทำ API) | ร่วมกับฝั่ง ARI003 | ⬜ |
+| 5.6 | ทดสอบยิงผลกลับไป SFDC — **auth ✅** `check_connection( )` = 200 ผ่าน arrangement จริง · **data API ⬜** รอ spec (OQ-17) | ร่วมกัน | 🟨 |
 
 ### ผลทดสอบครั้งแรกจาก Postman — 2026-08-31
 

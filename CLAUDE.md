@@ -68,6 +68,11 @@
 - **`strict ( 2 )` บังคับ `authorization master/dependent` ทุก entity** — read-only BO ก็ต้องมี
   behavior pool ที่ `get_global_authorizations` ว่าง ตัดไม่ได้
 - **key UUID ต้อง `field ( numbering : managed, readonly )`** แม้ BO ไม่มี `create`
+- **Outbound ไปนอก tenant ใช้ Communication Arrangement เสมอ ห้ามเขียน OAuth เอง** — secret
+  ไม่มีที่เก็บที่ปลอดภัยใน ABAP Cloud · Outbound Service (SCO3) ต้องมีก่อน scenario · Token
+  Endpoint = URL เต็ม · Client Authentication = Form Field สำหรับ Salesforce
+- **แก้ scenario ที่ publish แล้ว (แม้แค่ description) → กลายเป็น unpublished** ต้อง Publish
+  Locally ใหม่ ไม่งั้น arrangement ที่ใช้อยู่อาจล่ม (เกือบโดนที่ `ZCS_INCOMING_PYMT` 2026-09-17)
 
 ## Git — การแบ่งงาน
 
@@ -110,21 +115,25 @@ master data บน tenant ยัง config ไม่เสร็จ และ sa
 
 ## Related RICEFW
 
-ZARE002 กับอีก 2 รหัสคุยกันผ่าน `ZTAR_I002_PYMT` / `ZTAR_I002_ITEM` เท่านั้น
-**ยกเว้น ZARI002 → ARI003 ที่เป็น call ตรง** (แก้กฎ 2026-09-02 — ดูเหตุผลข้างล่าง)
+ทั้ง 3 รหัสคุยกันผ่าน `ZTAR_I002_PYMT` / `ZTAR_I002_ITEM` เท่านั้น ไม่มี call ตรงระหว่างกัน
 
-| RICEFW | หน้าที่ | เขียน `status` |
-|---|---|---|
-| **ZARI002** (งานนี้) | **SBPA** ยิงเข้ามา — validate แล้วลง table | `N` |
-| **ZARE002** | RAP UI — อ่าน row `N` ไป post FI จริง | `S` / `W` / `E` + `error_message` |
-| **ZARI003** | ขา outbound — แจ้งผลกลับไปที่ Salesforce | — (อ่านอย่างเดียว) |
+| RICEFW | หน้าที่ | เขียน `status` | outbound ไป SFDC |
+|---|---|---|---|
+| **ZARI002** (งานนี้) | **SBPA** ยิงเข้ามา — validate แล้วลง table | `N` | ✅ **แจ้งผลการรับข้อมูล** (S/E ต่อใบ) ผ่าน `ZCL_ZARI002_SFDC_NOTIFY` |
+| **ZARE002** | RAP UI — อ่าน row `N` ไป post FI จริง | `S` / `W` / `E` + `error_message` | — |
+| **ZARI003** | อ่านผล post จาก table แจ้งกลับ Salesforce | — (อ่านอย่างเดียว) | ✅ **แจ้งผลการ post** |
 
-### เส้นทางข้อมูลจริง (แก้ความเข้าใจผิด 2026-09-02)
+**2 outbound เป็นคนละเรื่อง** — ZARI002 บอกว่า "รับใบนี้ไหม" · ZARI003 บอกว่า "post ใบนี้ผ่านไหม"
+(แก้ให้ถูก 2026-09-17 — ระหว่าง 2–17 ก.ย. เคยเข้าใจว่า outbound ทั้งหมดเป็นของ ARI003
+class จึงเคยชื่อ `ZCL_ZARI003_SFDC_NOTIFY`)
+
+### เส้นทางข้อมูลจริง
 
 ```
-SFDC ──(Excel)──▶ SBPA ──(HTTP POST)──▶ ZARI002 ──▶ table ──▶ ARI003 ──▶ SFDC
-                   ▲                        │
-                   └────(response)──────────┘
+SFDC ──(Excel)──▶ SBPA ──(HTTP POST)──▶ ZARI002 ──▶ table ──▶ ZARE002 post ──▶ ZARI003 ──▶ SFDC
+                   ▲                        │                                    (ผล post)
+                   └────(response)──────────┤
+                                            └──── ZARI002 notify ──▶ SFDC (ผลรับ S/E)
 ```
 
 **ผู้เรียก ZARI002 คือ SBPA ไม่ใช่ SFDC** — SFDC ส่ง Excel ให้ SBPA แล้ว SBPA อ่านไฟล์
@@ -133,13 +142,12 @@ SFDC ──(Excel)──▶ SBPA ──(HTTP POST)──▶ ZARI002 ──▶ ta
 ZARI002 จึงเป็น **create อย่างเดียว ไม่ต้องเปิด read** — ยกเว้น **log monitor** (Phase 5A)
 ที่เป็น RAP read-only บนชุดตาราง log แยกต่างหาก ไม่แตะตารางธุรกิจ
 
-### ทำไม ZARI002 ถึงเรียก class ของ ARI003 ตรง ๆ
+### ทำไม ZARI002 ต้องยิงผลรับกลับเอง
 
-`ZCL_ZARI003_SFDC_NOTIFY` ถูกเรียกจาก `ZCL_ZARI002_PROCESSOR` ใน request เดียวกัน
-เพราะ **payment ที่ถูก reject มีตัวตนอยู่แค่ใน memory** — ไม่มี row ในตารางธุรกิจ
-พอ `process( )` จบก็หายไป · ถ้าจะบอก SFDC ว่าใบไหนตกและตกเพราะอะไร **ต้องยิงตอนที่ข้อมูล
-ยังอยู่ในมือเท่านั้น** (ตั้งแต่ Phase 5A มี log table แล้ว แต่ callback ยังยิง inline เหมือนเดิม
-เพราะ contract ยังไม่มา — OQ-17)
+payment ที่ถูก reject **ไม่มี row ในตารางธุรกิจ** — ZARI003 ที่อ่านจาก table จึงบอก SFDC ไม่ได้ว่า
+ใบไหนตก · ZARI002 ต้องแจ้งเองตอนที่ข้อมูลยังอยู่ในมือ ผ่าน `ZCL_ZARI002_SFDC_NOTIFY` ท้าย loop
+ของแต่ละ payment (ตั้งแต่ Phase 5A มี log table แล้วแต่ยังยิง inline เหมือนเดิม)
 
-**ความเป็นเจ้าของอยู่ที่ ARI003** (ชื่อ class · comm scenario · contract ของ payload)
-ZARI002 เป็นแค่ผู้เรียก — ตอนสร้าง object ของ ARI003 จริง ค่อยย้าย class ไป package `ZARI003`
+**Outbound ใช้ Communication Arrangement** — `ZCS_PAYMENT_RESULT` (OAuth 2.0 client credentials
+ผ่าน Communication System `SFDC_DEV` ที่แชร์ข้าม RICEFW) · secret อยู่ใน Fiori ไม่มีใน code/git
+· `check_connection( )` ใช้พิสูจน์ว่าต่อถึงและ token ใช้ได้
