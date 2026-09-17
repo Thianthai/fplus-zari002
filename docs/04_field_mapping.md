@@ -107,13 +107,16 @@ SAP pad `GlAccount` และ `CustomerCode` เป็น 10 หลักให�
 
 ### 4.2 `PaymentMethod` ส่งเป็นคำ
 
-| SFDC ส่ง | SAP code |
-|---|---|
-| `Cheque` | `A` (Manual Cheque) |
-| `Transfer` | `T` (Bank Transfer) |
+Salesforce ส่งคำ ไม่ใช่ code · API แปลงให้ที่ `convert_payment_method( )` (ไม่สนตัวพิมพ์เล็กใหญ่)
 
-`Cheque` ทำให้ `ChequeNo` `IssueDate` `DueOn` `ChequeBankBranch` กลายเป็นบังคับ
-⚠️ `Transfer` ยาว 8 ตัวเต็ม `char(8)` พอดี — คำใหม่ที่ยาวกว่านี้ส่งเข้ามาไม่ได้ (OQ-02)
+| คำจาก SFDC | SAP `sap_payment_method` | ชื่อใน tenant |
+|---|---|---|
+| `Cheque` | `A` | Manual Cheque |
+| `Cash` | `S` | Cash Payment |
+| `Transfer` | `T` | Bank Transfer (ในประเทศ) |
+
+คำอื่น → `202` · ยืนยันครบ 3 คำจาก Salesforce 2026-09-18 (OQ-02 ปิด)
+· เช็คบังคับ `ChequeNo` `IssueDate` `DueOn` `ChequeBankBranch` เฉพาะ `A`
 
 ### 4.3 ไม่เช็คเครื่องหมายจำนวนเงินรายบรรทัด
 

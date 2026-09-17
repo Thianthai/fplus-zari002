@@ -10,8 +10,8 @@
 | # | เรื่อง | เจ้าของคำตอบ | ยกมาจาก | บล็อกอะไร | สถานะ |
 |---|--------|-------------|---------|-----------|--------|
 | OQ-01 | `cheque_bank_branch` — **ปิดแล้ว 2026-09-04** เป็น `I_Bank_2-BankInternalID` ตรง ๆ ไม่ใช่ bank+branch ประกอบกัน · ทั้งสองฝั่งเป็น **CHAR 15** เท่ากัน · ข้อสรุปเดิมที่ว่า `0040129` ไม่มีในระบบ มาจากการดู master data ชุดที่ยังไม่ถูกต้องบน tenant | — | Phase 1 | — | ✅ |
-| OQ-02 | รายการคำ `payment_method` ทั้งชุดที่ Salesforce จะส่ง (ตอนนี้รู้แค่ `Cheque` / `Transfer`) · ⚠️ **`Transfer` ยาว 8 ตัวเต็ม `char(8)` พอดี ไม่เหลือที่ว่าง** — คำใหม่ที่ยาวกว่านี้จะส่งเข้ามาไม่ได้เลยตั้งแต่ชั้น OData ต้องขยาย field ก่อน (พิสูจน์จาก compiler 2026-08-28) | Salesforce | Phase 1 | mapping constant ไม่ครบ → คำที่ไม่รู้จักถูก reject · คำที่ยาวเกิน 8 ส่งไม่ได้เลย | 🟨 |
-| OQ-03 | `IsPaymentMethodForIncomingPayments` ติ๊กแค่ `M` `N` `E` ไม่รวม `A` / `T` ที่ใช้จริง | FI | Phase 1 | ZARI002 ไม่เช็ค flag นี้ แต่ **ZARE002 จะ post ไม่ผ่านถ้า config ถูกต้องจริง** | ⬜ |
+| OQ-02 | คำ `payment_method` จาก Salesforce — **ปิดแล้ว 2026-09-18** ยืนยัน 3 คำ: `Cheque`→`A` · `Cash`→`S` · `Transfer`→`T` (code จาก `I_PaymentMethod` TH) · ไม่มีคำเกิน 8 ตัว ไม่ต้องขยาย field | — | Phase 1 | — | ✅ |
+| OQ-03 | 🔴 `IsPaytMethForIncomingPayments` — **ยืนยันจาก export 2026-09-18**: ติ๊กเฉพาะ `M` `N` `E` · **`A` `S` `T` ที่เราใช้ทั้ง 3 ตัวไม่ติ๊กเลย** · ZARI002 ไม่เช็ค flag นี้ ใบเข้า table ได้ · แต่ถ้า ZARE002 post ผ่าน API ที่บังคับ flag จะตกทุกใบ | FI | Phase 1 | ไม่บล็อก ZARI002 · **บล็อก ZARE002 ตั้งแต่ใบแรกที่ post** — ต้องตัดสินก่อน ZARE002 เทส: ติ๊ก flag เพิ่ม หรือ ZARE002 post แบบไม่บังคับ flag | ⬜ |
 | OQ-04 | master data บน tenant ยังไม่ครบ — `I_Customer` ขึ้นเป็น **8 ราย** แล้ว (2026-08-28) แต่ customer ที่ sample ของ SFDC ใช้ (`1000000001` `1000000005` `1000000013` `1000000020` `1000000021`) ยังไม่มี | FI / ผู้ดูแล tenant | Phase 1 | **บล็อก Phase 7** — ยิง sample แล้วจะติด `validateCustomerCode` | 🟨 คืบหน้า |
 | OQ-05 | `payment_amount` ต้องเท่ากับผลรวม `amount_paid` ของทุก item หรือไม่ | Salesforce / FI | Phase 1 | `validatePaymentTotal` เป็นที่ว่างไว้แล้ว เพิ่ม logic ทีหลังได้ทันที | 🟨 |
 | OQ-06 | URL endpoint — **ปิดแล้ว 2026-08-31** `https://my442178-api.s4hana.cloud.sap/sap/bc/http/sap/zari002_incoming_pymt` · client `100` · Basic auth ด้วย `SBPA_DEV` | — | Phase 1 | — | ✅ |
@@ -361,3 +361,21 @@ class จึงออกแบบให้ไม่รู้จัก ZARI002 �
 · ถ้าอยากเปลี่ยนแก้ที่ message class ที่เดียว
 
 **เหลือเปิด 8 ข้อ** — ไม่มีข้อไหนเกี่ยวกับ code ที่ยังต้องเขียน ยกเว้น OQ-05 (ที่ว่างตัวสุดท้าย)
+
+
+### OQ-02 ปิด · OQ-03 ยืนยันว่าจริง — 2026-09-18
+
+export `I_PaymentMethod` (TH) ตอบ 2 ข้อจากไฟล์เดียว
+
+**OQ-02 ปิด** — Salesforce ยืนยัน 3 คำ `Cheque` `Cash` `Transfer` · `Cash` = `S` Cash Payment
+· `Transfer` 8 ตัวยังเป็นคำยาวสุด ไม่ต้องขยาย field · mapping อยู่ที่ `convert_payment_method( )`
+จุดเดียว · test ที่เคยใช้ `Cash` เป็นตัวอย่างคำแปลกเปลี่ยนเป็น `Bitcoin`
+
+**OQ-03 กลายเป็นเรื่องจริง ไม่ใช่แค่ข้อสงสัย** — tenant ติ๊ก incoming ให้ `M` `N` `E` เท่านั้น
+ทั้ง 3 code ที่เราใช้ไม่มีตัวไหนติ๊ก · ค้างมา 5 phase โดยไม่มีใครถาม FI ตอนนี้มีหลักฐานแล้ว
+**ต้องส่งให้ FI ก่อน ZARE002 เริ่มเทส post** ไม่งั้นจะเจอที่นั่นและดูเหมือนบั๊กของ ZARE002
+
+มี `C` Cheque Direct ใน tenant ด้วย — เราใช้ `A` Manual Cheque ตาม spike · ถ้า FI บอกว่าเช็คจาก
+SFDC ควรเป็น `C` เปลี่ยน constant ตัวเดียว
+
+**เหลือเปิด 7 ข้อ**
