@@ -61,7 +61,7 @@ Authorization: Basic <base64 ของ user:password>
 | `Items` | array | ✔ | ต้องมีอย่างน้อย 1 รายการ · **เดิมชื่อ `_Item` สมัย OData** เปลี่ยน 2026-08-31 เพราะขึ้นต้นด้วย `_` ทำให้กฎแปลงชื่อเพี้ยน |
 
 **ห้ามส่ง** (ระบบเติมเอง ส่งมาก็ถูกเมิน): `PaymentUuid` · `BatchId` · `Currency` ·
-`SapPaymentMethod` · `Status` · `SalesforceStatus` · `SalesforceMessage` ·
+`Status` · `SalesforceStatus` · `SalesforceMessage` ·
 field `Created*` / `LastChanged*` ทั้งหมด
 
 ## 4. Field ของ item (`Items`)
@@ -303,8 +303,8 @@ API แปลงคำเป็น SAP payment method code ให้เอง
 |---|---|
 | `ZARI002/200` | Company code &1 does not exist |
 | `ZARI002/201` | G/L account &1 does not exist in company code &2 |
-| `ZARI002/202` | Payment method &1 is not known to this interface |
-| `ZARI002/203` | Payment method &1 does not exist for country &2 |
+| `ZARI002/202` | Payment method &1 is not known to this interface — ต้องเป็น `Cheque` / `Cash` / `Transfer` |
+| ~~`ZARI002/203`~~ | ~~Payment method &1 does not exist for country &2~~ — **ลบแล้ว 2026-09-18** ไม่แปลงเป็น SAP code แล้วจึงไม่มีอะไรให้เทียบกับ `I_PaymentMethod` |
 | `ZARI002/204` | Currency for company code &1 cannot be determined |
 | `ZARI002/205` | Customer &1 does not exist |
 | `ZARI002/206` | Document &1 already cleared or reversed — ⬜ ยังไม่เปิดใช้ (OQ-08) |

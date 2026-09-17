@@ -25,7 +25,6 @@ API field ↔ table field · **JSON ใช้ CamelCase · table ใช้ snake
 | `PostingDate` | `posting_date` | `dats` | `Date` | in | ✔ | |
 | `GlAccount` | `gl_account` | `char(10)` | `String(10)` | in | ✔ | **เดิม `GLAccount`** เปลี่ยน 2026-08-31 เพราะตัวใหญ่ติดกันทำให้กฎแปลงชื่อแตก · ส่งแบบไม่มี leading zero ได้ — SAP pad ให้ (§4.1) |
 | `PaymentMethod` | `payment_method` | `char(8)` | `String(8)` | in | ✔ | ส่งเป็น**คำ** เช่น `Cheque` `Transfer` (§4.2) |
-| `SapPaymentMethod` | `sap_payment_method` | `char(1)` | `String(1)` | out | – | code ที่แปลงแล้ว — **ZARE002 ใช้ตัวนี้ post FI** |
 | `ChequeNo` | `cheque_no` | `char(8)` | `String(8)` | in | (✔) | บังคับเมื่อจ่ายด้วยเช็ค |
 | `IssueDate` | `issue_date` | `dats` | `Date` | in | (✔) | บังคับเมื่อจ่ายด้วยเช็ค |
 | `DueOn` | `due_on` | `dats` | `Date` | in | (✔) | บังคับเมื่อจ่ายด้วยเช็ค · ต้องไม่ก่อน `IssueDate` |
@@ -105,18 +104,22 @@ duplicate — การแก้ต้องทำฝั่ง SAP · ส่ว�
 SAP pad `GlAccount` และ `CustomerCode` เป็น 10 หลักให้เอง ทั้งตอนตรวจและตอนบันทึก
 ส่งมาเต็มหรือไม่เต็มผลเหมือนกัน
 
-### 4.2 `PaymentMethod` ส่งเป็นคำ
+### 4.2 `PaymentMethod` เป็นข้อมูลแสดงผล ไม่ใช่ตัวขับการ post
 
-Salesforce ส่งคำ ไม่ใช่ code · API แปลงให้ที่ `convert_payment_method( )` (ไม่สนตัวพิมพ์เล็กใหญ่)
+**functional ยืนยัน 2026-09-18**: Salesforce ส่งคำมาให้เก็บเฉย ๆ SAP ไม่ได้เอาไป post FI
+· เก็บตามที่ส่งมาใน `payment_method` char(8) · **ไม่แปลงเป็น SAP code** · column `sap_payment_method`
+ถูกลบแล้ว
 
-| คำจาก SFDC | SAP `sap_payment_method` | ชื่อใน tenant |
-|---|---|---|
-| `Cheque` | `A` | Manual Cheque |
-| `Cash` | `S` | Cash Payment |
-| `Transfer` | `T` | Bank Transfer (ในประเทศ) |
+รับเฉพาะ 3 คำ (ไม่สนตัวพิมพ์/ช่องว่าง) — คำอื่น `202`:
 
-คำอื่น → `202` · ยืนยันครบ 3 คำจาก Salesforce 2026-09-18 (OQ-02 ปิด)
-· เช็คบังคับ `ChequeNo` `IssueDate` `DueOn` `ChequeBankBranch` เฉพาะ `A`
+| คำ | ผลต่อ validation |
+|---|---|
+| `Cheque` | บังคับ `ChequeNo` `IssueDate` `DueOn` `ChequeBankBranch` (`107`–`110`) + ตรวจ bank (`207`) |
+| `Cash` | ไม่มีเงื่อนไขเพิ่ม |
+| `Transfer` | ไม่มีเงื่อนไขเพิ่ม |
+
+ที่ยังตรวจคำทั้งที่เป็น information: กันพิมพ์ผิดจน `is_cheque( )` มองไม่เห็นว่าเป็นเช็ค แล้วใบเช็คเข้า table
+โดยไม่มีเลขเช็ค
 
 ### 4.3 ไม่เช็คเครื่องหมายจำนวนเงินรายบรรทัด
 

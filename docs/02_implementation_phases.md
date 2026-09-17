@@ -87,7 +87,7 @@ serialize ขึ้นมา แล้วค่อยเอาเอกสาร
 | 3.6 | ABAP Unit — validator 31 · json 9 · processor 9 = **49 test เขียวทั้งหมด** (notify เป็น draft ไม่มี test ตามที่ตกลง) | ✅ |
 
 **Exit criteria**: unit test เขียวทั้งหมด ✅ — `ltc_processor` พิสูจน์ flow ทั้งเส้นแล้วโดยไม่ต้องมี console class:
-บันทึกลง 2 table · `batch_id`/`currency`/`status`/`sap_payment_method` ถูกเติม · `gl_account` ถูก pad ·
+บันทึกลง 2 table · `batch_id`/`currency`/`status` ถูกเติม (`sap_payment_method` ตัดออก 2026-09-18) · `gl_account` ถูก pad ·
 reject แล้วไม่เหลือ row · duplicate ถูกจับ · callback ได้ 1 บรรทัดต่อ 1 item ทั้งกรณี S และ E
 
 ---

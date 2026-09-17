@@ -10,7 +10,7 @@
 | # | เรื่อง | เจ้าของคำตอบ | ยกมาจาก | บล็อกอะไร | สถานะ |
 |---|--------|-------------|---------|-----------|--------|
 | OQ-01 | `cheque_bank_branch` — **ปิดแล้ว 2026-09-04** เป็น `I_Bank_2-BankInternalID` ตรง ๆ ไม่ใช่ bank+branch ประกอบกัน · ทั้งสองฝั่งเป็น **CHAR 15** เท่ากัน · ข้อสรุปเดิมที่ว่า `0040129` ไม่มีในระบบ มาจากการดู master data ชุดที่ยังไม่ถูกต้องบน tenant | — | Phase 1 | — | ✅ |
-| OQ-02 | คำ `payment_method` จาก Salesforce — **ปิดแล้ว 2026-09-18** ยืนยัน 3 คำ: `Cheque`→`A` · `Cash`→`S` · `Transfer`→`T` (code จาก `I_PaymentMethod` TH) · ไม่มีคำเกิน 8 ตัว ไม่ต้องขยาย field | — | Phase 1 | — | ✅ |
+| OQ-02 | คำ `payment_method` จาก Salesforce — **ปิดแล้ว 2026-09-18** 3 คำ `Cheque` `Cash` `Transfer` · **เก็บคำตามที่ส่งมา ไม่แปลงเป็น SAP code** (functional ยืนยันวันเดียวกันว่าเป็นข้อมูลแสดงผล ไม่ใช้ post) · `Cheque` เป็นตัวเดียวที่มีผลต่อ validation | — | Phase 1 | — | ✅ |
 | OQ-03 | `IsPaytMethForIncomingPayments` ไม่ติ๊ก `A` `S` `T` — **ปิดในขอบเขต ZARI002 2026-09-18** เป็น config ของ FI ไม่ใช่งาน development · ZARI002 ไม่เช็ค flag นี้ · **ส่งต่อ functional** พร้อมหลักฐาน export `I_PaymentMethod` (ดูบันทึก 2026-09-18) — กระทบ ZARE002 ไม่ใช่เรา | functional | Phase 1 | — | ✅ ส่งต่อ |
 | OQ-04 | master data บน tenant ไม่ครบ — **ปิดในขอบเขต ZARI002 2026-09-18** เป็นงานโหลดข้อมูลของ functional/FI · code ตรวจกับ master data จริงอยู่แล้ว ครบเมื่อไหร่ก็ผ่านเมื่อนั้น · SBPA เทสจริงอยู่ ถ้าขาดจะเห็นเป็น `205`/`207` ใน monitor | functional | Phase 1 | — | ✅ ส่งต่อ |
 | OQ-05 | `payment_amount` ต้องเท่ากับผลรวม `amount_paid` ของทุก item หรือไม่ | Salesforce / FI | Phase 1 | `validatePaymentTotal` เป็นที่ว่างไว้แล้ว เพิ่ม logic ทีหลังได้ทันที | 🟨 |
@@ -391,3 +391,21 @@ SFDC ควรเป็น `C` เปลี่ยน constant ตัวเดี
 ให้ `M` `N` `E` เท่านั้น · ถ้า post ด้วย `A`/`S`/`T` แล้วตก ให้ดู config ก่อนดู code
 
 **เหลือเปิด 5 ข้อ** — OQ-05 · 07 · 10 · 16 · 23 · ไม่มีข้อไหนที่ development ทำอะไรได้โดยไม่มีคำตอบจากคนอื่น
+
+
+### Payment method กลายเป็นข้อมูลแสดงผล — 2026-09-18 (บ่าย)
+
+ปิด OQ-02 ตอนเช้าด้วย mapping `Cash → S` แล้วบ่ายเดียวกัน functional ยืนยันว่า **SAP ไม่ได้ใช้
+payment method post FI เลย** — เป็นข้อมูลที่ SFDC ส่งมาให้เก็บ · mapping ทั้งชุด + column
+`sap_payment_method` + การอ่าน `I_PaymentMethod` + message `203` ถูกถอดออกในวันเดียวกัน
+
+**ที่ยังต้องรู้ว่า "เป็นเช็คไหม"** — cheque field (`107`–`110`) และ bank check (`207`) ยังทำงานเฉพาะเช็ค
+· เปลี่ยนจากดู code `A` เป็นดู**คำ** `Cheque` ผ่าน `is_cheque( )` · และยังตรวจว่าคำเป็น 1 ใน 3
+(`202`) เพื่อกันพิมพ์ผิดจนเช็คหลุด conditional check
+
+**บทเรียนลำดับการลบ column** — table activate ผ่าน แต่ `ZI_ZARE002_PYMT` ที่อ้าง column พัง
+ทันที · ต้องแก้ CDS ฝั่ง ZARE002 **ก่อน**ลบ column · รอบนี้ผู้ใช้เป็นคนทำ ZARE002 เองจึงแก้ได้ในที่
+
+**OQ-03 ที่เพิ่งส่งต่อ functional ตอนเช้าเบาลงมาก** — flag `IsPaytMethForIncomingPayments` ไม่ติ๊ก
+`A`/`S`/`T` ไม่มีผลกับเราอีก เพราะเราไม่ได้ส่ง code เหล่านี้ไปให้ใครใช้แล้ว · ยังเป็นเรื่องของ ZARE002
+ว่าจะ post ด้วย method อะไร

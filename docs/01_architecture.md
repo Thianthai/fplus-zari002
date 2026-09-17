@@ -283,7 +283,7 @@ duplicate — การแก้ต้องทำฝั่ง SAP
 | Validation | Entity | ตรวจอะไร |
 |---|---|---|
 | `check_mandatory` | Payment | 8 field บังคับ ครบไหม (ดู `04_field_mapping.md`) |
-| `check_cheque_fields` | Payment | ถ้า `sap_payment_method` = เช็ค → `cheque_no` `issue_date` `due_on` `cheque_bankbranch` ต้องครบ (ดูจาก code ที่แปลงแล้ว ไม่ใช่คำดิบ) |
+| `check_cheque_fields` | Payment | ถ้า `is_cheque( payment_method )` → `cheque_no` `issue_date` `due_on` `cheque_bank_branch` ต้องครบ · ดูจาก**คำ** `Cheque` ไม่สนตัวพิมพ์ (ไม่มี SAP code แล้ว 2026-09-18) |
 | `check_payment_total` | Payment | **ที่ว่างไว้ ยังไม่ใส่ logic** — เผื่อภายหลังต้องเทียบ `payment_amount` กับผลรวม `amount_paid` |
 | `check_amount_paid_total` | Payment | ผลรวม `amount_paid` ของทุก item ต้อง **> 0** |
 | `check_duplicate` | Payment | `payment_document_no` + `billing_document` + **`status`** — ใบใหม่เป็น `N` เสมอ จึงซ้ำเฉพาะกับ row `N` · row `E` ไม่บล็อก (ส่งแก้ใหม่ได้) · row `S`/`W` ไม่บล็อกที่นี่แต่ `check_ar_open_item` จับเพราะ document ถูก clear แล้ว · **ห้ามแยกจากกัน** |
@@ -298,7 +298,7 @@ duplicate — การแก้ต้องทำฝั่ง SAP
 |---|---|---|
 | `check_company_code` | `company_code` | `I_CompanyCode` |
 | `check_gl_account` | `gl_account` | `I_GLAccountInCompanyCode` |
-| `check_payment_method` | `sap_payment_method` | `I_PaymentMethod` เช็คแค่ว่า code มีจริง · ถ้าแปลงไม่ได้ (คำที่ไม่รู้จัก) ต้องแจ้งคำที่ส่งมาในข้อความด้วย |
+| `check_payment_method` | `payment_method` | คำต้องเป็น `Cheque` / `Cash` / `Transfer` ไม่งั้น `202` · **ไม่อ่าน `I_PaymentMethod` แล้ว** — field เป็นข้อมูลแสดงผล ไม่ได้ใช้ post |
 | `check_customer_code` | `customer_code` (Item) | `I_Customer` |
 | `check_ar_open_item` | `billing_document` (Item) | `I_OperationalAcctgDocItem WITH PRIVILEGED ACCESS` — เจอ row `FinancialAccountType = D` + `OriginalReferenceDocument = billing_document` + `ClearingJournalEntry` ว่าง = ยังเปิดอยู่ · ไม่เจอ = clear/reverse/ไม่มี → `206` · เงื่อนไขตาม functional spec ข้อ 3 ไม่เพิ่ม company code |
 | `check_bank` | `cheque_bank_branch` | เทียบกับ `I_Bank_2-BankInternalID` คู่กับ country ของ company code · **ตรวจเฉพาะตอนจ่ายด้วยเช็ค** เพราะวิธีอื่น field นี้ว่างได้ |
@@ -328,7 +328,7 @@ Salesforce ส่ง `gl_account` มาแบบ **ไม่มี leading zero
 | ขั้น | ระดับ | ทำอะไร |
 |---|---|---|
 | `set_payment_defaults` | header | อ่าน `I_CompanyCode` ครั้งเดียวได้ `Currency` + `Country` → เติม `currency` ให้ header **และ push ลงทุก item** · สร้าง `batch_id` · pad `gl_account` · `status = 'N'` |
-| `set_payment_method_code` | header | แปลงคำจาก Salesforce (`payment_method`) → SAP code (`sap_payment_method`) ด้วย constant ใน `ZCL_ZARI002_VALIDATOR` — `Cheque` → `A` · `Transfer` → `T` |
+| ~~`set_payment_method_code`~~ | header | **ตัดออก 2026-09-18** — เก็บคำตามที่ SFDC ส่ง ไม่แปลงเป็น SAP code · column `sap_payment_method` ลบแล้ว |
 | `set_item_defaults` | item | pad `customer_code` |
 
 ทั้งหมดรันเป็นลำดับใน `ZCL_ZARI002_PROCESSOR` ก่อนเข้าขั้น validate — **ลำดับชัดเจนอ่านได้จาก code**
@@ -400,7 +400,7 @@ post ไปแล้วได้
 - ZARI002 เป็นเจ้าของ contract ของ table (ใครแก้โครงสร้างต้องคุยกัน)
 - **ZARI003 เป็นคำตอบว่า Salesforce รู้ผล post ได้ยังไง** — ZARI002 จึงไม่ต้องเปิด read
   operation ให้ Salesforce poll และยืนยันว่า create-only ถูกต้องแล้ว
-- `sap_payment_method` เป็น field ที่ ZARE002 ใช้ post FI ไม่ใช่ `payment_method` ที่เป็นคำดิบ
+- ~~`sap_payment_method` เป็น field ที่ ZARE002 ใช้ post FI~~ — **ผิด** functional ยืนยัน 2026-09-18 ว่า ZARE002 ไม่ได้ใช้ payment method post · column ลบแล้ว
 - ⚠️ ถ้าภายหลัง ZARI002 เปิด update/delete ต้องคุมไม่ให้แก้ row ที่ ZARE002 กำลัง post อยู่
 
 
