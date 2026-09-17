@@ -96,9 +96,6 @@ annotate entity ZC_ZARI002_PYMT_LOG
   }
   PaymentMethod;
 
-  @UI.fieldGroup: [{ qualifier: 'GeneralData', position: 90 }]
-  SapPaymentMethod;
-
   @UI.fieldGroup: [{ qualifier: 'ChequeData', position: 10 }]
   ChequeNo;
 

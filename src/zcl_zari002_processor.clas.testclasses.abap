@@ -21,17 +21,6 @@ CLASS ltd_master_data IMPLEMENTATION.
     ENDLOOP.
   ENDMETHOD.
 
-  METHOD zif_zari002_master_data~find_unknown_pymt_methods.
-    LOOP AT it_payment_method_key ASSIGNING FIELD-SYMBOL(<lfs_k>).
-      IF NOT ( <lfs_k>-country = 'TH'
-               AND ( <lfs_k>-payment_method = 'A'
-                  OR <lfs_k>-payment_method = 'S'
-                  OR <lfs_k>-payment_method = 'T' ) ).
-        INSERT <lfs_k> INTO TABLE rt_result.
-      ENDIF.
-    ENDLOOP.
-  ENDMETHOD.
-
   METHOD zif_zari002_master_data~find_unknown_banks.
     LOOP AT it_bank_key ASSIGNING FIELD-SYMBOL(<lfs_b>).
       IF NOT ( <lfs_b>-country = 'TH' AND <lfs_b>-bank = '0040129' ).
@@ -225,13 +214,12 @@ CLASS ltc_processor IMPLEMENTATION.
     go_cut->process( sample_json( ) ).
 
     SELECT SINGLE FROM ztar_i002_pymt
-      FIELDS request_id, currency, status, sap_payment_method
+      FIELDS request_id, currency, status
       INTO @DATA(ls_pymt).
 
     cl_abap_unit_assert=>assert_not_initial( act = ls_pymt-request_id ).
     cl_abap_unit_assert=>assert_equals( exp = 'THB' act = ls_pymt-currency ).
     cl_abap_unit_assert=>assert_equals( exp = 'N'   act = ls_pymt-status ).
-    cl_abap_unit_assert=>assert_equals( exp = 'A'   act = ls_pymt-sap_payment_method ).
 
 *   currency ต้องไหลลงถึง item ด้วย
     SELECT SINGLE FROM ztar_i002_item FIELDS currency INTO @DATA(lv_currency).

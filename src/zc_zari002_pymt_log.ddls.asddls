@@ -22,7 +22,6 @@ define root view entity ZC_ZARI002_PYMT_LOG
       PostingDate,
       GlAccount,
       PaymentMethod,
-      SapPaymentMethod,
 
       ChequeNo,
       IssueDate,

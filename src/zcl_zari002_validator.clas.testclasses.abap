@@ -5,13 +5,12 @@ CLASS ltc_validator DEFINITION FINAL
 
   PRIVATE SECTION.
 
-    " ---- convert_payment_method ----
-    METHODS cheque_maps_to_a          FOR TESTING.
-    METHODS cash_maps_to_s            FOR TESTING.
-    METHODS transfer_maps_to_t        FOR TESTING.
-    METHODS mapping_ignores_case      FOR TESTING.
-    METHODS mapping_ignores_spaces    FOR TESTING.
-    METHODS unknown_word_maps_to_none FOR TESTING.
+    " ---- is_cheque / check_payment_method ----
+    METHODS cheque_is_cheque          FOR TESTING.
+    METHODS cheque_ignores_case_space FOR TESTING.
+    METHODS cash_is_not_cheque        FOR TESTING.
+    METHODS three_words_pass_202      FOR TESTING.
+    METHODS unknown_word_gets_202     FOR TESTING.
 
     " ---- to_internal_key ----
     METHODS key_gets_padded           FOR TESTING.
@@ -119,43 +118,34 @@ CLASS ltc_validator IMPLEMENTATION.
   ENDMETHOD.
 
 * =====================================================================
-* convert_payment_method
+* is_cheque / check_payment_method
 * =====================================================================
 
-  METHOD cheque_maps_to_a.
-    cl_abap_unit_assert=>assert_equals(
-      exp = 'A'
-      act = zcl_zari002_validator=>convert_payment_method( 'Cheque' ) ).
+  METHOD cheque_is_cheque.
+    cl_abap_unit_assert=>assert_true( act = zcl_zari002_validator=>is_cheque( 'Cheque' ) ).
   ENDMETHOD.
 
-  METHOD cash_maps_to_s.
-    cl_abap_unit_assert=>assert_equals(
-      exp = 'S'
-      act = zcl_zari002_validator=>convert_payment_method( 'Cash' ) ).
+  METHOD cheque_ignores_case_space.
+    cl_abap_unit_assert=>assert_true( act = zcl_zari002_validator=>is_cheque( ' cheque' ) ).
   ENDMETHOD.
 
-  METHOD transfer_maps_to_t.
-    cl_abap_unit_assert=>assert_equals(
-      exp = 'T'
-      act = zcl_zari002_validator=>convert_payment_method( 'Transfer' ) ).
+  METHOD cash_is_not_cheque.
+    cl_abap_unit_assert=>assert_false( act = zcl_zari002_validator=>is_cheque( 'Cash' ) ).
   ENDMETHOD.
 
-  METHOD mapping_ignores_case.
-    cl_abap_unit_assert=>assert_equals(
-      exp = 'A'
-      act = zcl_zari002_validator=>convert_payment_method( 'cheque' ) ).
+  METHOD three_words_pass_202.
+    DATA(ls_payment) = valid_payment( ).
+    LOOP AT VALUE string_table( ( `Cheque` ) ( `Cash` ) ( `Transfer` ) ) INTO DATA(lv_word).
+      ls_payment-payment_method = lv_word.
+      assert_clean( zcl_zari002_validator=>check_payment_method( ls_payment ) ).
+    ENDLOOP.
   ENDMETHOD.
 
-  METHOD mapping_ignores_spaces.
-    cl_abap_unit_assert=>assert_equals(
-      exp = 'A'
-      act = zcl_zari002_validator=>convert_payment_method( ' Cheque' ) ).
-  ENDMETHOD.
-
-  METHOD unknown_word_maps_to_none.
-    cl_abap_unit_assert=>assert_initial(
-      act = zcl_zari002_validator=>convert_payment_method( 'Bitcoin' )
-      msg = 'คำที่ไม่รู้จักต้องคืนค่าว่าง ให้ validation ออก 202' ).
+  METHOD unknown_word_gets_202.
+    DATA(ls_payment) = valid_payment( ).
+    ls_payment-payment_method = 'Bitcoin'.
+    assert_has( it_finding = zcl_zari002_validator=>check_payment_method( ls_payment )
+                iv_msgno   = '202' ).
   ENDMETHOD.
 
 * =====================================================================
@@ -266,7 +256,7 @@ CLASS ltc_validator IMPLEMENTATION.
 
   METHOD transfer_skips_cheque_chk.
     DATA(ls_payment) = valid_payment( ).
-    ls_payment-sap_payment_method = 'T'.
+    ls_payment-payment_method = 'Transfer'.
     CLEAR: ls_payment-cheque_no, ls_payment-issue_date,
            ls_payment-due_on,    ls_payment-cheque_bank_branch.
 

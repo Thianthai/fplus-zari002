@@ -215,12 +215,6 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZARI002</ARBGB>
-     <MSGNR>203</MSGNR>
-     <TEXT>Payment method &amp;1 does not exist for country &amp;2</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZARI002</ARBGB>
      <MSGNR>204</MSGNR>
      <TEXT>Currency for company code &amp;1 cannot be determined</TEXT>
     </T100>

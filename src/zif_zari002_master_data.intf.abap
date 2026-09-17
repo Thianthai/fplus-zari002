@@ -4,7 +4,6 @@ INTERFACE zif_zari002_master_data
   TYPES:
     ty_company_code     TYPE ztar_i002_pymt-company_code,
     ty_gl_account       TYPE ztar_i002_pymt-gl_account,
-    ty_payment_method   TYPE ztar_i002_pymt-sap_payment_method,
     ty_currency         TYPE ztar_i002_pymt-currency,
     ty_customer         TYPE ztar_i002_item-customer_code,
     ty_country          TYPE c LENGTH 3,
@@ -25,12 +24,6 @@ INTERFACE zif_zari002_master_data
       gl_account   TYPE ty_gl_account,
     END OF ty_gl_key,
 
-    "! payment method ผูกกับประเทศ
-    BEGIN OF ty_payment_method_key,
-      country        TYPE ty_country,
-      payment_method TYPE ty_payment_method,
-    END OF ty_payment_method_key,
-
     "! bank ผูกกับประเทศ เหมือน payment method
     BEGIN OF ty_bank_key,
       country TYPE ty_country,
@@ -44,8 +37,6 @@ INTERFACE zif_zari002_master_data
                           WITH UNIQUE KEY company_code,
     tt_gl_key             TYPE SORTED TABLE OF ty_gl_key
                           WITH UNIQUE KEY company_code gl_account,
-    tt_payment_method_key TYPE SORTED TABLE OF ty_payment_method_key
-                          WITH UNIQUE KEY country payment_method,
     tt_customer           TYPE SORTED TABLE OF ty_customer
                           WITH UNIQUE KEY table_line,
     tt_bank_key           TYPE SORTED TABLE OF ty_bank_key
@@ -63,11 +54,6 @@ INTERFACE zif_zari002_master_data
   METHODS find_unknown_gl_accounts
     IMPORTING it_gl_key        TYPE tt_gl_key
     RETURNING VALUE(rt_result) TYPE tt_gl_key.
-
-  "! คืน payment method code ที่ไม่มีจริงในประเทศนั้น
-  METHODS find_unknown_pymt_methods
-    IMPORTING it_payment_method_key TYPE tt_payment_method_key
-    RETURNING VALUE(rt_result)      TYPE tt_payment_method_key.
 
   "! คืน customer ที่ไม่มีจริง
   METHODS find_unknown_customers

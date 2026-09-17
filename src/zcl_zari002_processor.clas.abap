@@ -282,9 +282,6 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
     " G/L Account
     cs_payment-gl_account = zcl_zari002_validator=>to_internal_key( cs_payment-gl_account ).
 
-    " Payment Method
-    cs_payment-sap_payment_method = zcl_zari002_validator=>convert_payment_method( cs_payment-payment_method ).
-
     " Status
     cs_payment-status = 'N'. "New
 
@@ -347,6 +344,10 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
                                iv_salesforce_id = is_payment-salesforce_id
                              ) TO rt_error.
 
+    APPEND LINES OF to_errors( it_finding       = zcl_zari002_validator=>check_payment_method( is_payment )
+                               iv_salesforce_id = is_payment-salesforce_id
+                             ) TO rt_error.
+
     APPEND LINES OF to_errors( it_finding       = zcl_zari002_validator=>check_dates( is_payment )
                                iv_salesforce_id = is_payment-salesforce_id
                              ) TO rt_error.
@@ -399,7 +400,6 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
 
     DATA lt_company_code     TYPE zif_zari002_master_data=>tt_company_code.
     DATA lt_gl_key           TYPE zif_zari002_master_data=>tt_gl_key.
-    DATA lt_pm_key           TYPE zif_zari002_master_data=>tt_payment_method_key.
     DATA lt_customer         TYPE zif_zari002_master_data=>tt_customer.
     DATA lt_bank_key         TYPE zif_zari002_master_data=>tt_bank_key.
     DATA lt_billing_document TYPE zif_zari002_master_data=>tt_billing_document.
@@ -439,38 +439,13 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
       ENDIF.
     ENDIF.
 
-    " Payment Method
+    " Country — ใช้กับ bank check
     DATA(lv_country) = VALUE zif_zari002_master_data=>ty_country(
       lt_cc_info[ company_code = is_payment-company_code ]-country OPTIONAL ).
 
-    IF is_payment-sap_payment_method IS INITIAL.
-      IF is_payment-payment_method IS NOT INITIAL.
-        APPEND VALUE #( msgno         = '202'
-                        msgtx         = message_text( iv_msgno = '202'
-                                                      iv_v1    = |{ is_payment-payment_method }| )
-                        salesforce_id = is_payment-salesforce_id
-                        field         = zcl_zari002_json=>to_json_name( 'payment_method' )
-                      ) TO rt_error.
-      ENDIF.
-    ELSEIF lv_country IS NOT INITIAL.
-      INSERT VALUE #( country        = lv_country
-                      payment_method = is_payment-sap_payment_method
-                    ) INTO TABLE lt_pm_key.
-
-      IF go_master_data->find_unknown_pymt_methods( lt_pm_key ) IS NOT INITIAL.
-        APPEND VALUE #( msgno         = '203'
-                        msgtx         = message_text( iv_msgno = '203'
-                                                      iv_v1    = |{ is_payment-sap_payment_method }|
-                                                      iv_v2    = |{ lv_country }| )
-                        salesforce_id = is_payment-salesforce_id
-                        field         = zcl_zari002_json=>to_json_name( 'payment_method' )
-                      ) TO rt_error.
-      ENDIF.
-    ENDIF.
-
     " Bank / Branch
     " ตรวจเฉพาะตอนจ่ายด้วยเช็คเท่านั้น
-    IF is_payment-sap_payment_method  = zcl_zari002_validator=>gc_pymt_method_cheque
+    IF zcl_zari002_validator=>is_cheque( is_payment-payment_method ) = abap_true
     AND is_payment-cheque_bank_branch IS NOT INITIAL
     AND lv_country                    IS NOT INITIAL.
 

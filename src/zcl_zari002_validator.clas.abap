@@ -24,16 +24,22 @@ CLASS zcl_zari002_validator DEFINITION
       tt_finding TYPE STANDARD TABLE OF ty_finding WITH EMPTY KEY.
 
     CONSTANTS:
-      gc_pymt_method_cheque   TYPE ztar_i002_pymt-sap_payment_method VALUE 'A',
-      gc_pymt_method_cash     TYPE ztar_i002_pymt-sap_payment_method VALUE 'S',
-      gc_pymt_method_transfer TYPE ztar_i002_pymt-sap_payment_method VALUE 'T'.
+      "! ค่าจาก Salesforce เก็บตามที่ส่งมา ไม่แปลงเป็นเป็น SAP internal code
+      gc_word_cheque   TYPE string VALUE 'CHEQUE',
+      gc_word_cash     TYPE string VALUE 'CASH',
+      gc_word_transfer TYPE string VALUE 'TRANSFER'.
 
-    "! แปลงคำจาก Salesforce เป็น SAP internal payment method code
-    "! คืนค่าว่างถ้าไม่รู้จักคำนั้น และ Caller ออก message 202
-    "! mapping อยู่ที่นี่ที่เดียว ย้ายไป constant table ทีหลังแก้แค่ method นี้ (OQ-02)
-    CLASS-METHODS convert_payment_method
+    "! payment method นี้คือเช็คไหม — ตัวตัดสิน conditional mandatory และ bank check
+    "! เทียบคำโดยไม่สนตัวพิมพ์และช่องว่าง
+    CLASS-METHODS is_cheque
       IMPORTING iv_payment_method TYPE ztar_i002_pymt-payment_method
-      RETURNING VALUE(rv_result)  TYPE ztar_i002_pymt-sap_payment_method.
+      RETURNING VALUE(rv_result)  TYPE abap_bool.
+
+    "! 202 · คำต้องเป็น 1 ใน 3 ที่ Salesforce ยืนยัน — กันพิมพ์ผิดจนเช็คหลุด conditional check
+    "! ค่าว่างข้าม (105 จับ)
+    CLASS-METHODS check_payment_method
+      IMPORTING is_payment        TYPE ty_payment
+      RETURNING VALUE(rt_finding) TYPE tt_finding.
 
     "! เติม 0 ข้างหน้าให้ครบ 10 หลัก — ใช้กับ field ที่มี conversion routine (GL / Customer)
     CLASS-METHODS to_internal_key
@@ -88,14 +94,25 @@ ENDCLASS.
 
 CLASS zcl_zari002_validator IMPLEMENTATION.
 
-  METHOD convert_payment_method.
+  METHOD is_cheque.
+    rv_result = xsdbool( to_upper( condense( CONV string( iv_payment_method ) ) ) = gc_word_cheque ).
+  ENDMETHOD.
 
-    "! 3 คำที่ Salesforce ยืนยันแล้ว 2026-09-18 (ปิด OQ-02) — code จาก I_PaymentMethod ของ TH
-    rv_result = SWITCH #( to_upper( condense( CONV string( iv_payment_method ) ) )
-                          WHEN 'CHEQUE'   THEN gc_pymt_method_cheque
-                          WHEN 'CASH'     THEN gc_pymt_method_cash
-                          WHEN 'TRANSFER' THEN gc_pymt_method_transfer
-                          ELSE space ).
+
+  METHOD check_payment_method.
+
+    IF is_payment-payment_method IS INITIAL.
+      RETURN.
+    ENDIF.
+
+    DATA(lv_word) = to_upper( condense( CONV string( is_payment-payment_method ) ) ).
+
+    IF lv_word <> gc_word_cheque AND lv_word <> gc_word_cash AND lv_word <> gc_word_transfer.
+      APPEND VALUE #( msgno = '202'
+                      msgv1 = |{ is_payment-payment_method }|
+                      field = 'payment_method'
+                    ) TO rt_finding.
+    ENDIF.
 
   ENDMETHOD.
 
@@ -193,7 +210,7 @@ CLASS zcl_zari002_validator IMPLEMENTATION.
 
   METHOD check_cheque_fields.
 
-    IF is_payment-sap_payment_method <> gc_pymt_method_cheque.
+    IF is_cheque( is_payment-payment_method ) = abap_false.
       RETURN.
     ENDIF.
 

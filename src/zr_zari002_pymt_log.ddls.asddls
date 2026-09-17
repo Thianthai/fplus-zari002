@@ -30,8 +30,6 @@ define root view entity ZR_ZARI002_PYMT_LOG
       gl_account                 as GlAccount,
       @EndUserText.label: 'Payment Method'
       payment_method             as PaymentMethod,
-      @EndUserText.label: 'SAP Payment Method'
-      sap_payment_method         as SapPaymentMethod,
 
       @EndUserText.label: 'Cheque No.'
       cheque_no                  as ChequeNo,

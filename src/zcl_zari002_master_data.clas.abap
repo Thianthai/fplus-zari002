@@ -70,43 +70,6 @@ CLASS zcl_zari002_master_data IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD zif_zari002_master_data~find_unknown_pymt_methods.
-
-    DATA lr_country        TYPE RANGE OF zif_zari002_master_data=>ty_country.
-    DATA lr_payment_method TYPE RANGE OF zif_zari002_master_data=>ty_payment_method.
-
-    IF it_payment_method_key IS INITIAL.
-      RETURN.
-    ENDIF.
-
-    LOOP AT it_payment_method_key ASSIGNING FIELD-SYMBOL(<lfs_pm>).
-
-      IF NOT line_exists( lr_country[ low = <lfs_pm>-country ] ).
-        APPEND VALUE #( sign = 'I' option = 'EQ' low = <lfs_pm>-country ) TO lr_country.
-      ENDIF.
-
-      IF NOT line_exists( lr_payment_method[ low = <lfs_pm>-payment_method ] ).
-        APPEND VALUE #( sign = 'I' option = 'EQ' low = <lfs_pm>-payment_method ) TO lr_payment_method.
-      ENDIF.
-
-    ENDLOOP.
-
-    SELECT FROM I_PaymentMethod
-      FIELDS Country       AS country,
-             PaymentMethod AS payment_method
-      WHERE Country       IN @lr_country
-        AND PaymentMethod IN @lr_payment_method
-      INTO TABLE @DATA(lt_existing).
-
-    LOOP AT it_payment_method_key ASSIGNING <lfs_pm>.
-      IF NOT line_exists( lt_existing[ country        = <lfs_pm>-country
-                                       payment_method = <lfs_pm>-payment_method ] ).
-        INSERT <lfs_pm> INTO TABLE rt_result.
-      ENDIF.
-    ENDLOOP.
-
-  ENDMETHOD.
-
 
   METHOD zif_zari002_master_data~find_unknown_customers.
 

@@ -26,7 +26,6 @@ authorization master ( global )
     PostingDate            = posting_date;
     GlAccount              = gl_account;
     PaymentMethod          = payment_method;
-    SapPaymentMethod       = sap_payment_method;
     ChequeNo               = cheque_no;
     IssueDate              = issue_date;
     DueOn                  = due_on;
