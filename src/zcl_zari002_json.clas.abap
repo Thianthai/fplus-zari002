@@ -11,14 +11,14 @@ CLASS zcl_zari002_json DEFINITION
       ty_item    TYPE zcl_zari002_http=>ty_item,
       tt_item    TYPE zcl_zari002_http=>tt_item.
 
-    "! แปลง JSON payload เป็น structure ของ table
-    "! ชื่อ field แปลงอัตโนมัติจาก PascalCase เป็น snake_case ด้วย pascal_case_to_underscore
+    " แปลง JSON payload เป็น structure ของ table
+    " ชื่อ field แปลงอัตโนมัติจาก PascalCase เป็น snake_case ด้วย pascal_case_to_underscore
     CLASS-METHODS parse_json_request
       IMPORTING iv_body    TYPE string
       EXPORTING es_request TYPE ty_request
       RAISING   zcx_zari002_error.
 
-    "! แปลงชื่อ field snake_case ของ table เป็นชื่อ JSON PascalCase
+    " แปลงชื่อ field snake_case ของ table เป็นชื่อ JSON PascalCase
     CLASS-METHODS to_json_name
       IMPORTING iv_field         TYPE string
       RETURNING VALUE(rv_result) TYPE string.

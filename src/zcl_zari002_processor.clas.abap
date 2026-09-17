@@ -33,12 +33,12 @@ CLASS zcl_zari002_processor DEFINITION
         errors     TYPE tt_error,
       END OF ty_result.
 
-    "! ฉีด dependency ได้เพื่อให้ unit test ไม่แตะ master data จริงและไม่ยิง HTTP
+    "! ทำ dependency ได้เพื่อให้ unit test ไม่แตะ master data จริงและไม่ยิง HTTP
     METHODS constructor
       IMPORTING io_master_data TYPE REF TO zif_zari002_master_data OPTIONAL
                 io_notify      TYPE REF TO zcl_zari002_sfdc_notify OPTIONAL.
 
-    "! flow เดียวจบ: parse → normalize → validate → save → callback
+    "! Flow เดียวจบ: parse → normalize → validate → save → callback
     METHODS process
       IMPORTING iv_body          TYPE string
       RETURNING VALUE(rs_result) TYPE ty_result.
@@ -48,8 +48,7 @@ CLASS zcl_zari002_processor DEFINITION
     DATA go_master_data TYPE REF TO zif_zari002_master_data.
     DATA go_notify      TYPE REF TO zcl_zari002_sfdc_notify.
 
-    "! เตรียม payment ให้พร้อมลง table — UUID · key padding · แปลง payment method · admin field
-    "! ถ้า UUID สร้างไม่ได้ คืน error กลับมาแบบเดียวกับ validate( ) ให้ process( ) รวมเข้าเส้นทางเดียวกัน
+    "! เตรียม payment data ให้พร้อม save ลง table
     METHODS normalize
       IMPORTING iv_request_id   TYPE ztar_i002_pymt-request_id
       CHANGING  cs_payment      TYPE ztar_i002_pymt
@@ -81,7 +80,7 @@ CLASS zcl_zari002_processor DEFINITION
                 it_item    TYPE tt_item
                 it_error   TYPE tt_error.
 
-    "! แปลง finding ของ validator เป็น error ที่พร้อมส่งกลับ (ชื่อ field เป็น JSON แล้ว)
+    "! แปลง finding ของ validator เป็น error ที่พร้อมส่งกลับไปที่ json
     METHODS to_errors
       IMPORTING it_finding            TYPE zcl_zari002_validator=>tt_finding
                 iv_salesforce_id      TYPE ztar_i002_pymt-salesforce_id      OPTIONAL
@@ -96,44 +95,43 @@ CLASS zcl_zari002_processor DEFINITION
                 iv_v4            TYPE string OPTIONAL
       RETURNING VALUE(rv_result) TYPE string.
 
-    "! สรุปผลรวมของทั้ง request จากตัวนับ — ต้องเรียกก่อน RETURN ทุกทาง
-    "! ไม่งั้นทางที่ออกก่อนจะคืน Status เป็นค่าว่าง
+    "! สรุปผลรวมของทั้ง request
     METHODS set_outcome
       CHANGING cs_result TYPE ty_result.
 
-    "! เขียน log 3 table สำหรับ payment ใบนี้ ทั้งผ่านและตก — LUW แยกจาก business save
-    "! ล้มแล้วต้องไม่ทำ request หลักพัง (log เป็นของรอง)
+    "! เขียน log 3 table สำหรับ payment ใบนี้ ทั้งผ่านและไม่ผ่าน | LUW แยกจาก business save
+    "! ถ้า log พังต้องไม่ทำ request หลักพัง | log เป็น priority รอง
     METHODS save_log
       IMPORTING is_payment TYPE ty_payment
                 it_item    TYPE tt_item
                 it_error   TYPE tt_error
                 is_raw     TYPE zcl_zari002_http=>ty_payment.
 
-    "! HDRLOG จาก payment ที่ normalize แล้ว · status = ผลรับของ ZARI002 ไม่ใช่ผล post
+    "! HDRLOG จาก payment ที่ normalize แล้ว | status = ผลรับของ ZARI002 ไม่ใช่ผล post
     METHODS to_hdr_log
       IMPORTING is_payment       TYPE ty_payment
                 it_error         TYPE tt_error
                 is_raw           TYPE zcl_zari002_http=>ty_payment
       RETURNING VALUE(rs_result) TYPE ty_hdr_log.
 
-    "! ITMLOG — field ชื่อตรงกับ ZTAR_I002_ITEM ทั้งหมด
+    "! ITMLOG field ชื่อตรงกับ ZTAR_I002_ITEM ทั้งหมด
     METHODS to_itm_log
       IMPORTING it_item          TYPE tt_item
       RETURNING VALUE(rt_result) TYPE tt_itm_log.
 
-    "! MSGLOG 1 row ต่อ 1 error · area ตัดสินจาก salesforce_item_id · ใบผ่านไม่มี row
+    "! MSGLOG 1 row ต่อ 1 error | area ตัดสินจาก salesforce_item_id | ใบที่ผ่านไม่มี row
     METHODS to_msg_log
       IMPORTING is_payment       TYPE ty_payment
                 it_error         TYPE tt_error
       RETURNING VALUE(rt_result) TYPE tt_msg_log
       RAISING   cx_uuid_error.
 
-    "! JSON ของ payment ใบนี้ตามที่ SBPA ส่งมา serialize จาก structure ดิบก่อน normalize
+    "! JSON ของ payment ใบนี้ตามที่ SBPA ส่งมา serialize จาก ABAP structure ก่อน normalize
     METHODS to_request_body
       IMPORTING is_raw           TYPE zcl_zari002_http=>ty_payment
       RETURNING VALUE(rv_result) TYPE ztar_i002_hdrlog-request_body.
 
-    "! จัด JSON compact ให้ขึ้นบรรทัดและย่อหน้า เพื่อให้อ่านได้ในหน้า monitor
+    "! จัด JSON compact ให้ขึ้นบรรทัดและย่อหน้า เพื่อให้อ่านได้ในหน้า Log Monitoring
     METHODS to_pretty_json
       IMPORTING iv_json          TYPE string
       RETURNING VALUE(rv_result) TYPE string.
@@ -202,7 +200,7 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
                                   CHANGING  cs_payment    = ls_payment
                                             ct_item       = lt_item ).
 
-      " 4.2 Validate — ข้ามถ้า normalize พัง ไม่งั้นจะได้ error ซ้อนจาก field ที่ยังไม่ได้เตรียม
+      " 4.2 Validate ข้ามถ้า normalize พัง ไม่งั้นจะได้ error ซ้อนจาก field ที่ยังไม่ได้เตรียม
       IF lt_error IS INITIAL.
         lt_error = validate( is_payment = ls_payment
                              it_item    = lt_item ).
@@ -228,8 +226,9 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
         APPEND LINES OF lt_error TO rs_result-errors.
       ENDIF.
 
-      " 4.4 Log — ทุกใบ ทั้งผ่านและตก ------------------------------------
-      "     ข้ามถ้าไม่มี UUID (normalize สร้างไม่ได้) เพราะไม่มี key ให้เขียน
+      " 4.4 Log  -------------------------------------------------------
+      " เก็บทุกใบ ทั้งผ่านและไม่ผ่าน
+      " ข้ามถ้าไม่มี UUID (normalize สร้างไม่ได้) เพราะไม่มี key ให้เขียน
       IF ls_payment-payment_uuid IS NOT INITIAL.
         save_log( is_payment = ls_payment
                   it_item    = lt_item
@@ -237,7 +236,7 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
                   is_raw     = <lfs_payment> ).
       ENDIF.
 
-      " 4.5 Callback ---------------------------------------------------
+      " 4.5 Callback to Salesforce -------------------------------------
       send_callback( is_payment = ls_payment
                      it_item    = lt_item
                      it_error   = lt_error ).
@@ -457,7 +456,8 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
       ENDIF.
     ENDIF.
 
-    " Bank / Branch — ตรวจเฉพาะตอนจ่ายด้วยเช็คเท่านั้น
+    " Bank / Branch
+    " ตรวจเฉพาะตอนจ่ายด้วยเช็คเท่านั้น
     IF is_payment-sap_payment_method  = zcl_zari002_validator=>gc_pymt_method_cheque
     AND is_payment-cheque_bank_branch IS NOT INITIAL
     AND lv_country                    IS NOT INITIAL.
@@ -498,8 +498,9 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
       ENDIF.
     ENDLOOP.
 
-    " AR Open Item — billing document ต้องยังเปิดอยู่ใน FI (ยังไม่ถูก clear / reverse)
-    " ทำงานคู่กับ duplicate check: ใบที่ post แล้ว (S/W) จะถูกจับที่นี่ เพราะการ post ทำให้ clear
+    " AR Open Item
+    " Billing Document ต้องยังเปิดอยู่ใน FI (ยังไม่ถูก Clear/Reverse)
+    " ทำงานคู่กับ Duplicate Check: ใบที่ post แล้ว(S/W) จะถูกดักที่นี่ เพราะการ post ทำให้ clear
     LOOP AT it_item ASSIGNING <lfs_item>.
       IF <lfs_item>-billing_document IS NOT INITIAL.
         INSERT <lfs_item>-billing_document INTO TABLE lt_billing_document.
@@ -540,16 +541,16 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
       ENDIF.
     ENDLOOP.
 
-*   range ว่างแปลว่า IN จะ match ทุกแถว — ต้องออกก่อน
+    " range ว่างแปลว่า IN จะ match ทุกแถว
     IF lr_billing IS INITIAL.
       RETURN.
     ENDIF.
 
-*   status เป็นส่วนของ key — ใบเข้ามาใหม่เป็น N เสมอ จึงซ้ำเฉพาะเมื่อมี row N อยู่แล้ว
-*     E (post ไม่ผ่าน)  → ไม่ซ้ำ ส่งแก้เข้ามาใหม่ได้
-*     S/W (post แล้ว)   → ไม่ซ้ำที่นี่ แต่ AR open item check จับได้ เพราะ document ถูก clear แล้ว
-*     N (ยังไม่ทำอะไร)  → ซ้ำ
-*   ห้ามใช้โดยไม่มี AR open item check — ไม่งั้นใบ S ส่งซ้ำแล้ว post ซ้ำได้
+    " Status เป็นส่วนของ key ใบเข้ามาใหม่เป็น N เสมอ จึงซ้ำเฉพาะเมื่อมี row = N อยู่แล้ว
+    " E (post ไม่ผ่าน) ไม่ซ้ำ ส่งแก้เข้ามาใหม่ได้
+    " S/W (post แล้ว) ไม่ซ้ำที่นี่ แต่ AR Open Item check จะดักได้ เพราะ document ถูก clear แล้ว
+    " N (ยังไม่ทำอะไร) ซ้ำ
+    " ห้ามใช้โดยไม่มี AR Open Item check ไม่งั้นใบ S จะส่งซ้ำแล้ว post ซ้ำได้
     SELECT FROM ztar_i002_pymt AS p
            INNER JOIN ztar_i002_item AS i ON i~payment_uuid = p~payment_uuid
       FIELDS i~billing_document
@@ -596,8 +597,8 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
 
   METHOD send_callback.
 
-*   1 record ต่อ 1 payment ตาม spec Integration_Log__c — ไม่มี field ระดับ item
-*   error ทุกบรรทัดจึงรวมเป็นข้อความเดียว · ไม่ใส่ code (ตกลง D3)
+    " 1 record ต่อ 1 payment ตาม spec Integration ไม่มี field ระดับ item
+    " error ทุกบรรทัดรวมเป็นข้อความเดียว ไม่ใส่ code
     DATA(ls_record) = VALUE zcl_zari002_sfdc_notify=>ty_record(
       interface    = zcl_zari002_sfdc_notify=>gc_interface_payment
       reference_id = is_payment-salesforce_id
@@ -612,14 +613,15 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
 
     DATA(lv_http) = go_notify->notify( ls_record ).
 
-*   บันทึกว่า SFDC รับ log record ไหม — 201 = รับ · อื่น ๆ / 0 = ไม่รับ
-*   UPDATE เฉย ๆ ถ้าไม่มี row (normalize ล้มไม่มี UUID) ก็แค่ 0 แถว ไม่พัง
+    " บันทึกว่า SFDC ได้รับ log record ไหม
+    " 201 = รับ / อื่นๆ = ไม่รับ
     TRY.
         UPDATE ztar_i002_hdrlog
           SET salesforce_status  = @( COND #( WHEN lv_http = zcl_zari002_sfdc_notify=>gc_http_created
-                                                THEN 'S' ELSE 'E' ) ),
+                                              THEN 'S' ELSE 'E' ) ),
               salesforce_message = @( |{ lv_http }| )
           WHERE payment_uuid = @is_payment-payment_uuid.
+
         COMMIT WORK.
       CATCH cx_root.
         ROLLBACK WORK.
@@ -630,7 +632,6 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
 
   METHOD to_errors.
 
-*   item id: finding ที่ระบุเองมาก่อน (check ที่วนหลาย item) ถ้าไม่มีค่อยใช้ของผู้เรียก
     LOOP AT it_finding ASSIGNING FIELD-SYMBOL(<lfs_finding>).
       APPEND VALUE #( msgno              = <lfs_finding>-msgno
                       msgtx              = message_text( iv_msgno = <lfs_finding>-msgno
@@ -660,8 +661,9 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
 
   METHOD set_outcome.
 
-*   สำเร็จ = มีอย่างน้อย 1 ใบเข้า table · ตกบางใบยังได้ HTTP 200
-*   จะเป็น 400 ก็ต่อเมื่อไม่มีอะไรเข้าเลย
+    " สำเร็จ = มีอย่างน้อย 1 ใบเข้า table
+    " ตกบางใบยังได้ HTTP 200
+    " จะเป็น HTTP 400 ก็ต่อเมื่อไม่มีอะไรเข้า table เลย
     cs_result-success = xsdbool( cs_result-accepted > 0 ).
 
     cs_result-status = COND #(
@@ -688,7 +690,7 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
           RETURN.
         ENDIF.
 
-*       ตารางลูกว่างเป็นเรื่องปกติ — INSERT FROM TABLE ที่ไม่มีแถวคืน sy-subrc = 4
+        " ตารางลูกว่างได้
         IF lt_itm_log IS NOT INITIAL.
           INSERT ztar_i002_itmlog FROM TABLE @lt_itm_log.
           IF sy-subrc <> 0.
@@ -708,7 +710,7 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
         COMMIT WORK AND WAIT.
 
       CATCH cx_root.
-*       log เขียนไม่ได้ก็ปล่อย — business save commit ไปแล้ว ไม่กระทบ
+        " ถ้า log เขียนไม่ได้ก็ปล่อยเลย เพราะ business save commit ไปแล้ว ไม่กระทบ
         ROLLBACK WORK.
     ENDTRY.
 
@@ -730,7 +732,7 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
   METHOD to_itm_log.
 
     LOOP AT it_item ASSIGNING FIELD-SYMBOL(<lfs_item>).
-*     item ที่ไม่มี UUID เขียนไม่ได้ (normalize สร้างไม่ได้) — ข้ามเฉพาะแถวนั้น
+      " item ที่ไม่มี UUID เขียนไม่ได้ (normalize สร้างไม่ได้)
       IF <lfs_item>-item_uuid IS INITIAL.
         CONTINUE.
       ENDIF.
@@ -779,7 +781,7 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
 
   METHOD to_pretty_json.
 
-*   HTML ยุบ space นำหน้าบรรทัดทิ้ง ใช้ non-breaking space แทนเพื่อให้ indent ติดไปด้วย
+    " HTML ยุบ space นำหน้าบรรทัดทิ้ง ใช้ non-breaking space แทนเพื่อให้ indent ติดไปด้วย
     DATA(lv_nbsp)   = cl_abap_conv_codepage=>create_in( )->convert( CONV xstring( 'C2A0' ) ).
     DATA(lv_indent) = lv_nbsp && lv_nbsp.
 
@@ -796,7 +798,7 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
 
       DATA(lv_char) = substring( val = iv_json off = lv_off len = 1 ).
 
-*     ---- อยู่ใน string literal ปล่อยผ่านทุกตัวอักษร ----
+      " อยู่ใน string literal ปล่อยผ่านทุกตัวอักษร
       IF lv_in_string = abap_true.
         lv_line = lv_line && lv_char.
         IF lv_escaped = abap_true.
@@ -810,7 +812,7 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
         CONTINUE.
       ENDIF.
 
-*     ---- นอก string literal ----
+      " นอก string literal
       CASE lv_char.
 
         WHEN `"`.
@@ -820,7 +822,7 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
         WHEN `{` OR `[`.
           DATA(lv_next) = COND string( WHEN lv_off + 1 < lv_len
                                        THEN substring( val = iv_json off = lv_off + 1 len = 1 ) ).
-*         container ว่างเขียนติดกันไปเลย
+          " container ว่างเขียนติดกันไปเลย
           IF ( lv_char = `{` AND lv_next = `}` ) OR ( lv_char = `[` AND lv_next = `]` ).
             lv_line = lv_line && lv_char && lv_next.
             lv_off  = lv_off + 2.

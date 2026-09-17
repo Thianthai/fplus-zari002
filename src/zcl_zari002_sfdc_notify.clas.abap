@@ -5,9 +5,10 @@ CLASS zcl_zari002_sfdc_notify DEFINITION
   PUBLIC SECTION.
 
     TYPES:
-      "! 1 record = 1 Integration_Log__c บน Salesforce
-      "! class นี้ไม่รู้จัก ZARI002 — ผู้เรียกกำหนด interface กับ request_body เอง
-      "! ZARI003 ใช้ตัวเดียวกันได้โดยส่ง interface ของตัวเองและใส่เลข FI doc ใน request_body
+      " 1 record = 1 Integration Log บน Salesforce
+      " Caller กำหนด interface กับ request_body เอง
+      " ZARI002 ใช้ตัวเดียวกันได้โดยส่ง interface ของตัวเองแต่ไม่ใส่ request_body
+      " ZARI003 ใช้ตัวเดียวกันได้โดยส่ง interface ของตัวเองและใส่เลข FI Document ใน request_body
       BEGIN OF ty_record,
         interface    TYPE string,
         reference_id TYPE ztar_i002_pymt-salesforce_id,
@@ -17,31 +18,35 @@ CLASS zcl_zari002_sfdc_notify DEFINITION
       END OF ty_record.
 
     CONSTANTS:
-      "! SAP รับข้อมูลเข้า table สำเร็จ → Status__c = Success
-      gc_status_success TYPE c LENGTH 1 VALUE 'S',
-      "! SAP ไม่รับข้อมูล → Status__c = Failed · Message__c บังคับ
-      gc_status_error   TYPE c LENGTH 1 VALUE 'E',
-      "! ค่า Interface__c ของ ZARI002 — ผู้เรียกส่งเข้ามาเอง ไม่ใช่ default
-      gc_interface_payment TYPE string VALUE 'Payment Response',
-      "! HTTP status ที่ Salesforce ตอบเมื่อ insert สำเร็จ · ไม่มีเคส 200
-      gc_http_created   TYPE i VALUE 201.
+      " SAP รับข้อมูลเข้า table สำเร็จ
+      " Status__c = Success
+      gc_status_success    TYPE c LENGTH 1 VALUE 'S',
+      " SAP ไม่รับข้อมูล
+      " Status__c = Failed
+      gc_status_error      TYPE c LENGTH 1 VALUE 'E',
+      " ZARI002 Caller ส่งค่า Interface__c เข้ามาเอง ไม่ใช่ default
+      gc_interface_payment TYPE string     VALUE 'Payment Response',
+      " HTTP status ที่ Salesforce ตอบเมื่อ insert สำเร็จ
+      gc_http_created      TYPE i VALUE 201.
 
-    "! สร้าง JSON ให้ตรงชื่อ field ของ sObject (`Interface__c` ฯลฯ)
-    "! ใช้ builder เพราะ transformation อัตโนมัติจะทำ `__c` พัง · escape ข้อความให้ด้วย
-    "! `Request_Body__c` ไม่ส่ง key ถ้าว่าง — field เป็น optional
+    " สร้าง JSON ให้ตรงชื่อ field ของ sObject (เช่น `Interface__c`)
+    " ใช้ builder เพราะ transformation อัตโนมัติจะทำ `__c` พัง และ escape ข้อความให้ด้วย
+    " `Request_Body__c` ไม่ส่ง key ถ้าว่าง (field เป็น optional)
     CLASS-METHODS build_payload
       IMPORTING is_record        TYPE ty_record
       RETURNING VALUE(rv_result) TYPE string.
 
-    "! POST 1 record ไป Integration_Log__c ผ่าน communication arrangement
-    "! คืน HTTP status ที่ได้ (201 = สำเร็จ) · คืน 0 เมื่อต่อไม่ถึงเลย
-    "! ไม่โยน exception — ผู้เรียกตัดสินเองว่าจะทำอะไรกับผล
+    " POST 1 record ไป Integration_Log__c ผ่าน Communication Arrangement
+    " คืน HTTP status ที่ได้ (201 = สำเร็จ) หรือคืน 0 เมื่อต่อไม่ถึงเลย
+    " ไม่โยน exception ให้ Caller ตัดสินเองว่าจะทำอะไรกับผล
     METHODS notify
       IMPORTING is_record             TYPE ty_record
       RETURNING VALUE(rv_http_status) TYPE i.
 
-    "! พิสูจน์ว่า arrangement + OAuth ใช้ได้ โดยไม่ต้องยิง payload จริง
-    "! GET /services/data/ ตอบ 200 เมื่อ token ถูกต้อง · 401 = client id/secret ผิด · 0 = ต่อไม่ถึง
+    " ทดสอบว่า Communication Arrangement + OAuth ใช้ได้ โดยไม่ต้องยิง payload จริง
+    " GET /services/data/ ตอบ 200 เมื่อ token ถูกต้อง
+    " ตอบ 401 = client id/secret ผิด
+    " ตอบ 0 = ต่อไม่ถึง
     METHODS check_connection
       RETURNING VALUE(rv_status) TYPE i.
 
@@ -50,14 +55,14 @@ CLASS zcl_zari002_sfdc_notify DEFINITION
     CONSTANTS:
       gc_comm_scenario TYPE sxco_cds_object_name VALUE 'ZCS_PAYMENT_RESULT',
       gc_service_id    TYPE c LENGTH 40          VALUE 'ZARI002_PAYMENT_RESULT_REST',
-      "! Salesforce standard sObject API — spec IN #4
-      gc_path_log      TYPE string VALUE '/services/data/v66.0/sobjects/Integration_Log__c',
-      "! endpoint มาตรฐานของ Salesforce สำหรับเช็ค token — ไม่ใช่ของโปรเจกต์
-      gc_path_ping     TYPE string VALUE '/services/data/',
-      "! Message__c รับได้ 4000 ตัว — ตัดก่อนส่ง ไม่งั้นได้ STRING_TOO_LONG ทั้ง record
-      gc_message_max   TYPE i VALUE 4000.
+      " Salesforce standard sObject API
+      gc_path_log      TYPE string               VALUE '/services/data/v66.0/sobjects/Integration_Log__c',
+      " Endpoint มาตรฐานของ Salesforce สำหรับเช็ค token
+      gc_path_ping     TYPE string               VALUE '/services/data/',
+      " Message__c รับได้ 4000 ตัว ตัดก่อนส่ง ไม่งั้นได้ STRING_TOO_LONG ทั้ง record
+      gc_message_max   TYPE i                    VALUE 4000.
 
-    "! สร้าง HTTP client ผ่าน arrangement — จุดเดียวที่รู้จัก scenario / service id
+    " สร้าง HTTP client ผ่าน Communication Arrangement
     METHODS create_client
       RETURNING VALUE(ro_client) TYPE REF TO if_web_http_client
       RAISING   cx_http_dest_provider_error
@@ -79,7 +84,7 @@ CLASS zcl_zari002_sfdc_notify IMPLEMENTATION.
       )->add_member( 'Status__c'       )->add_string( COND #( WHEN is_record-status = gc_status_success
                                                               THEN 'Success' ELSE 'Failed' ) ).
 
-*   Message__c บังคับเฉพาะ Failed แต่ส่งทั้ง 2 กรณีเพื่อให้ Success มีข้อความอ่านได้ในหน้า SFDC
+    " Message__c บังคับเฉพาะ Failed แต่ส่งทั้ง 2 กรณีเพื่อให้ Success มีข้อความอ่านได้ในหน้า SFDC
     IF is_record-message IS NOT INITIAL.
       lo_builder->add_member( 'Message__c' )->add_string( substring( val = is_record-message
                                                                      len = nmin( val1 = strlen( is_record-message )
@@ -123,7 +128,8 @@ CLASS zcl_zari002_sfdc_notify IMPLEMENTATION.
         lo_client->close( ).
 
       CATCH cx_root.
-*       ต่อไม่ถึง / arrangement ไม่มี — คืน 0 ให้ผู้เรียกบันทึกว่าไม่ได้ส่ง
+        " ต่อไม่ถึง หรือ Communication Arrangement พัง
+        " คืน 0 ให้ผู้เรียกบันทึกว่าไม่ได้ส่ง
         rv_http_status = 0.
     ENDTRY.
 

@@ -11,7 +11,7 @@ CLASS zcl_zari002_validator DEFINITION
       tt_item    TYPE STANDARD TABLE OF ztar_i002_item WITH EMPTY KEY.
 
     TYPES:
-      "! ผลการตรวจ 1 ข้อ — ผู้เรียกแปลงเป็น message ต่อ
+      " เก็บผลการ validate ให้ Caller นำไปแปลงเป็น message ต่อ
       BEGIN OF ty_finding,
         msgno              TYPE symsgno,
         msgv1              TYPE string,
@@ -24,56 +24,58 @@ CLASS zcl_zari002_validator DEFINITION
       tt_finding TYPE STANDARD TABLE OF ty_finding WITH EMPTY KEY.
 
     CONSTANTS:
-      "! SAP payment method ที่หมายถึงเช็ค — ตัวตัดสิน conditional mandatory
       gc_pymt_method_cheque   TYPE ztar_i002_pymt-sap_payment_method VALUE 'A',
       gc_pymt_method_transfer TYPE ztar_i002_pymt-sap_payment_method VALUE 'T'.
 
-    "! แปลงคำจาก Salesforce เป็น SAP payment method code
-    "! คืนค่าว่างถ้าไม่รู้จักคำนั้น — ผู้เรียกออก message 202
-    "! ⚠️ mapping อยู่ที่นี่ที่เดียว ย้ายไป constant table ทีหลังแก้แค่ method นี้ (OQ-02)
+    " แปลงคำจาก Salesforce เป็น SAP internal payment method code
+    " คืนค่าว่างถ้าไม่รู้จักคำนั้น และ Caller ออก message 202
+    " mapping อยู่ที่นี่ที่เดียว ย้ายไป constant table ทีหลังแก้แค่ method นี้ (OQ-02)
     CLASS-METHODS convert_payment_method
       IMPORTING iv_payment_method TYPE ztar_i002_pymt-payment_method
       RETURNING VALUE(rv_result)  TYPE ztar_i002_pymt-sap_payment_method.
 
-    "! เติม 0 ข้างหน้าให้ครบ 10 หลัก — ใช้กับ gl_account และ customer_code
-    "! ค่าที่ pad มาแล้วส่งเข้ามาซ้ำได้ ผลลัพธ์เท่าเดิม
     CLASS-METHODS to_internal_key
       IMPORTING iv_value         TYPE clike
       RETURNING VALUE(rv_result) TYPE ztar_i002_pymt-gl_account.
 
-    "! 100–106 · field บังคับของ header
+    " Message 100–106
     CLASS-METHODS check_payment_mandatory
       IMPORTING is_payment        TYPE ty_payment
       RETURNING VALUE(rt_finding) TYPE tt_finding.
 
-    "! 001 · 002 · ต้องมี item และจำนวนต้องตรงกับที่แจ้งมา
+    " Message 001, 002
+    " จำนวน item ต้องตรงกับที่ระบุมา
     CLASS-METHODS check_number_of_items
       IMPORTING iv_number_of_items TYPE ztar_i002_pymt-number_of_items_in_payment
                 iv_item_count      TYPE i
       RETURNING VALUE(rt_finding)  TYPE tt_finding.
 
-    "! 003 · due_on ต้องไม่ก่อน issue_date
+    " Message 003
+    " due_on ต้องไม่ก่อน issue_date
     CLASS-METHODS check_dates
       IMPORTING is_payment        TYPE ty_payment
       RETURNING VALUE(rt_finding) TYPE tt_finding.
 
-    "! 107–110 · field ที่บังคับเมื่อจ่ายด้วยเช็ค
+    " Message 107–110
+    " field ที่บังคับเมื่อจ่ายด้วยเช็ค
     CLASS-METHODS check_cheque_fields
       IMPORTING is_payment        TYPE ty_payment
       RETURNING VALUE(rt_finding) TYPE tt_finding.
 
-    "! 011 · ผลรวม amount_paid ของทุก item ต้องมากกว่า 0
+    " Message 011
+    " ผลรวม amount_paid ของทุก item ต้องมากกว่า 0
     CLASS-METHODS check_amount_paid_total
       IMPORTING iv_salesforce_id  TYPE ztar_i002_pymt-salesforce_id
                 it_item           TYPE tt_item
       RETURNING VALUE(rt_finding) TYPE tt_finding.
 
-    "! 111 · 005 · item id ต้องมี และห้ามซ้ำกันเองภายใน payment เดียวกัน
+    " Message 111, 005
+    " item id ต้องมี และห้ามซ้ำกันเองภายใน payment เดียวกัน
     CLASS-METHODS check_item_ids
       IMPORTING it_item           TYPE tt_item
       RETURNING VALUE(rt_finding) TYPE tt_finding.
 
-    "! 112–118 · 006 · field บังคับของ item + รูปแบบ partial flag
+    " Message 112–118, 006
     CLASS-METHODS check_item_mandatory
       IMPORTING is_item           TYPE ty_item
       RETURNING VALUE(rt_finding) TYPE tt_finding.
@@ -86,7 +88,7 @@ CLASS zcl_zari002_validator IMPLEMENTATION.
 
   METHOD convert_payment_method.
 
-*   mapping ชั่วคราว — รู้แค่ 2 คำที่ Salesforce ยืนยันแล้ว (OQ-02)
+    " mapping ชั่วคราว — รู้แค่ 2 คำที่ Salesforce ยืนยันแล้ว (OQ-02)
     rv_result = SWITCH #( to_upper( condense( CONV string( iv_payment_method ) ) )
                           WHEN 'CHEQUE'   THEN gc_pymt_method_cheque
                           WHEN 'TRANSFER' THEN gc_pymt_method_transfer
@@ -250,7 +252,7 @@ CLASS zcl_zari002_validator IMPLEMENTATION.
     LOOP AT it_item ASSIGNING FIELD-SYMBOL(<lfs_item>).
 
       IF <lfs_item>-salesforce_item_id IS INITIAL.
-*       ไม่มี id ให้อ้างถึง จึงออก message ที่ไม่ระบุรายการ แล้วข้ามการเช็คซ้ำ
+        " ไม่มี id ให้อ้างถึง เลยออก message ที่ไม่ระบุรายการ แล้วข้ามการเช็คซ้ำ
         IF NOT line_exists( rt_finding[ msgno = '111' ] ).
           APPEND VALUE #( msgno = '111'
                           field = 'salesforce_item_id'
@@ -261,8 +263,8 @@ CLASS zcl_zari002_validator IMPLEMENTATION.
 
       INSERT <lfs_item>-salesforce_item_id INTO TABLE lt_seen.
       IF sy-subrc <> 0.
-*       check นี้วนหลาย item ในครั้งเดียว ผู้เรียกส่ง item id ค่าเดียวให้ไม่ได้
-*       finding จึงต้องบอกเองว่าเป็นของ item ไหน
+        " check นี้วนหลาย item ในครั้งเดียว
+        " Caller ส่ง item id ค่าเดียวให้ไม่ได้ finding จึงต้องบอกเองว่าเป็นของ item ไหน
         APPEND VALUE #( msgno              = '005'
                         msgv1              = |{ <lfs_item>-salesforce_item_id }|
                         field              = 'salesforce_item_id'

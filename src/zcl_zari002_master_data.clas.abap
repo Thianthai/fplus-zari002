@@ -20,7 +20,7 @@ CLASS zcl_zari002_master_data IMPLEMENTATION.
     ENDIF.
 
     lr_company_code = VALUE #( FOR <lfs_cc> IN it_company_code
-                               ( sign = 'I' option = 'EQ' low = <lfs_cc> ) ).
+                             ( sign = 'I' option = 'EQ' low = <lfs_cc> ) ).
 
     SELECT FROM I_CompanyCode
       FIELDS CompanyCode AS company_code,
@@ -41,18 +41,14 @@ CLASS zcl_zari002_master_data IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-*   จำกัดขอบเขตด้วย 2 range แล้วค่อยจับคู่ในหน่วยความจำ
-*   เพราะ SQL เทียบคู่ (company_code, gl_account) พร้อมกันไม่ได้
     LOOP AT it_gl_key ASSIGNING FIELD-SYMBOL(<lfs_key>).
 
       IF NOT line_exists( lr_company_code[ low = <lfs_key>-company_code ] ).
-        APPEND VALUE #( sign = 'I' option = 'EQ' low = <lfs_key>-company_code )
-               TO lr_company_code.
+        APPEND VALUE #( sign = 'I' option = 'EQ' low = <lfs_key>-company_code ) TO lr_company_code.
       ENDIF.
 
       IF NOT line_exists( lr_gl_account[ low = <lfs_key>-gl_account ] ).
-        APPEND VALUE #( sign = 'I' option = 'EQ' low = <lfs_key>-gl_account )
-               TO lr_gl_account.
+        APPEND VALUE #( sign = 'I' option = 'EQ' low = <lfs_key>-gl_account ) TO lr_gl_account.
       ENDIF.
 
     ENDLOOP.
@@ -86,13 +82,11 @@ CLASS zcl_zari002_master_data IMPLEMENTATION.
     LOOP AT it_payment_method_key ASSIGNING FIELD-SYMBOL(<lfs_pm>).
 
       IF NOT line_exists( lr_country[ low = <lfs_pm>-country ] ).
-        APPEND VALUE #( sign = 'I' option = 'EQ' low = <lfs_pm>-country )
-               TO lr_country.
+        APPEND VALUE #( sign = 'I' option = 'EQ' low = <lfs_pm>-country ) TO lr_country.
       ENDIF.
 
       IF NOT line_exists( lr_payment_method[ low = <lfs_pm>-payment_method ] ).
-        APPEND VALUE #( sign = 'I' option = 'EQ' low = <lfs_pm>-payment_method )
-               TO lr_payment_method.
+        APPEND VALUE #( sign = 'I' option = 'EQ' low = <lfs_pm>-payment_method ) TO lr_payment_method.
       ENDIF.
 
     ENDLOOP.
@@ -123,7 +117,7 @@ CLASS zcl_zari002_master_data IMPLEMENTATION.
     ENDIF.
 
     lr_customer = VALUE #( FOR <lfs_cust> IN it_customer
-                           ( sign = 'I' option = 'EQ' low = <lfs_cust> ) ).
+                         ( sign = 'I' option = 'EQ' low = <lfs_cust> ) ).
 
     SELECT FROM I_Customer WITH PRIVILEGED ACCESS
       FIELDS Customer AS customer
@@ -148,18 +142,14 @@ CLASS zcl_zari002_master_data IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-*   จำกัดขอบเขตด้วย 2 range แล้วค่อยจับคู่ในหน่วยความจำ
-*   เพราะ SQL เทียบคู่ (country, bank) พร้อมกันไม่ได้
     LOOP AT it_bank_key ASSIGNING FIELD-SYMBOL(<lfs_bank>).
 
       IF NOT line_exists( lr_country[ low = <lfs_bank>-country ] ).
-        APPEND VALUE #( sign = 'I' option = 'EQ' low = <lfs_bank>-country )
-               TO lr_country.
+        APPEND VALUE #( sign = 'I' option = 'EQ' low = <lfs_bank>-country ) TO lr_country.
       ENDIF.
 
       IF NOT line_exists( lr_bank[ low = <lfs_bank>-bank ] ).
-        APPEND VALUE #( sign = 'I' option = 'EQ' low = <lfs_bank>-bank )
-               TO lr_bank.
+        APPEND VALUE #( sign = 'I' option = 'EQ' low = <lfs_bank>-bank ) TO lr_bank.
       ENDIF.
 
     ENDLOOP.
@@ -190,10 +180,8 @@ CLASS zcl_zari002_master_data IMPLEMENTATION.
     ENDIF.
 
     lr_billing = VALUE #( FOR <lfs_doc> IN it_billing_document
-                          ( sign = 'I' option = 'EQ' low = <lfs_doc> ) ).
+                        ( sign = 'I' option = 'EQ' low = <lfs_doc> ) ).
 
-*   เงื่อนไขตาม functional spec ข้อ 3 ไม่เพิ่มอะไร — เจอ row = document ยังเปิดอยู่
-*   ไม่เจอ = clear / reverse / ไม่มีใน FI → ผู้เรียกออก 206
     SELECT FROM I_OperationalAcctgDocItem WITH PRIVILEGED ACCESS
       FIELDS OriginalReferenceDocument AS billing_document
       WHERE FinancialAccountType      = 'D'
