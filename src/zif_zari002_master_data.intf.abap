@@ -55,35 +55,34 @@ INTERFACE zif_zari002_master_data
 
   "! อ่าน currency และ country ของ company code
   "! ใช้ทั้งใน setPaymentDefaults (เอาค่าไปเติม) และ validateCompanyCode (เช็คว่ามีจริง)
-  "! company code ที่ไม่มีจริง **จะไม่อยู่ในผลลัพธ์** — ผู้เรียกตรวจจากการที่มันหายไป
   METHODS get_company_codes
     IMPORTING it_company_code  TYPE tt_company_code
     RETURNING VALUE(rt_result) TYPE tt_company_code_info.
 
-  "! คืน GL account ที่ **ไม่มีจริง** ใน company code นั้น
+  "! คืน GL account ที่ไม่มีจริงใน company code นั้น
   METHODS find_unknown_gl_accounts
     IMPORTING it_gl_key        TYPE tt_gl_key
     RETURNING VALUE(rt_result) TYPE tt_gl_key.
 
-  "! คืน payment method code ที่ **ไม่มีจริง** ในประเทศนั้น
+  "! คืน payment method code ที่ไม่มีจริงในประเทศนั้น
   METHODS find_unknown_pymt_methods
     IMPORTING it_payment_method_key TYPE tt_payment_method_key
     RETURNING VALUE(rt_result)      TYPE tt_payment_method_key.
 
-  "! คืน customer ที่ **ไม่มีจริง**
+  "! คืน customer ที่ไม่มีจริง
   METHODS find_unknown_customers
     IMPORTING it_customer      TYPE tt_customer
     RETURNING VALUE(rt_result) TYPE tt_customer.
 
-  "! คืน bank ที่ **ไม่มีจริง** ในประเทศนั้น
-  "! ค่าต้องตรงกับ I_Bank_2-BankInternalID เป๊ะ — field ไม่มี conversion routine
-  "! จึงไม่ pad ให้ ต้นทางต้องส่งมาถูกเอง
+  "! คืน bank ที่ไม่มีจริงในประเทศนั้น
+  "! ค่าต้องตรงกับ I_Bank_2-BankInternalID — field ไม่มี conversion routine
+  "! ไม่ pad ให้ ต้นทางต้องส่งมาถูกเอง
   METHODS find_unknown_banks
     IMPORTING it_bank_key      TYPE tt_bank_key
     RETURNING VALUE(rt_result) TYPE tt_bank_key.
 
-  "! คืน billing document ที่**ไม่มี** open item ใน FI — ถูก clear / reverse / ไม่มีเลย
-  "! เงื่อนไขตาม functional spec ข้อ 3: FinancialAccountType = D · ClearingJournalEntry ว่าง
+  "! คืน billing document ที่ไม่มี open item ใน FI — ถูก clear / reverse / ไม่มีเลย
+  "! เงื่อนไข FinancialAccountType = D / ClearingJournalEntry ว่าง
   METHODS find_cleared_documents
     IMPORTING it_billing_document TYPE tt_billing_document
     RETURNING VALUE(rt_result)    TYPE tt_billing_document.

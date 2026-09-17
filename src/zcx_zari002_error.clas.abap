@@ -25,10 +25,10 @@ CLASS zcx_zari002_error DEFINITION
     DATA gv_msgv3 TYPE string READ-ONLY.
     DATA gv_msgv4 TYPE string READ-ONLY.
 
-    " สร้าง exception พร้อม message จาก message class ZARI002
-    " @parameter textid   | message key — ไม่ระบุจะใช้ ZARI002/900
-    " @parameter previous | exception ก่อนหน้า สำหรับ chaining
-    " @parameter iv_msgv1 | ค่าแทน placeholder &1
+    "! สร้าง exception พร้อม message จาก message class ZARI002
+    "! @parameter textid   | message key — ไม่ระบุจะใช้ ZARI002/900
+    "! @parameter previous | exception ก่อนหน้า สำหรับ chaining
+    "! @parameter iv_msgv1 | ค่าแทน placeholder &1
     METHODS constructor
       IMPORTING
         textid   LIKE if_t100_message=>t100key OPTIONAL
