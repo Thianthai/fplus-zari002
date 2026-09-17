@@ -36,7 +36,7 @@ CLASS zcl_zari002_processor DEFINITION
     "! ฉีด dependency ได้เพื่อให้ unit test ไม่แตะ master data จริงและไม่ยิง HTTP
     METHODS constructor
       IMPORTING io_master_data TYPE REF TO zif_zari002_master_data OPTIONAL
-                io_notify      TYPE REF TO zcl_zari003_sfdc_notify OPTIONAL.
+                io_notify      TYPE REF TO zcl_zari002_sfdc_notify OPTIONAL.
 
     "! flow เดียวจบ: parse → normalize → validate → save → callback
     METHODS process
@@ -46,7 +46,7 @@ CLASS zcl_zari002_processor DEFINITION
   PRIVATE SECTION.
 
     DATA go_master_data TYPE REF TO zif_zari002_master_data.
-    DATA go_notify      TYPE REF TO zcl_zari003_sfdc_notify.
+    DATA go_notify      TYPE REF TO zcl_zari002_sfdc_notify.
 
     "! เตรียม payment ให้พร้อมลง table — UUID · key padding · แปลง payment method · admin field
     "! ถ้า UUID สร้างไม่ได้ คืน error กลับมาแบบเดียวกับ validate( ) ให้ process( ) รวมเข้าเส้นทางเดียวกัน
@@ -150,7 +150,7 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
                              ELSE NEW zcl_zari002_master_data( ) ).
 
     go_notify = COND #( WHEN io_notify IS BOUND THEN io_notify
-                        ELSE NEW zcl_zari003_sfdc_notify( ) ).
+                        ELSE NEW zcl_zari002_sfdc_notify( ) ).
 
   ENDMETHOD.
 
@@ -596,11 +596,11 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
 
   METHOD send_callback.
 
-    DATA lt_result TYPE zcl_zari003_sfdc_notify=>tt_result.
+    DATA lt_result TYPE zcl_zari002_sfdc_notify=>tt_result.
 
     DATA(lv_status) = COND #( WHEN it_error IS INITIAL
-                              THEN zcl_zari003_sfdc_notify=>gc_status_success
-                              ELSE zcl_zari003_sfdc_notify=>gc_status_error ).
+                              THEN zcl_zari002_sfdc_notify=>gc_status_success
+                              ELSE zcl_zari002_sfdc_notify=>gc_status_error ).
 
 *   error ที่ระบุ item ได้ ให้ไปอยู่กับ item นั้น · ที่เหลือเป็น error ระดับ payment
 *   ใช้กับทุกบรรทัดเพราะ reject-all — ทั้งใบตกไปด้วยกัน
