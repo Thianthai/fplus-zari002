@@ -31,7 +31,7 @@
 
 | OQ-16 | payload เดียวที่มี 2 item ใช้ `billing_document` ตัวเดียวกัน — `validateItemDuplicate` ปล่อยผ่าน เพราะตอน validate ยังไม่มีอะไรใน table ให้ชน · **ต้องรู้ก่อนว่าธุรกิจมีเคสที่ 1 ใบแจ้งหนี้ถูกแบ่งจ่าย 2 บรรทัดในใบเดียวกันไหม** ถ้ามีจริงการกันไว้จะไปบล็อกของที่ถูกต้อง | Salesforce / business | Phase 4 | ไม่บล็อกอะไร — เป็น defensive check ไม่ใช่ requirement · ถ้าจะเพิ่มก็แค่เช็คภายใน `lt_item` ก่อนยิง SELECT | ⬜ |
 
-| OQ-17 | contract ยิงผลรับกลับ SFDC — **auth ปิดแล้ว 2026-09-17** OAuth 2.0 client credentials ผ่าน `ZCS_PAYMENT_RESULT` / `SFDC_DEV` · `check_connection( )` = 200 · **เหลือ data API**: endpoint · รูปแบบ JSON (ตอนนี้ mock `/services/apexrest/PaymentResult` + array ของ `ty_result`) | Salesforce | Phase 3 | `notify( )` ยิงไปที่ mock path → 404 เงียบ จนกว่าจะได้ spec | 🟨 |
+| OQ-17 | contract ยิงผลรับกลับ SFDC — **ปิดแล้ว 2026-09-17** spec IN #4: `POST /services/data/v66.0/sobjects/Integration_Log__c` 1 record/payment · field `Interface__c` `Reference_Id__c` `Direction__c` `Status__c` `Message__c` · `201` = รับ · auth ผ่าน comm arrangement · ยิงจริงได้ `201` | — | Phase 3 | — | ✅ |
 | OQ-18 | response ของ API — **ปิดแล้ว 2026-09-16** SBPA เทสจริงบนโครง error-only + `Status` 3 ค่า มาระยะหนึ่ง ไม่มี issue เรื่องโครงกลับมา · ถือว่ายอมรับ | — | Phase 4 | — | ✅ |
 
 | OQ-19 | สิทธิ์อ่าน master data ของ `SBPA_DEV` — **ปิดแล้ว 2026-09-04** ใช้ `WITH PRIVILEGED ACCESS` แทนการขอ business role · ทำกับ `I_GLAccountInCompanyCode` `I_Customer` `I_Bank_2` · `I_CompanyCode` กับ `I_PaymentMethod` query ได้อยู่แล้วไม่ต้องทำ | — | Phase 5 | — | ✅ |
@@ -42,7 +42,7 @@
 | OQ-25 | ใบที่ถูก reject ไม่มีร่องรอย — **ปิดแล้ว 2026-09-16 ด้วย Phase 5A** `HDRLOG` / `MSGLOG` เก็บทุกใบรวมใบตก พร้อม JSON ของใบนั้นและ error ทุกบรรทัด · ดูได้จาก monitor | — | Phase 5 | — | ✅ |
 | OQ-26 | SBPA ส่ง `RequestId` มาไหม — **ปิดแล้ว 2026-09-16** ส่งจริง รูปแบบ `20260915_105645_1056` (20 ตัว) · ขยาย field เป็น 25 แล้ว (OQ-22) | — | Phase 5 | — | ✅ |
 | OQ-23 | request ที่มีหลาย payment แล้วบางใบตก — ตอนนี้ใบที่ผ่าน**ถูก commit ไปแล้ว** ใบที่ตกไม่ถูกบันทึก · SBPA ต้องรับสภาพ "request สำเร็จบางส่วน" ได้และส่งเฉพาะใบที่ตกกลับมาใหม่ ไม่ใช่ส่งทั้ง request ซ้ำ (จะติด duplicate ทันที) | SBPA | Phase 5 | ไม่บล็อก — แต่ response **ไม่ได้บอกตรง ๆ** ว่าใบไหนเข้าไปแล้ว SBPA ต้องหักลบเอาจากใบที่ไม่โผล่ใน `Errors` (กลับมาเป็นแบบนี้ 2026-09-10) · ถ้า SBPA คาดหวัง all-or-nothing ต้องรื้อ `process( )` ให้ commit ครั้งเดียวตอนจบ | ⬜ |
-| OQ-24 | `notify( )` ถูกเรียก**ในลูป payment** = 1 request ที่มี 5 payment ยิง 5 ครั้ง · ควรเป็นครั้งเดียวต่อ request หรือไม่ | Salesforce | Phase 5 | ผูกกับ OQ-17 — ตอบพร้อมกันตอนได้ contract | ⬜ |
+| OQ-24 | callback กี่ครั้งต่อ request — **ปิดแล้ว 2026-09-17** spec กำหนด 1 record = 1 payment → ยิง 1 ครั้งต่อ payment ท้าย loop | — | Phase 5 | — | ✅ |
 
 ## วิธีใช้
 
@@ -293,7 +293,6 @@ functional + SBPA เทสจริงร่วมกันอยู่แล�
 |---|---|---|
 | business rule ที่ยังไม่นิยาม (ที่ว่างใน `validate( )`) | OQ-05 · 08 · 10 · 16 | FI / Salesforce |
 | master data / config | OQ-02 · 03 · 04 | FI |
-| แจ้งผลรับกลับ SFDC (ของ ZARI002) | OQ-17 · 24 | Salesforce |
 | พฤติกรรมที่ SBPA ต้องรู้ | OQ-14 · 23 | SBPA — เทสจริงจะบอกเอง |
 | volume | OQ-07 | ใช้จริง |
 
@@ -344,3 +343,21 @@ credentials แทนเขียน token flow เอง · เหตุผล�
 
 **เหลือ OQ-17 ครึ่งหลัง**: data API spec จาก SFDC → แก้ `gc_path_result` + `build_payload( )`
 · และตัดสิน OQ-24 (ยิงต่อใบหรือต่อ request) กับว่าจะเขียนผลลง `salesforce_status` ไหม
+
+
+### Callback ไป SFDC เสร็จ — 2026-09-17
+
+**ปิด OQ-17 และ OQ-24** — spec IN #4 มาครบ: Salesforce standard sObject API `Integration_Log__c`
+1 record ต่อ 1 payment · ยิงจริงได้ `201` · **API ตัวเดียวกันนี้ ZARI003 จะใช้ส่งเลข FI doc ด้วย**
+class จึงออกแบบให้ไม่รู้จัก ZARI002 — `Interface__c` กับ `Request_Body__c` เป็นของผู้เรียก
+
+**ตัดสินใจ 3 ข้อ** (D1–D3 ในบทสนทนา):
+- `Request_Body__c` ไม่ส่ง — ZARI002 ไม่ได้สร้าง document ให้อ้าง
+- ผล notify ลง `HDRLOG-salesforce_status` (`S` = 201 · `E` อื่น ๆ) + `salesforce_message` = HTTP code
+  → **monitor เห็นทันทีว่าใบไหน SFDC ไม่ได้รับ** — ปิดช่อง fire-and-forget ที่ค้างตั้งแต่ Phase 3
+- `Message__c` = msgtx ต่อกันด้วย `, ` ไม่มี code · สำเร็จใช้ข้อความ `300`
+
+**ที่ต้องรู้**: ข้อความ `300` (`All payments saved successfully`) เป็นคำระดับ request แต่ถูกส่งต่อ 1 ใบ
+· ถ้าอยากเปลี่ยนแก้ที่ message class ที่เดียว
+
+**เหลือเปิด 8 ข้อ** — ไม่มีข้อไหนเกี่ยวกับ code ที่ยังต้องเขียน ยกเว้น OQ-05 (ที่ว่างตัวสุดท้าย)

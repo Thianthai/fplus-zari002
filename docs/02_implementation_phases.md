@@ -116,7 +116,7 @@ reject แล้วไม่เหลือ row · duplicate ถูกจับ 
 | 5.3 | Communication System `SBPA_DEV` / User `SBPA_DEV` / Arrangement `ZCS_INCOMING_PYMT` บน **IA5/100** | ผู้ใช้ (Fiori) | ✅ |
 | 5.4 | ~~Business role ให้ `SBPA_DEV`~~ — **แก้ด้วยวิธีอื่นแล้ว 2026-09-04** ใช้ `WITH PRIVILEGED ACCESS` ใน `ZCL_ZARI002_MASTER_DATA` ข้าม DCL ไปเลย ไม่ต้องขอ role · เหตุผล: มีแต่ SBPA เรียก ไม่ใช่ user จริง | — | ✅ |
 | 5.5 | ทดสอบ inbound จาก Postman นอก tenant | ร่วมกัน | 🟨 ยิงถึงแล้ว รอ 5.4 |
-| 5.6 | ทดสอบยิงผลกลับไป SFDC — **auth ✅** `check_connection( )` = 200 ผ่าน arrangement จริง · **data API ⬜** รอ spec (OQ-17) | ร่วมกัน | 🟨 |
+| 5.6 | ทดสอบยิงผลกลับไป SFDC — auth ✅ · data API ✅ ยิงจริงได้ `201` ผล ลง HDRLOG | ร่วมกัน | ✅ 2026-09-17 |
 
 ### ผลทดสอบครั้งแรกจาก Postman — 2026-08-31
 

@@ -77,7 +77,7 @@ SFDC ส่งข้อมูลให้ SBPA เป็น **ไฟล์ Excel
 | comm system | `SFDC_DEV` — **แชร์ข้าม RICEFW** มี inbound user ของ RICEFW อื่นอยู่ด้วย |
 | auth | **OAuth 2.0 client credentials โดย platform** — client id/secret อยู่ใน Communication System · token endpoint = URL เต็ม · Client Authentication = **Form Field** ตาม spec SFDC · ABAP ไม่เห็น token เลย |
 | พิสูจน์ | `check_connection( )` → `GET /services/data/` ผ่าน arrangement · `200` = ทั้ง chain ใช้ได้ |
-| data endpoint | ⬜ mock `/services/apexrest/PaymentResult` รอ spec (OQ-17) |
+| data endpoint | `POST /services/data/v66.0/sobjects/Integration_Log__c` — Salesforce standard sObject API · 1 record/payment · `Status__c` Success/Failed · `Message__c` = error ต่อกันด้วย `, ` · ผล (HTTP code) ลง `HDRLOG-salesforce_status/_message` |
 
 **ชื่อเคยผิด** — ระหว่าง 2–17 ก.ย. class ชื่อ `ZCL_ZARI003_SFDC_NOTIFY` เพราะเข้าใจว่า outbound
 ทั้งหมดเป็นของ ARI003 · แก้แล้วเมื่อ 2026-09-17: ARI003 = ผล post · ผลรับ = ZARI002
@@ -90,8 +90,9 @@ SFDC ส่งข้อมูลให้ SBPA เป็น **ไฟล์ Excel
 - ~~เขียน OAuth token flow เองใน ABAP~~ — ไม่มีที่เก็บ secret ที่ปลอดภัยใน ABAP Cloud
   และ platform ทำให้อยู่แล้ว
 
-⚠️ **ยังเหลือช่องว่าง** — `notify( )` เป็น fire and forget ถ้ายิงไม่สำเร็จไม่มีใครรู้ (บันทึกอยู่ใน
-log แล้วแต่ SFDC ไม่ได้รับ) · ตัดสินตอนได้ spec ว่าจะเขียนผลลง `salesforce_status` ไหม
+**ไม่ใช่ fire-and-forget แล้ว** — `notify( )` คืน HTTP status · processor เขียนลง `HDRLOG-salesforce_status`
+(`S` = 201 · `E` อื่น ๆ / 0) และ `salesforce_message` = code · ใบที่ SFDC ไม่ได้รับเห็นได้จาก monitor
+· ยังไม่ retry — ถ้าต้องการ ทำเป็น job อ่าน HDRLOG ที่ `salesforce_status = E` ทีหลังได้
 
 ### 1 request = หลาย payment (2026-08-31)
 
@@ -504,7 +505,7 @@ log เขียน**หลัง** business save เพราะต้องร
 | field | ตารางธุรกิจ | log |
 |---|---|---|
 | `HDRLOG-status` | `N` → ZARE002 เขียน `S`/`W`/`E` (ผล post) | **`S`/`E` ผลรับของ ZARI002** — `N`/`W` ไม่มีวันโผล่ |
-| `HDRLOG-salesforce_status` / `_message` | ARI003 เขียน | ว่างเสมอ |
+| `HDRLOG-salesforce_status` / `_message` | ARI003 เขียน (ผล post) | **ZARI002 เขียนผล notify** — `S`/`E` + HTTP code (เปลี่ยน 2026-09-17) |
 | `HDRLOG-request_body` | ไม่มี | JSON **ของใบนั้น** serialize จาก structure ดิบ + pretty-print · วันที่เป็น `20260815` เพราะ parse แปลงไปแล้ว |
 | `ITMLOG-reject_reason` | ZARE002 เขียน | ว่างเสมอ |
 | `MSGLOG-message` | — | `ZARI002/107 Cheque number is required ...` มี code นำหน้าให้ค้นได้ |

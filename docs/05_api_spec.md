@@ -347,22 +347,32 @@ API แปลงคำเป็น SAP payment method code ให้เอง
 
 ---
 
-## 9. Callback ไปหา Salesforce
+## 9. Callback ไปหา Salesforce — ผลการรับข้อมูล
 
-หลังจบการประมวลผล **SAP ยิง POST ไปที่ API ของ Salesforce** เพื่อแจ้งผล **รายบรรทัด**
+ZARI002 แจ้ง SFDC เองว่าใบไหนลง table ได้ (ใบที่ตกไม่มีใน table ให้ RICEFW อื่นอ่าน)
 
-| Field | Type | | ที่มา |
-|---|---|---|---|
-| Salesforce ID (Header) | CHAR(18) | R | `salesforce_id` |
-| Salesforce ID (Item) | CHAR(18) | R | `salesforce_item_id` — key ที่ SFDC ใช้จับคู่ |
-| Status | CHAR(1) | R | `S` = บันทึกสำเร็จ · `E` = ไม่บันทึก |
-| Error Message | CHAR(200) | C | มีเมื่อ `E` |
+| | |
+|---|---|
+| จังหวะ | ท้าย loop ของ**แต่ละ payment** หลัง save + log · 1 request 5 ใบ = 5 call |
+| Endpoint | `POST /services/data/v66.0/sobjects/Integration_Log__c` (Salesforce standard sObject API) |
+| Auth | OAuth 2.0 client credentials โดย Communication Arrangement `ZCA_PAYMENT_RESULT` |
+| สำเร็จ | `201` + `{"id":"...","success":true}` |
 
-**ยิงทั้งกรณีสำเร็จและไม่สำเร็จ** — เคส error ต้องยิงระหว่าง request เพราะ reject-all
-ไม่ได้บันทึก row ไว้ให้ตามไปแจ้งทีหลัง
+```json
+{ "Interface__c": "Payment Response",
+  "Reference_Id__c": "b0yfd000000GRsHAAW",
+  "Direction__c": "Inbound",
+  "Status__c": "Failed",
+  "Message__c": "Cheque number is required for payment method Cheque, Issue date is required for payment method Cheque" }
+```
 
-⚠️ **fire and forget** — ไม่เก็บสถานะว่าแจ้งไปแล้วหรือยัง (ตกลง 2026-08-31) ·
-ถ้า callback ล้ม ข้อมูลจะอยู่ใน SAP โดยที่ SFDC ไม่รู้ และ **retry ไม่ได้**
+| Field | ค่า |
+|---|---|
+| `Status__c` | `Success` = ใบเข้า table · `Failed` = ตก |
+| `Message__c` | ตก: ข้อความ error ทุกตัวต่อด้วย `, ` ไม่มี code · ผ่าน: `All payments saved successfully` · ตัด 4000 |
+| `Request_Body__c` | ไม่ส่ง |
 
-⚠️ `Status` ตัวนี้เป็นคนละตัวกับ `status` (`N`/`C`/`R`/`E`) และ `salesforce_status` (`S`/`W`/`E`)
-ที่เก็บใน table — ตัวนี้ตอบแค่ว่า "SAP รับข้อมูลได้ไหม"
+ผลของ call ลง `ZTAR_I002_HDRLOG` — `salesforce_status` `S`/`E` · `salesforce_message` = HTTP code
+· ดูใน monitor ได้ · **ไม่ retry**
+
+**API ตัวเดียวกันนี้ ZARI003 ใช้แจ้งผล post** — `Interface__c` คนละค่า · `Request_Body__c` ใส่เลข FI doc
