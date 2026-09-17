@@ -34,6 +34,7 @@ CLASS zcl_zari002_validator DEFINITION
       IMPORTING iv_payment_method TYPE ztar_i002_pymt-payment_method
       RETURNING VALUE(rv_result)  TYPE ztar_i002_pymt-sap_payment_method.
 
+    "! เติม 0 ข้างหน้าให้ครบ 10 หลัก — ใช้กับ field ที่มี conversion routine (GL / Customer)
     CLASS-METHODS to_internal_key
       IMPORTING iv_value         TYPE clike
       RETURNING VALUE(rv_result) TYPE ztar_i002_pymt-gl_account.

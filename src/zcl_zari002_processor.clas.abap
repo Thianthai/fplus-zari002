@@ -55,26 +55,37 @@ CLASS zcl_zari002_processor DEFINITION
                 ct_item         TYPE tt_item
       RETURNING VALUE(rt_error) TYPE tt_error.
 
+    "! ตรวจ payment 1 ใบ format > consistency > master data > duplicate
+    "! คืน error ทั้งหมดที่เจอ ไม่หยุดที่ตัวแรก
     METHODS validate
       IMPORTING is_payment      TYPE ztar_i002_pymt
                 it_item         TYPE tt_item
       RETURNING VALUE(rt_error) TYPE tt_error.
 
+    "! ตรวจกับ master data จริงผ่าน go_master_data
+    "! company code / GL / payment method / bank / customer / AR open item
     METHODS check_master_data
       IMPORTING is_payment      TYPE ztar_i002_pymt
                 it_item         TYPE tt_item
       RETURNING VALUE(rt_error) TYPE tt_error.
 
+    "! ซ้ำเมื่อมี row status N ที่ payment_document_no + billing_document เดียวกัน
+    "! ใบ E ไม่บล็อก (ส่งแก้ใหม่ได้)
+    "! ใบ S/W ถูก AR open item check ดักแทน
     METHODS check_duplicate
       IMPORTING is_payment       TYPE ztar_i002_pymt
                 it_item          TYPE tt_item
       RETURNING VALUE(rt_error) TYPE tt_error.
 
+    "! INSERT 2 business table + COMMIT
+    "! คืน false ถ้า INSERT พัง (ROLLBACK แล้ว)
     METHODS save
       IMPORTING is_payment       TYPE ztar_i002_pymt
                 it_item          TYPE tt_item
       RETURNING VALUE(rv_result) TYPE abap_bool.
 
+    "! ยิงผลรับ 1 record ไป Salesforce แล้วบันทึก HTTP status ลง HDRLOG
+    "! ต้องไม่ทำ request หลักพัง
     METHODS send_callback
       IMPORTING is_payment TYPE ztar_i002_pymt
                 it_item    TYPE tt_item
@@ -87,6 +98,7 @@ CLASS zcl_zari002_processor DEFINITION
                 iv_salesforce_item_id TYPE ztar_i002_item-salesforce_item_id OPTIONAL
       RETURNING VALUE(rt_error)       TYPE tt_error.
 
+    "! อ่านข้อความจาก message class ZARI002 พร้อม replace แทน &1–&4
     METHODS message_text
       IMPORTING iv_msgno         TYPE symsgno
                 iv_v1            TYPE string OPTIONAL
@@ -99,15 +111,15 @@ CLASS zcl_zari002_processor DEFINITION
     METHODS set_outcome
       CHANGING cs_result TYPE ty_result.
 
-    "! เขียน log 3 table สำหรับ payment ใบนี้ ทั้งผ่านและไม่ผ่าน | LUW แยกจาก business save
-    "! ถ้า log พังต้องไม่ทำ request หลักพัง | log เป็น priority รอง
+    "! เขียน log 3 table สำหรับ payment ใบนี้ ทั้งผ่านและไม่ผ่าน - LUW แยกจาก business save
+    "! ถ้า log พังต้องไม่ทำ request หลักพัง - log เป็น priority รอง
     METHODS save_log
       IMPORTING is_payment TYPE ty_payment
                 it_item    TYPE tt_item
                 it_error   TYPE tt_error
                 is_raw     TYPE zcl_zari002_http=>ty_payment.
 
-    "! HDRLOG จาก payment ที่ normalize แล้ว | status = ผลรับของ ZARI002 ไม่ใช่ผล post
+    "! HDRLOG จาก payment ที่ normalize แล้ว - status = ผลรับของ ZARI002 ไม่ใช่ผล post
     METHODS to_hdr_log
       IMPORTING is_payment       TYPE ty_payment
                 it_error         TYPE tt_error
@@ -119,7 +131,7 @@ CLASS zcl_zari002_processor DEFINITION
       IMPORTING it_item          TYPE tt_item
       RETURNING VALUE(rt_result) TYPE tt_itm_log.
 
-    "! MSGLOG 1 row ต่อ 1 error | area ตัดสินจาก salesforce_item_id | ใบที่ผ่านไม่มี row
+    "! MSGLOG 1 row ต่อ 1 error - area ตัดสินจาก salesforce_item_id - ใบที่ผ่านไม่มี row
     METHODS to_msg_log
       IMPORTING is_payment       TYPE ty_payment
                 it_error         TYPE tt_error

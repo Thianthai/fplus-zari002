@@ -26,6 +26,7 @@ CLASS zcl_zari002_json DEFINITION
   PROTECTED SECTION.
   PRIVATE SECTION.
 
+    "! ตัดตัวคั่น - / . ออก ให้เหลือ YYYYMMDD
     CLASS-METHODS to_internal_date
       IMPORTING iv_value         TYPE string
       RETURNING VALUE(rv_result) TYPE string.

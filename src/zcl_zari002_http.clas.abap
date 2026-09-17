@@ -70,9 +70,13 @@ CLASS zcl_zari002_http DEFINITION
       END OF ty_response.
 
     " Handle Methods ---------------------------------------------------
+    "! GET ไม่รองรับ 405 ใช้พิสูจน์ว่า routing ถึง handler
     METHODS handle_get
       CHANGING co_http_response TYPE REF TO if_web_http_response.
 
+    "! POST > processor
+    "! ตอบ JSON 200 เมื่อมีอย่างน้อย 1 ใบเข้า
+    "! ตอบ JSON 400 เมื่อไม่มีเลย
     METHODS handle_post
       IMPORTING io_http_request  TYPE REF TO if_web_http_request
       CHANGING  co_http_response TYPE REF TO if_web_http_response.
