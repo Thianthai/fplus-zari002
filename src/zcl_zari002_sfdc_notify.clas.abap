@@ -42,7 +42,7 @@ CLASS zcl_zari002_sfdc_notify DEFINITION
 
     CONSTANTS:
       gc_comm_scenario TYPE sxco_cds_object_name VALUE 'ZCS_PAYMENT_RESULT',
-      gc_service_id    TYPE c LENGTH 40          VALUE 'ZARI003_PAYMENT_RESULT_REST',
+      gc_service_id    TYPE c LENGTH 40          VALUE 'ZARI002_PAYMENT_RESULT_REST',
       "! ⬜ mock — รอ spec ของ data API จาก SFDC
       gc_path_result   TYPE string               VALUE '/services/apexrest/PaymentResult',
       "! endpoint มาตรฐานของ Salesforce สำหรับเช็ค token — ไม่ใช่ของโปรเจกต์
