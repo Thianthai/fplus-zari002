@@ -11,8 +11,8 @@
 |---|--------|-------------|---------|-----------|--------|
 | OQ-01 | `cheque_bank_branch` — **ปิดแล้ว 2026-09-04** เป็น `I_Bank_2-BankInternalID` ตรง ๆ ไม่ใช่ bank+branch ประกอบกัน · ทั้งสองฝั่งเป็น **CHAR 15** เท่ากัน · ข้อสรุปเดิมที่ว่า `0040129` ไม่มีในระบบ มาจากการดู master data ชุดที่ยังไม่ถูกต้องบน tenant | — | Phase 1 | — | ✅ |
 | OQ-02 | คำ `payment_method` จาก Salesforce — **ปิดแล้ว 2026-09-18** ยืนยัน 3 คำ: `Cheque`→`A` · `Cash`→`S` · `Transfer`→`T` (code จาก `I_PaymentMethod` TH) · ไม่มีคำเกิน 8 ตัว ไม่ต้องขยาย field | — | Phase 1 | — | ✅ |
-| OQ-03 | 🔴 `IsPaytMethForIncomingPayments` — **ยืนยันจาก export 2026-09-18**: ติ๊กเฉพาะ `M` `N` `E` · **`A` `S` `T` ที่เราใช้ทั้ง 3 ตัวไม่ติ๊กเลย** · ZARI002 ไม่เช็ค flag นี้ ใบเข้า table ได้ · แต่ถ้า ZARE002 post ผ่าน API ที่บังคับ flag จะตกทุกใบ | FI | Phase 1 | ไม่บล็อก ZARI002 · **บล็อก ZARE002 ตั้งแต่ใบแรกที่ post** — ต้องตัดสินก่อน ZARE002 เทส: ติ๊ก flag เพิ่ม หรือ ZARE002 post แบบไม่บังคับ flag | ⬜ |
-| OQ-04 | master data บน tenant ยังไม่ครบ — `I_Customer` ขึ้นเป็น **8 ราย** แล้ว (2026-08-28) แต่ customer ที่ sample ของ SFDC ใช้ (`1000000001` `1000000005` `1000000013` `1000000020` `1000000021`) ยังไม่มี | FI / ผู้ดูแล tenant | Phase 1 | **บล็อก Phase 7** — ยิง sample แล้วจะติด `validateCustomerCode` | 🟨 คืบหน้า |
+| OQ-03 | `IsPaytMethForIncomingPayments` ไม่ติ๊ก `A` `S` `T` — **ปิดในขอบเขต ZARI002 2026-09-18** เป็น config ของ FI ไม่ใช่งาน development · ZARI002 ไม่เช็ค flag นี้ · **ส่งต่อ functional** พร้อมหลักฐาน export `I_PaymentMethod` (ดูบันทึก 2026-09-18) — กระทบ ZARE002 ไม่ใช่เรา | functional | Phase 1 | — | ✅ ส่งต่อ |
+| OQ-04 | master data บน tenant ไม่ครบ — **ปิดในขอบเขต ZARI002 2026-09-18** เป็นงานโหลดข้อมูลของ functional/FI · code ตรวจกับ master data จริงอยู่แล้ว ครบเมื่อไหร่ก็ผ่านเมื่อนั้น · SBPA เทสจริงอยู่ ถ้าขาดจะเห็นเป็น `205`/`207` ใน monitor | functional | Phase 1 | — | ✅ ส่งต่อ |
 | OQ-05 | `payment_amount` ต้องเท่ากับผลรวม `amount_paid` ของทุก item หรือไม่ | Salesforce / FI | Phase 1 | `validatePaymentTotal` เป็นที่ว่างไว้แล้ว เพิ่ม logic ทีหลังได้ทันที | 🟨 |
 | OQ-06 | URL endpoint — **ปิดแล้ว 2026-08-31** `https://my442178-api.s4hana.cloud.sap/sap/bc/http/sap/zari002_incoming_pymt` · client `100` · Basic auth ด้วย `SBPA_DEV` | — | Phase 1 | — | ✅ |
 | OQ-07 | จำนวน item สูงสุดต่อ request | — | Phase 1 | **ไม่มี volume test แล้ว** (ข้าม Phase 6) — ตอบจากการใช้จริง ถ้าเจอปัญหาค่อยกำหนด | ⬜ |
@@ -379,3 +379,15 @@ export `I_PaymentMethod` (TH) ตอบ 2 ข้อจากไฟล์เด�
 SFDC ควรเป็น `C` เปลี่ยน constant ตัวเดียว
 
 **เหลือเปิด 7 ข้อ**
+
+
+### OQ-03 · OQ-04 ปิดในขอบเขต ZARI002 — 2026-09-18
+
+ทั้งคู่เป็น**งาน config / master data ของ functional** ไม่ใช่ development · code ทำหน้าที่ของมันครบแล้ว
+(OQ-03: ไม่เช็ค flag เพราะไม่ใช่กฎของขาเข้า · OQ-04: ตรวจกับ master data จริง ครบเมื่อไหร่ผ่านเมื่อนั้น)
+· ที่ทำได้คือส่งหลักฐานต่อ ซึ่งทำแล้ว
+
+**OQ-03 ยังเป็นความเสี่ยงของ ZARE002** — จดไว้ตรงนี้เพื่อให้คนที่ทำ ZARE002 เห็น: tenant ติ๊ก incoming
+ให้ `M` `N` `E` เท่านั้น · ถ้า post ด้วย `A`/`S`/`T` แล้วตก ให้ดู config ก่อนดู code
+
+**เหลือเปิด 5 ข้อ** — OQ-05 · 07 · 10 · 16 · 23 · ไม่มีข้อไหนที่ development ทำอะไรได้โดยไม่มีคำตอบจากคนอื่น
