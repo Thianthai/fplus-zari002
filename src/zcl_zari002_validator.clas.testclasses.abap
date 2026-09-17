@@ -86,7 +86,6 @@ CLASS ltc_validator IMPLEMENTATION.
                          posting_date         = '20260815'
                          gl_account           = '0011011214'
                          payment_method       = 'Cheque'
-                         sap_payment_method   = 'A'
                          cheque_no            = '10020185'
                          issue_date           = '20260715'
                          due_on               = '20260831'
