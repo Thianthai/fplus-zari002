@@ -596,40 +596,34 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
 
   METHOD send_callback.
 
-    DATA lt_result TYPE zcl_zari002_sfdc_notify=>tt_result.
+*   1 record ต่อ 1 payment ตาม spec Integration_Log__c — ไม่มี field ระดับ item
+*   error ทุกบรรทัดจึงรวมเป็นข้อความเดียว · ไม่ใส่ code (ตกลง D3)
+    DATA(ls_record) = VALUE zcl_zari002_sfdc_notify=>ty_record(
+      interface    = zcl_zari002_sfdc_notify=>gc_interface_payment
+      reference_id = is_payment-salesforce_id
+      status       = COND #( WHEN it_error IS INITIAL
+                             THEN zcl_zari002_sfdc_notify=>gc_status_success
+                             ELSE zcl_zari002_sfdc_notify=>gc_status_error )
+      message      = COND #( WHEN it_error IS INITIAL
+                             THEN message_text( '300' )
+                             ELSE concat_lines_of(
+                                    table = VALUE string_table( FOR <lfs_e> IN it_error ( <lfs_e>-msgtx ) )
+                                    sep   = `, ` ) ) ).
 
-    DATA(lv_status) = COND #( WHEN it_error IS INITIAL
-                              THEN zcl_zari002_sfdc_notify=>gc_status_success
-                              ELSE zcl_zari002_sfdc_notify=>gc_status_error ).
+    DATA(lv_http) = go_notify->notify( ls_record ).
 
-*   error ที่ระบุ item ได้ ให้ไปอยู่กับ item นั้น · ที่เหลือเป็น error ระดับ payment
-*   ใช้กับทุกบรรทัดเพราะ reject-all — ทั้งใบตกไปด้วยกัน
-    DATA(lv_common) = concat_lines_of(
-      table = VALUE string_table( FOR <lfs_e> IN it_error
-                                  WHERE ( salesforce_item_id IS INITIAL ) ( <lfs_e>-msgtx ) )
-      sep   = ` · ` ).
-
-    LOOP AT it_item ASSIGNING FIELD-SYMBOL(<lfs_item>).
-
-      DATA(lv_text) = concat_lines_of(
-        table = VALUE string_table(
-                  FOR <lfs_ie> IN it_error
-                  WHERE ( salesforce_item_id = <lfs_item>-salesforce_item_id ) ( <lfs_ie>-msgtx ) )
-        sep   = ` · ` ).
-
-      IF lv_common IS NOT INITIAL.
-        lv_text = COND #( WHEN lv_text IS INITIAL THEN lv_common
-                          ELSE |{ lv_common } · { lv_text }| ).
-      ENDIF.
-
-      APPEND VALUE #( salesforce_id      = is_payment-salesforce_id
-                      salesforce_item_id = <lfs_item>-salesforce_item_id
-                      status             = lv_status
-                      error_message      = lv_text ) TO lt_result.
-
-    ENDLOOP.
-
-    go_notify->notify( lt_result ).
+*   บันทึกว่า SFDC รับ log record ไหม — 201 = รับ · อื่น ๆ / 0 = ไม่รับ
+*   UPDATE เฉย ๆ ถ้าไม่มี row (normalize ล้มไม่มี UUID) ก็แค่ 0 แถว ไม่พัง
+    TRY.
+        UPDATE ztar_i002_hdrlog
+          SET salesforce_status  = @( COND #( WHEN lv_http = zcl_zari002_sfdc_notify=>gc_http_created
+                                                THEN 'S' ELSE 'E' ) ),
+              salesforce_message = @( |{ lv_http }| )
+          WHERE payment_uuid = @is_payment-payment_uuid.
+        COMMIT WORK.
+      CATCH cx_root.
+        ROLLBACK WORK.
+    ENDTRY.
 
   ENDMETHOD.
 

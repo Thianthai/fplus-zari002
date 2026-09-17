@@ -60,14 +60,15 @@ ENDCLASS.
 
 CLASS ltd_notify DEFINITION FOR TESTING INHERITING FROM zcl_zari002_sfdc_notify.
   PUBLIC SECTION.
-    "! เก็บสิ่งที่ "จะยิง" ไว้ตรวจ แทนที่จะยิงจริง
-    DATA gt_sent TYPE zcl_zari002_sfdc_notify=>tt_result.
+    "! เก็บ record ที่ "จะยิง" ไว้ตรวจ แทนที่จะยิงจริง · ตอบ 201 เสมอเหมือน SFDC รับ
+    DATA gs_sent TYPE zcl_zari002_sfdc_notify=>ty_record.
     METHODS notify REDEFINITION.
 ENDCLASS.
 
 CLASS ltd_notify IMPLEMENTATION.
   METHOD notify.
-    gt_sent = it_result.
+    gs_sent        = is_record.
+    rv_http_status = zcl_zari002_sfdc_notify=>gc_http_created.
   ENDMETHOD.
 ENDCLASS.
 
@@ -97,8 +98,9 @@ CLASS ltc_processor DEFINITION FINAL
     METHODS broken_json_gives_012      FOR TESTING.
     METHODS unknown_bank_fails_207     FOR TESTING.
     METHODS bank_skipped_if_not_cheque FOR TESTING.
-    METHODS callback_one_row_per_item  FOR TESTING.
-    METHODS callback_carries_error     FOR TESTING.
+    METHODS callback_success_record   FOR TESTING.
+    METHODS callback_failed_record    FOR TESTING.
+    METHODS callback_result_in_hdrlog FOR TESTING.
     METHODS empty_payments_gives_013 FOR TESTING.
     METHODS header_error_carries_sf_id FOR TESTING.
     METHODS log_written_for_saved     FOR TESTING.
@@ -322,34 +324,54 @@ CLASS ltc_processor IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD callback_one_row_per_item.
+  METHOD callback_success_record.
 
     go_cut->process( sample_json( ) ).
 
-    cl_abap_unit_assert=>assert_equals( exp = 2 act = lines( go_notify->gt_sent ) ).
-
-    cl_abap_unit_assert=>assert_equals(
-      exp = 'S' act = go_notify->gt_sent[ 1 ]-status ).
-    cl_abap_unit_assert=>assert_equals(
-      exp = 'IT0000000000000002' act = go_notify->gt_sent[ 2 ]-salesforce_item_id ).
-    cl_abap_unit_assert=>assert_equals(
-      exp = 'SF0000000000000001' act = go_notify->gt_sent[ 1 ]-salesforce_id ).
+    cl_abap_unit_assert=>assert_equals( exp = 'Payment Response'    act = go_notify->gs_sent-interface ).
+    cl_abap_unit_assert=>assert_equals( exp = 'SF0000000000000001' act = go_notify->gs_sent-reference_id ).
+    cl_abap_unit_assert=>assert_equals( exp = 'S'                  act = go_notify->gs_sent-status ).
+    cl_abap_unit_assert=>assert_equals( exp = 'All payments saved successfully'
+                                        act = go_notify->gs_sent-message ).
+    cl_abap_unit_assert=>assert_initial( act = go_notify->gs_sent-request_body
+                                         msg = 'ZARI002 ไม่ส่ง Request_Body__c (D1-A)' ).
 
   ENDMETHOD.
 
 
-  METHOD callback_carries_error.
+  METHOD callback_failed_record.
 
-    go_cut->process( sample_json( iv_company_code = `9999` ) ).
+*   เช็คไม่มี cheque no / issue date / due on / bank → 4 error ระดับ header
+    DATA(lv_json) = replace( val = sample_json( iv_cheque_no = `` iv_bank_branch = `` )
+                             sub = `"IssueDate": "2026-07-15",` with = `` occ = 1 ).
+    lv_json = replace( val = lv_json sub = `"DueOn": "2026-08-31",` with = `` occ = 1 ).
 
-    cl_abap_unit_assert=>assert_equals( exp = 2 act = lines( go_notify->gt_sent ) ).
+    go_cut->process( lv_json ).
 
+    cl_abap_unit_assert=>assert_equals( exp = 'E' act = go_notify->gs_sent-status ).
     cl_abap_unit_assert=>assert_equals(
-      exp = 'E' act = go_notify->gt_sent[ 1 ]-status ).
+      exp = `Cheque number is required for payment method Cheque, `
+         && `Issue date is required for payment method Cheque, `
+         && `Due date is required for payment method Cheque, `
+         && `Bank/branch is required for payment method Cheque`
+      act = go_notify->gs_sent-message
+      msg = 'msgtx ต่อกันด้วย ", " ไม่มี code นำหน้า (D3)' ).
 
-    cl_abap_unit_assert=>assert_not_initial(
-      act = go_notify->gt_sent[ 1 ]-error_message
-      msg = 'error ระดับ payment ต้องถูกส่งไปกับทุกบรรทัด ไม่งั้น SFDC เห็นแค่ E เฉย ๆ' ).
+  ENDMETHOD.
+
+
+  METHOD callback_result_in_hdrlog.
+
+    go_cut->process( sample_json( ) ).
+
+    SELECT SINGLE FROM ztar_i002_hdrlog
+      FIELDS salesforce_status, salesforce_message
+      INTO @DATA(ls_log).
+
+    cl_abap_unit_assert=>assert_equals( exp = 'S'   act = ls_log-salesforce_status
+                                        msg = 'double ตอบ 201 → S' ).
+    cl_abap_unit_assert=>assert_equals( exp = '201' act = ls_log-salesforce_message
+                                        msg = 'เก็บ HTTP code (D2)' ).
 
   ENDMETHOD.
 
