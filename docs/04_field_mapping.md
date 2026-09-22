@@ -37,6 +37,9 @@ API field ↔ table field · **JSON ใช้ CamelCase · table ใช้ snake
 | `Status` | `status` | `ze_request_status` | `String(1)` | out | – | **transaction status** — ZARI002 set `N` เท่านั้น |
 | `SalesforceStatus` | `salesforce_status` | `ze_response_status` | `String(1)` | out | – | **result status ที่ส่งกลับ SFDC** — ZARI002 ปล่อยว่างเสมอ |
 | `SalesforceMessage` | `salesforce_message` | `char(200)` | `String(200)` | out | – | ข้อความคู่กับ `SalesforceStatus` — ZARI002 ปล่อยว่างเสมอ |
+| — | `payment_accounting_document` | `char(10)` | — | — | – | **ของ ZARE002** (เพิ่ม 2026-09-22 `08c105c`) เลข JE ที่ Submit post · ZARI002 ไม่เขียน |
+| — | `clearing_accounting_document` | `char(10)` | — | — | – | **ของ ZARE002** เลข clearing ที่ BOT ส่งกลับ · ZARI002 ไม่เขียน |
+| — | `submit_message` | `char(200)` | — | — | – | **ของ ZARE002** ข้อความล่าสุดของขั้น Submit (คนละช่องกับ `salesforce_message`) · ZARI002 ไม่เขียน |
 | `CreatedBy` `CreatedAt` `LastChangedBy` `LastChangedAt` `LocalLastChangedAt` | admin fields | | | out | – | managed · `LocalLastChangedAt` = etag |
 | `Items` | — | array | array | in | ✔ | ต้องมีอย่างน้อย 1 รายการ |
 
