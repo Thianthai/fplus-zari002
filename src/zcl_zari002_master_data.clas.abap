@@ -9,7 +9,8 @@ ENDCLASS.
 
 
 
-CLASS zcl_zari002_master_data IMPLEMENTATION.
+CLASS ZCL_ZARI002_MASTER_DATA IMPLEMENTATION.
+
 
   METHOD zif_zari002_master_data~get_company_codes.
 
@@ -68,7 +69,6 @@ CLASS zcl_zari002_master_data IMPLEMENTATION.
     ENDLOOP.
 
   ENDMETHOD.
-
 
 
   METHOD zif_zari002_master_data~find_unknown_customers.
@@ -159,5 +159,4 @@ CLASS zcl_zari002_master_data IMPLEMENTATION.
     ENDLOOP.
 
   ENDMETHOD.
-
 ENDCLASS.

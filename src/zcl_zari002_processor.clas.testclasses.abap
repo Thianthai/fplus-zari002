@@ -76,6 +76,9 @@ CLASS ltc_processor DEFINITION FINAL
     DATA go_cut    TYPE REF TO zcl_zari002_processor.
     DATA go_notify TYPE REF TO ltd_notify.
 
+    "! salesforce_id ของ fixture — ใช้เป็น WHERE ในทุก SELECT ของ test (ATC บังคับ)
+    CONSTANTS gc_sf_id TYPE ztar_i002_pymt-salesforce_id VALUE 'SF0000000000000001'.
+
     CLASS-METHODS class_setup.
     CLASS-METHODS class_teardown.
     METHODS setup.
@@ -112,6 +115,10 @@ CLASS ltc_processor DEFINITION FINAL
       IMPORTING it_error         TYPE zcl_zari002_processor=>tt_error
                 iv_msgno         TYPE symsgno
       RETURNING VALUE(rv_result) TYPE abap_bool.
+
+    "! payment_uuid ของใบ fixture — อ่านจาก HDRLOG เพราะเขียนทุกใบทั้งผ่านและตก
+    METHODS payment_uuid
+      RETURNING VALUE(rv_result) TYPE sysuuid_x16.
 
 ENDCLASS.
 
@@ -198,10 +205,10 @@ CLASS ltc_processor IMPLEMENTATION.
       msg = 'ข้อมูลถูกต้องทั้งหมด ไม่ควรมี error' ).
     cl_abap_unit_assert=>assert_equals( exp = abap_true act = ls_out-success ).
 
-    cl_abap_unit_assert=>assert_equals( exp = abap_true act = ls_out-success ).
+    DATA(lv_uuid) = payment_uuid( ).
 
-    SELECT COUNT(*) FROM ztar_i002_pymt INTO @DATA(lv_header).
-    SELECT COUNT(*) FROM ztar_i002_item INTO @DATA(lv_item).
+    SELECT COUNT(*) FROM ztar_i002_pymt WHERE salesforce_id = @gc_sf_id INTO @DATA(lv_header).
+    SELECT COUNT(*) FROM ztar_i002_item WHERE payment_uuid  = @lv_uuid  INTO @DATA(lv_item).
 
     cl_abap_unit_assert=>assert_equals( exp = 1 act = lv_header ).
     cl_abap_unit_assert=>assert_equals( exp = 2 act = lv_item ).
@@ -256,8 +263,10 @@ CLASS ltc_processor IMPLEMENTATION.
 
     go_cut->process( sample_json( iv_company_code = `9999` ) ).
 
-    SELECT COUNT(*) FROM ztar_i002_pymt INTO @DATA(lv_header).
-    SELECT COUNT(*) FROM ztar_i002_item INTO @DATA(lv_item).
+    DATA(lv_uuid) = payment_uuid( ).
+
+    SELECT COUNT(*) FROM ztar_i002_pymt WHERE salesforce_id = @gc_sf_id INTO @DATA(lv_header).
+    SELECT COUNT(*) FROM ztar_i002_item WHERE payment_uuid  = @lv_uuid  INTO @DATA(lv_item).
 
     cl_abap_unit_assert=>assert_equals(
       exp = 0 act = lv_header msg = 'reject-all ต้องไม่บันทึก header' ).
@@ -393,9 +402,12 @@ CLASS ltc_processor IMPLEMENTATION.
 
     go_cut->process( sample_json( ) ).
 
-    SELECT SINGLE FROM ztar_i002_hdrlog FIELDS status, request_body INTO @DATA(ls_hdr).
-    SELECT COUNT(*) FROM ztar_i002_itmlog INTO @DATA(lv_item).
-    SELECT COUNT(*) FROM ztar_i002_msglog INTO @DATA(lv_msg).
+    DATA(lv_uuid) = payment_uuid( ).
+
+    SELECT SINGLE FROM ztar_i002_hdrlog FIELDS status, request_body
+      WHERE payment_uuid = @lv_uuid INTO @DATA(ls_hdr).
+    SELECT COUNT(*) FROM ztar_i002_itmlog WHERE payment_uuid = @lv_uuid INTO @DATA(lv_item).
+    SELECT COUNT(*) FROM ztar_i002_msglog WHERE payment_uuid = @lv_uuid INTO @DATA(lv_msg).
 
     cl_abap_unit_assert=>assert_equals( exp = 'S' act = ls_hdr-status ).
     cl_abap_unit_assert=>assert_not_initial( act = ls_hdr-request_body
@@ -411,8 +423,12 @@ CLASS ltc_processor IMPLEMENTATION.
 
     DATA(ls_out) = go_cut->process( sample_json( iv_company_code = `9999` ) ).
 
-    SELECT SINGLE FROM ztar_i002_hdrlog FIELDS status INTO @DATA(lv_status).
+    DATA(lv_uuid) = payment_uuid( ).
+
+    SELECT SINGLE FROM ztar_i002_hdrlog FIELDS status
+      WHERE payment_uuid = @lv_uuid INTO @DATA(lv_status).
     SELECT FROM ztar_i002_msglog FIELDS msg_seq, message_area, message
+      WHERE payment_uuid = @lv_uuid
       ORDER BY msg_seq INTO TABLE @DATA(lt_msg).
 
 *   ใบตกต้องมี log เหมือนกัน — และเป็นใบที่ต้องดูมากที่สุด
@@ -467,7 +483,7 @@ CLASS ltc_processor IMPLEMENTATION.
 
 *   เคส 1 ของ functional: รอบแรกลง table เป็น N → ZARE002 post ไม่ผ่านเป็น E → SF ส่งใหม่ต้องรับ
     go_cut->process( sample_json( ) ).
-    UPDATE ztar_i002_pymt SET status = 'E' WHERE status = 'N'.
+    UPDATE ztar_i002_pymt SET status = 'E' WHERE status = 'N' AND salesforce_id = @gc_sf_id.
 
     DATA(ls_out) = go_cut->process( sample_json( ) ).
 
@@ -475,10 +491,17 @@ CLASS ltc_processor IMPLEMENTATION.
                                         msg = 'ใบที่ post ไม่ผ่าน ต้องส่งแก้เข้ามาใหม่ได้' ).
     cl_abap_unit_assert=>assert_false( act = has_msgno( it_error = ls_out-errors iv_msgno = '010' ) ).
 
-    SELECT COUNT(*) FROM ztar_i002_pymt INTO @DATA(lv_count).
+    SELECT COUNT(*) FROM ztar_i002_pymt WHERE salesforce_id = @gc_sf_id INTO @DATA(lv_count).
     cl_abap_unit_assert=>assert_equals( exp = 2 act = lv_count
                                         msg = 'ต้องมี 2 row: E เดิม + N ใหม่' ).
 
+  ENDMETHOD.
+
+
+  METHOD payment_uuid.
+    SELECT SINGLE payment_uuid FROM ztar_i002_hdrlog
+      WHERE salesforce_id = @gc_sf_id
+      INTO @rv_result.
   ENDMETHOD.
 
 ENDCLASS.

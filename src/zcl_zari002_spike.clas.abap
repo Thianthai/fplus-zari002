@@ -16,13 +16,15 @@ ENDCLASS.
 
 
 
-CLASS zcl_zari002_spike IMPLEMENTATION.
+CLASS ZCL_ZARI002_SPIKE IMPLEMENTATION.
+
 
   METHOD if_oo_adt_classrun~main.
 
     purge_all( out ).
 
   ENDMETHOD.
+
 
   METHOD purge_all.
 
@@ -34,5 +36,4 @@ CLASS zcl_zari002_spike IMPLEMENTATION.
     io_out->write( |--- all 2 tables purged ---| ).
 
   ENDMETHOD.
-
 ENDCLASS.

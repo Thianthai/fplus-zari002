@@ -12,7 +12,8 @@ ENDCLASS.
 
 
 
-CLASS zcl_zari002_util IMPLEMENTATION.
+CLASS ZCL_ZARI002_UTIL IMPLEMENTATION.
+
 
   METHOD if_oo_adt_classrun~main.
 
@@ -37,5 +38,4 @@ CLASS zcl_zari002_util IMPLEMENTATION.
     ENDLOOP.
 
   ENDMETHOD.
-
 ENDCLASS.

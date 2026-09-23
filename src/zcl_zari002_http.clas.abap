@@ -84,7 +84,9 @@ CLASS zcl_zari002_http DEFINITION
 ENDCLASS.
 
 
-CLASS zcl_zari002_http IMPLEMENTATION.
+
+CLASS ZCL_ZARI002_HTTP IMPLEMENTATION.
+
 
   METHOD if_http_service_extension~handle_request.
 
@@ -160,5 +162,4 @@ CLASS zcl_zari002_http IMPLEMENTATION.
                                 )->to_string( ) ).
 
   ENDMETHOD.
-
 ENDCLASS.

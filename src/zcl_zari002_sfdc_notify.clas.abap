@@ -71,7 +71,9 @@ CLASS zcl_zari002_sfdc_notify DEFINITION
 ENDCLASS.
 
 
-CLASS zcl_zari002_sfdc_notify IMPLEMENTATION.
+
+CLASS ZCL_ZARI002_SFDC_NOTIFY IMPLEMENTATION.
+
 
   METHOD build_payload.
 
@@ -152,5 +154,4 @@ CLASS zcl_zari002_sfdc_notify IMPLEMENTATION.
     ENDTRY.
 
   ENDMETHOD.
-
 ENDCLASS.

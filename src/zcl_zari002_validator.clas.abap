@@ -92,7 +92,8 @@ ENDCLASS.
 
 
 
-CLASS zcl_zari002_validator IMPLEMENTATION.
+CLASS ZCL_ZARI002_VALIDATOR IMPLEMENTATION.
+
 
   METHOD is_cheque.
     rv_result = xsdbool( to_upper( condense( CONV string( iv_payment_method ) ) ) = gc_word_cheque ).
@@ -348,5 +349,4 @@ CLASS zcl_zari002_validator IMPLEMENTATION.
     ENDIF.
 
   ENDMETHOD.
-
 ENDCLASS.

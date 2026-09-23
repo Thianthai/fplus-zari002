@@ -152,7 +152,8 @@ ENDCLASS.
 
 
 
-CLASS zcl_zari002_processor IMPLEMENTATION.
+CLASS ZCL_ZARI002_PROCESSOR IMPLEMENTATION.
+
 
   METHOD constructor.
 
@@ -846,5 +847,4 @@ CLASS zcl_zari002_processor IMPLEMENTATION.
     rv_result = concat_lines_of( table = lt_line sep = |\n| ).
 
   ENDMETHOD.
-
 ENDCLASS.
