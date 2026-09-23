@@ -222,14 +222,19 @@ CLASS ltc_processor IMPLEMENTATION.
 
     SELECT SINGLE FROM ztar_i002_pymt
       FIELDS request_id, currency, status
+      WHERE salesforce_id = @gc_sf_id
       INTO @DATA(ls_pymt).
 
     cl_abap_unit_assert=>assert_not_initial( act = ls_pymt-request_id ).
     cl_abap_unit_assert=>assert_equals( exp = 'THB' act = ls_pymt-currency ).
     cl_abap_unit_assert=>assert_equals( exp = 'N'   act = ls_pymt-status ).
 
-*   currency ต้องไหลลงถึง item ด้วย
-    SELECT SINGLE FROM ztar_i002_item FIELDS currency INTO @DATA(lv_currency).
+    " currency ต้องไหลลงถึง item ด้วย
+    SELECT SINGLE FROM ztar_i002_item
+      FIELDS currency
+      WHERE payment_uuid = @( payment_uuid( ) )
+      INTO @DATA(lv_currency).
+
     cl_abap_unit_assert=>assert_equals( exp = 'THB' act = lv_currency ).
 
   ENDMETHOD.
@@ -239,12 +244,15 @@ CLASS ltc_processor IMPLEMENTATION.
 
     go_cut->process( sample_json( ) ).
 
-    SELECT SINGLE FROM ztar_i002_pymt FIELDS gl_account INTO @DATA(lv_gl).
+    SELECT SINGLE FROM ztar_i002_pymt
+      FIELDS gl_account
+      WHERE salesforce_id = @gc_sf_id
+      INTO @DATA(lv_gl).
 
     cl_abap_unit_assert=>assert_equals(
       exp = '0011011214'
       act = lv_gl
-      msg = 'ส่ง 11011214 เข้าไป ต้องเก็บเป็น 10 หลัก ไม่งั้น ZARE002 post ไม่ได้' ).
+      msg = 'ส่ง 8 หลักเข้าไป ต้องเก็บเป็น 10 หลัก ไม่งั้น ZARE002 post ไม่ได้' ).
 
   ENDMETHOD.
 
@@ -365,12 +373,13 @@ CLASS ltc_processor IMPLEMENTATION.
 
     SELECT SINGLE FROM ztar_i002_hdrlog
       FIELDS salesforce_status, salesforce_message
+      WHERE salesforce_id = @gc_sf_id
       INTO @DATA(ls_log).
 
     cl_abap_unit_assert=>assert_equals( exp = 'S'   act = ls_log-salesforce_status
-                                        msg = 'double ตอบ 201 → S' ).
+                                        msg = 'double ตอบ 201 ต้องได้ S' ).
     cl_abap_unit_assert=>assert_equals( exp = '201' act = ls_log-salesforce_message
-                                        msg = 'เก็บ HTTP code (D2)' ).
+                                        msg = 'เก็บ HTTP code' ).
 
   ENDMETHOD.
 
