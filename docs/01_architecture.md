@@ -40,7 +40,7 @@ SBPA ──POST JSON──▶ HTTP Service
                               ├─ validate    ZCL_ZARI002_VALIDATOR + ZIF_ZARI002_MASTER_DATA
                               ├─ save        ผ่าน → INSERT 2 table + COMMIT
                               │              ไม่ผ่าน → ไม่ INSERT อะไรของใบนั้นเลย
-                              └─ notify      ZCL_ZARI002_SFDC_NOTIFY → ผลรับ S/E ไป SFDC (§2.2)
+                              └─ notify      ZCL_ZARI002_SFDC_RESULT → ผลรับ S/E ไป SFDC (§2.2)
                          ▼
                     HTTP response  { RequestId, Accepted, Rejected, Errors[] }
 ```
@@ -70,29 +70,40 @@ SFDC ส่งข้อมูลให้ SBPA เป็น **ไฟล์ Excel
 
 | | |
 |---|---|
-| class | `ZCL_ZARI002_SFDC_NOTIFY` — ของ ZARI002 เอง |
+| class | `ZCL_ZARI002_SFDC_RESULT` — ของ ZARI002 เอง · โครงเดียวกับ `ZCL_ZARE002_SFDC_RESULT` เพื่อให้ support ทั้ง 2 ตัวเหมือนกัน |
 | ใครเรียก | `ZCL_ZARI002_PROCESSOR` → `send_callback( )` ท้าย loop หลัง log |
-| outbound service | `ZARI002_PAYMENT_RESULT_REST` (SCO3) |
-| comm scenario | `ZCS_PAYMENT_RESULT` — ชื่อกลาง · ZARI003 เพิ่ม service ของตัวเองในนี้ทีหลังได้ |
-| comm system | `SFDC_DEV` — **แชร์ข้าม RICEFW** มี inbound user ของ RICEFW อื่นอยู่ด้วย |
-| auth | **OAuth 2.0 client credentials โดย platform** — client id/secret อยู่ใน Communication System · token endpoint = URL เต็ม · Client Authentication = **Form Field** ตาม spec SFDC · ABAP ไม่เห็น token เลย |
-| พิสูจน์ | `check_connection( )` → `GET /services/data/` ผ่าน arrangement · `200` = ทั้ง chain ใช้ได้ |
-| data endpoint | `POST /services/data/v66.0/sobjects/Integration_Log__c` — Salesforce standard sObject API · 1 record/payment · `Status__c` Success/Failed · `Message__c` = error ต่อกันด้วย `, ` · ผล (HTTP code) ลง `HDRLOG-salesforce_status/_message` |
+| auth | **`ZCL_UTILITY=>create_sfdc_client( )`** จาก package กลาง `ZBCUTILITY` — ขอ token ใหม่ทุก call แล้วผูก `Authorization: Bearer` มาให้เลย |
+| comm arrangement | `ZCA_SFDC_TOKEN` (ของกลาง) แบบ **Basic** — client id/secret อยู่ใน Communication System `SFDC_DEV` · ABAP เห็นแค่ access token |
+| พิสูจน์ | `check_connection( )` → `ZCL_UTILITY=>check_sfdc_connection( )` ยิง `/services/data/v66.0/limits` (endpoint ที่ **ต้องใช้ token**) · `200` = token ใช้ได้จริง |
+| data endpoint | `POST /services/data/v66.0/sobjects/Integration_Log__c` — 1 record/payment · `Status__c` Success/Failed · `Message__c` = error ต่อกันด้วย `, ` |
+| ผลของ call | `parse_response( )` อ่าน body · `HDRLOG-salesforce_status` = `S`/`E` · `salesforce_message` = HTTP code (+ `error_code` เมื่อพัง) |
+
+### เปลี่ยนวิธี auth 2026-09-23 — ของเดิมพังเงียบวันถัดมา
+
+เดิมให้ **Communication Arrangement ทำ OAuth ให้** (`ZCA_PAYMENT_RESULT` / `ZCS_PAYMENT_RESULT`
+/ `ZARI002_PAYMENT_RESULT_REST`) · **Salesforce client credentials ไม่ส่ง `expires_in` กลับมา**
+platform จึงถือ token ค้างไว้ ไม่ขอใหม่แม้เจอ 401
+
+อาการ: **วันแรกยิงผ่าน วันถัดมาได้ 401 `INVALID_SESSION_ID` ทั้งที่ไม่ได้แก้อะไร**
+· ZARE002 เจอเต็ม ๆ ตอนทดสอบ Reject (2026-09-21) · ZARI002 ยังไม่เจอเพราะยิงไม่บ่อย
+
+ทางแก้: ขอ token เองทุกครั้งผ่าน `ZCL_UTILITY` — จ่าย 1 request เพิ่มต่อการยิง (ราว 200 ms)
+แลกกับ token ที่ไม่มีวันค้าง · object ชุดเดิมทั้ง 3 ตัวถูกลบ
+
+**`check_connection( )` เดิมหลอกตัวเอง** — ping `/services/data/` ซึ่ง **ไม่ต้องใช้ token**
+ตอบ `200` เสมอแม้ token หมดอายุ · `200` ที่เคยยืนยันว่า "auth ใช้ได้" จริง ๆ พิสูจน์แค่ว่า host ต่อถึง
 
 **ชื่อเคยผิด** — ระหว่าง 2–17 ก.ย. class ชื่อ `ZCL_ZARI003_SFDC_NOTIFY` เพราะเข้าใจว่า outbound
-ทั้งหมดเป็นของ ARI003 · แก้แล้วเมื่อ 2026-09-17: ARI003 = ผล post · ผลรับ = ZARI002
+ทั้งหมดเป็นของ ARI003 · แก้ 2026-09-17 เป็น `..._ZARI002_SFDC_NOTIFY` แล้ว 2026-09-23
+เปลี่ยนเป็น `..._SFDC_RESULT` ให้ล้อกับ ZARE002
 
 ทางเลือกที่ **ไม่** เลือกและเหตุผล:
 
 - ~~ให้ ZARI003 อ่านจาก table แล้วยิงเอง~~ — ใบที่ตกไม่มีใน table จะอ่านอะไรไม่ได้เลย
 - ~~ให้ ZARI002 เก็บใบที่ตกลง table ธุรกิจ~~ — ต้องรื้อ duplicate check · (ตั้งแต่ Phase 5A ใบตก
-  อยู่ใน **log table** แล้ว แต่ notify ยังยิง inline เพราะ log ไม่ใช่ตารางที่ ZARI003 อ่าน)
-- ~~เขียน OAuth token flow เองใน ABAP~~ — ไม่มีที่เก็บ secret ที่ปลอดภัยใน ABAP Cloud
-  และ platform ทำให้อยู่แล้ว
-
-**ไม่ใช่ fire-and-forget แล้ว** — `notify( )` คืน HTTP status · processor เขียนลง `HDRLOG-salesforce_status`
-(`S` = 201 · `E` อื่น ๆ / 0) และ `salesforce_message` = code · ใบที่ SFDC ไม่ได้รับเห็นได้จาก monitor
-· ยังไม่ retry — ถ้าต้องการ ทำเป็น job อ่าน HDRLOG ที่ `salesforce_status = E` ทีหลังได้
+  อยู่ใน **log table** แล้ว แต่ยังยิง inline เพราะ log ไม่ใช่ตารางที่ ZARI003 อ่าน)
+- ~~เขียน OAuth token flow เองใน class นี้~~ — ของกลางที่ `ZBCUTILITY` ทำให้แล้ว
+  และ secret ไม่มีที่เก็บที่ปลอดภัยใน ABAP Cloud นอกจาก Communication System
 
 ### 1 request = หลาย payment (2026-08-31)
 

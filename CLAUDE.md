@@ -68,9 +68,17 @@
 - **`strict ( 2 )` บังคับ `authorization master/dependent` ทุก entity** — read-only BO ก็ต้องมี
   behavior pool ที่ `get_global_authorizations` ว่าง ตัดไม่ได้
 - **key UUID ต้อง `field ( numbering : managed, readonly )`** แม้ BO ไม่มี `create`
-- **Outbound ไปนอก tenant ใช้ Communication Arrangement เสมอ ห้ามเขียน OAuth เอง** — secret
-  ไม่มีที่เก็บที่ปลอดภัยใน ABAP Cloud · Outbound Service (SCO3) ต้องมีก่อน scenario · Token
-  Endpoint = URL เต็ม · Client Authentication = Form Field สำหรับ Salesforce
+- **Outbound ไป Salesforce ใช้ `ZCL_UTILITY=>create_sfdc_client( )` จาก package `ZBCUTILITY`**
+  ห้ามตั้ง Communication Arrangement แบบ OAuth ให้ platform จัดการ token เอง
+  เหตุผล: Salesforce client credentials ไม่ส่ง `expires_in` platform จึงถือ token ค้างไม่ขอใหม่
+  แม้เจอ 401 · อาการคือวันแรกผ่าน วันถัดมาได้ 401 `INVALID_SESSION_ID` โดยไม่ได้แก้อะไร
+  (เจอจริงที่ ZARE002 2026-09-21 · ZARI002 ย้ายตาม 2026-09-23)
+- **ห้าม ping `/services/data/` เพื่อเช็ค auth** — endpoint นั้นไม่ต้องใช้ token ตอบ 200 เสมอ
+  ใช้ `ZCL_UTILITY=>check_sfdc_connection( )` ซึ่งยิง `/services/data/v66.0/limits` แทน
+- **Path ใน Communication Arrangement เป็น prefix** `set_uri_path( )` ต่อท้ายไม่ได้แทนที่
+  ตั้ง prefix เป็น `/` เสมอ แล้วให้ class ใส่ path เต็มเอง ไม่งั้นได้ 404
+- secret อยู่ใน Communication System เท่านั้น ABAP มองไม่เห็น ไม่ต้องมี table เก็บ
+  และห้าม print หรือ log ตัว access token
 - **แก้ scenario ที่ publish แล้ว (แม้แค่ description) → กลายเป็น unpublished** ต้อง Publish
   Locally ใหม่ ไม่งั้น arrangement ที่ใช้อยู่อาจล่ม (เกือบโดนที่ `ZCS_INCOMING_PYMT` 2026-09-17)
 
@@ -119,7 +127,7 @@ master data บน tenant ยัง config ไม่เสร็จ และ sa
 
 | RICEFW | หน้าที่ | เขียน `status` | outbound ไป SFDC |
 |---|---|---|---|
-| **ZARI002** (งานนี้) | **SBPA** ยิงเข้ามา — validate แล้วลง table | `N` | ✅ **แจ้งผลการรับข้อมูล** (S/E ต่อใบ) ผ่าน `ZCL_ZARI002_SFDC_NOTIFY` |
+| **ZARI002** (งานนี้) | **SBPA** ยิงเข้ามา — validate แล้วลง table | `N` | ✅ **แจ้งผลการรับข้อมูล** (S/E ต่อใบ) ผ่าน `ZCL_ZARI002_SFDC_RESULT` |
 | **ZARE002** | RAP UI — อ่าน row `N` ไป post FI จริง | `S` / `W` / `E` + `error_message` | — |
 | **ZARI003** | อ่านผล post จาก table แจ้งกลับ Salesforce | — (อ่านอย่างเดียว) | ✅ **แจ้งผลการ post** |
 
@@ -145,9 +153,9 @@ ZARI002 จึงเป็น **create อย่างเดียว ไม่�
 ### ทำไม ZARI002 ต้องยิงผลรับกลับเอง
 
 payment ที่ถูก reject **ไม่มี row ในตารางธุรกิจ** — ZARI003 ที่อ่านจาก table จึงบอก SFDC ไม่ได้ว่า
-ใบไหนตก · ZARI002 ต้องแจ้งเองตอนที่ข้อมูลยังอยู่ในมือ ผ่าน `ZCL_ZARI002_SFDC_NOTIFY` ท้าย loop
+ใบไหนตก · ZARI002 ต้องแจ้งเองตอนที่ข้อมูลยังอยู่ในมือ ผ่าน `ZCL_ZARI002_SFDC_RESULT` ท้าย loop
 ของแต่ละ payment (ตั้งแต่ Phase 5A มี log table แล้วแต่ยังยิง inline เหมือนเดิม)
 
-**Outbound ใช้ Communication Arrangement** — `ZCS_PAYMENT_RESULT` (OAuth 2.0 client credentials
-ผ่าน Communication System `SFDC_DEV` ที่แชร์ข้าม RICEFW) · secret อยู่ใน Fiori ไม่มีใน code/git
+**Outbound ใช้ `ZCL_UTILITY` จาก package กลาง `ZBCUTILITY`** — ขอ token ใหม่ทุก call ผ่าน
+`ZCA_SFDC_TOKEN` แบบ Basic (Communication System `SFDC_DEV` ที่แชร์ข้าม RICEFW) · secret อยู่ใน Fiori ไม่มีใน code/git
 · `check_connection( )` ใช้พิสูจน์ว่าต่อถึงและ token ใช้ได้

@@ -43,7 +43,7 @@
 | `ZCL_ZARI002_MASTER_DATA` | Class — implementation จริงบน released CDS view | `src/zcl_zari002_master_data.clas.abap` | 3 | ✅ |
 | `ZCL_ZARI002_VALIDATOR` | Class — validation format/mandatory/consistency · `is_cheque( )` ตัดสินจากคำ · 32 unit test | `src/zcl_zari002_validator.clas.abap` | 3 | ✅ |
 | `ZCL_ZARI002_JSON` | Class — parse payload + แปลงชื่อ field 2 ทาง · 9 unit test | `src/zcl_zari002_json.clas.abap` | 3 | ✅ |
-| `ZCL_ZARI002_SFDC_NOTIFY` | Class — POST 1 record ไป `Integration_Log__c` ผ่าน comm arrangement · ไม่รู้จัก ZARI002 (ZARI003 ใช้ได้) · `check_connection( )` · 5 unit test | `src/zcl_zari002_sfdc_notify.clas.abap` | 3 | ✅ 2026-09-17 |
+| `ZCL_ZARI002_SFDC_RESULT` | Class — POST 1 record ไป `Integration_Log__c` · ขอ token ผ่าน `ZCL_UTILITY` ทุก call · `parse_response( )` + `check_connection( )` · 9 unit test | `src/zcl_zari002_sfdc_result.clas.abap` | 3 | ✅ 2026-09-23 |
 | `ZCL_ZARI002_PROCESSOR` | Class — flow 5 ขั้น (parse → normalize → validate → save → callback) · 9 unit test | `src/zcl_zari002_processor.clas.abap` | 3 | ✅ |
 
 ทุก class มีไฟล์คู่: `*.clas.xml` (metadata) + `*.clas.testclasses.abap` (ABAP Unit)
@@ -59,6 +59,12 @@
 
 > **RAP ถูกถอดออกทั้งหมดเมื่อ 2026-08-31** — CDS view, behavior definition, behavior pool,
 > projection view และ behavior projection ถูกลบ · เหตุผลอยู่ใน `01_architecture.md` §2
+
+## Dependency นอก package
+
+| Package | ใช้ทำอะไร |
+|---|---|
+| `ZBCUTILITY` | `ZCL_UTILITY=>create_sfdc_client( )` / `check_sfdc_connection( )` — ขอ OAuth token ใหม่ทุก call พร้อม `ZCS_SFDC_TOKEN` · `ZBC_SFDC_TOKEN_REST` · `ZCA_SFDC_TOKEN` · repo <https://github.com/Thianthai/fplus-zbcutility> |
 
 ## Connectivity
 
@@ -103,10 +109,10 @@
 | สิ่งที่ต้องทำ | ที่ไหน | Phase | Status |
 |---|---|-------|--------|
 | Communication System `SBPA_DEV` | Fiori app | 5 | ✅ |
-| `ZARI002_PAYMENT_RESULT_REST` | Outbound Service (SCO3) — HTTP · `src/zari002_payment_result_rest.sco3.xml` | 5 | ✅ 2026-09-17 |
-| `ZCS_PAYMENT_RESULT` | Communication Scenario **outbound** (SCO1) — OAuth 2.0 client credentials · one instance per client · `src/zcs_payment_result.sco1.xml` | 5 | ✅ 2026-09-17 |
-| Communication System `SFDC_DEV` | Fiori app — **แชร์ข้าม RICEFW** · host sandbox · token endpoint URL เต็ม · outbound user OAuth 2.0 Form Field | 5 | ✅ 2026-09-17 |
-| Communication Arrangement `ZCA_PAYMENT_RESULT` | Fiori app — `ZCS_PAYMENT_RESULT` × `SFDC_DEV` · Check Connection ✅ · `check_connection( )` = 200 | 5 | ✅ 2026-09-17 |
+| ~~`ZARI002_PAYMENT_RESULT_REST`~~ | Outbound Service — **ลบแล้ว 2026-09-23** ย้ายไปใช้ `ZBC_SFDC_TOKEN_REST` ของ `ZBCUTILITY` | 5 | ❌ |
+| ~~`ZCS_PAYMENT_RESULT`~~ | Communication Scenario outbound — **ลบแล้ว 2026-09-23** ย้ายไปใช้ `ZCS_SFDC_TOKEN` ของ `ZBCUTILITY` | 5 | ❌ |
+| Communication System `SFDC_DEV` | Fiori app — **แชร์ข้าม RICEFW** · outbound user **User ID and Password** = ของ `ZCA_SFDC_TOKEN` ที่ใช้อยู่ · user **OAuth 2.0 (Form Field)** ยังมี ARI001 ใช้ ห้ามลบ | 5 | ✅ |
+| ~~Communication Arrangement `ZCA_PAYMENT_RESULT`~~ | Fiori app — **ลบแล้ว 2026-09-23** ย้ายไปใช้ `ZCA_SFDC_TOKEN` ของ `ZBCUTILITY` | 5 | ❌ |
 | Communication User `SBPA_DEV` | Fiori app | 5 | ✅ |
 | Communication Arrangement `ZCS_INCOMING_PYMT` (client 100) | Fiori app | 5 | ✅ |
 | Communication System + Arrangement ขา outbound | Fiori app | 5 | ⬜ |

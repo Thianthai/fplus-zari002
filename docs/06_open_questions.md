@@ -409,3 +409,23 @@ payment method post FI เลย** — เป็นข้อมูลที่ S
 **OQ-03 ที่เพิ่งส่งต่อ functional ตอนเช้าเบาลงมาก** — flag `IsPaytMethForIncomingPayments` ไม่ติ๊ก
 `A`/`S`/`T` ไม่มีผลกับเราอีก เพราะเราไม่ได้ส่ง code เหล่านี้ไปให้ใครใช้แล้ว · ยังเป็นเรื่องของ ZARE002
 ว่าจะ post ด้วย method อะไร
+
+
+### เปลี่ยนวิธี auth ไป Salesforce — 2026-09-23
+
+**ของเดิมพังเงียบ** — Communication Arrangement แบบ OAuth ถือ token ค้างเพราะ Salesforce
+ไม่ส่ง `expires_in` · วันแรกยิงผ่าน วันถัดมาได้ 401 โดยไม่ได้แก้อะไร · ZARE002 เจอจริงเมื่อ
+2026-09-21 แล้วทำของกลางไว้ที่ package `ZBCUTILITY` ZARI002 ย้ายตาม
+
+**สิ่งที่เปลี่ยน**
+- `ZCL_ZARI002_SFDC_NOTIFY` -> `ZCL_ZARI002_SFDC_RESULT` โครงเดียวกับ `ZCL_ZARE002_SFDC_RESULT`
+- ขอ token ใหม่ทุก call ผ่าน `ZCL_UTILITY=>create_sfdc_client( )`
+- ลบ `ZCA_PAYMENT_RESULT` · `ZCS_PAYMENT_RESULT` · `ZARI002_PAYMENT_RESULT_REST`
+- `send( )` คืน `ty_result` แทน HTTP status เปล่า ๆ · เพิ่ม `parse_response( )` อ่าน body
+- `salesforce_message` เก็บ `error_code` ต่อท้าย HTTP code เมื่อพัง
+
+**`check_connection( )` ที่เคยได้ 200 พิสูจน์แค่ว่า host ต่อถึง** — มัน ping `/services/data/`
+ซึ่งไม่ต้องใช้ token · ตอนนี้ยิง `/services/data/v66.0/limits` ที่ต้องใช้ token จริง
+
+**ยังไม่ปิด 5.6** — ต้องยืนยัน 3 ขั้น: `check_connection( )` = 200 · ยิงจริงได้ 201
+· **เว้น 1 วันแล้วยิงซ้ำต้องยังได้ 201** (ขั้นสุดท้ายคือเคสที่ของเดิมพัง)

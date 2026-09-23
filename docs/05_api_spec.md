@@ -355,7 +355,7 @@ ZARI002 แจ้ง SFDC เองว่าใบไหนลง table ได�
 |---|---|
 | จังหวะ | ท้าย loop ของ**แต่ละ payment** หลัง save + log · 1 request 5 ใบ = 5 call |
 | Endpoint | `POST /services/data/v66.0/sobjects/Integration_Log__c` (Salesforce standard sObject API) |
-| Auth | OAuth 2.0 client credentials โดย Communication Arrangement `ZCA_PAYMENT_RESULT` |
+| Auth | ขอ OAuth token ใหม่ทุก call ผ่าน `ZCL_UTILITY` (package `ZBCUTILITY`) แล้วใส่ `Authorization: Bearer` เอง — arrangement `ZCA_SFDC_TOKEN` แบบ Basic |
 | สำเร็จ | `201` + `{"id":"...","success":true}` |
 
 ```json
@@ -373,6 +373,7 @@ ZARI002 แจ้ง SFDC เองว่าใบไหนลง table ได�
 | `Request_Body__c` | ไม่ส่ง |
 
 ผลของ call ลง `ZTAR_I002_HDRLOG` — `salesforce_status` `S`/`E` · `salesforce_message` = HTTP code
+และ `error_code` เมื่อพัง (เช่น `400 REQUIRED_FIELD_MISSING` · `0 TOKEN_NOT_REACHABLE`)
 · ดูใน monitor ได้ · **ไม่ retry**
 
 **API ตัวเดียวกันนี้ ZARI003 ใช้แจ้งผล post** — `Interface__c` คนละค่า · `Request_Body__c` ใส่เลข FI doc

@@ -112,11 +112,11 @@ reject แล้วไม่เหลือ row · duplicate ถูกจับ 
 | # | งาน | ฝั่ง | Status |
 |---|-----|------|--------|
 | 5.1 | Communication Scenario **inbound** `ZCS_INCOMING_PYMT` ผูก inbound service `ZARI002_INCOMING_PYMT_HTTP` | ผู้ใช้ | ✅ |
-| 5.2 | Communication Scenario **outbound** `ZCS_PAYMENT_RESULT` + Outbound Service `ZARI002_PAYMENT_RESULT_REST` — OAuth 2.0 client credentials | ผู้ใช้ (ADT) | ✅ 2026-09-17 |
+| 5.2 | ~~Communication Scenario outbound ของตัวเอง~~ — **เปลี่ยนวิธี 2026-09-23** ใช้ `ZCA_SFDC_TOKEN` ของ package กลาง `ZBCUTILITY` แทน · object ชุดเดิม 3 ตัวลบแล้ว | ผู้ใช้ | ✅ |
 | 5.3 | Communication System `SBPA_DEV` / User `SBPA_DEV` / Arrangement `ZCS_INCOMING_PYMT` บน **IA5/100** | ผู้ใช้ (Fiori) | ✅ |
 | 5.4 | ~~Business role ให้ `SBPA_DEV`~~ — **แก้ด้วยวิธีอื่นแล้ว 2026-09-04** ใช้ `WITH PRIVILEGED ACCESS` ใน `ZCL_ZARI002_MASTER_DATA` ข้าม DCL ไปเลย ไม่ต้องขอ role · เหตุผล: มีแต่ SBPA เรียก ไม่ใช่ user จริง | — | ✅ |
 | 5.5 | ทดสอบ inbound จาก Postman นอก tenant | ร่วมกัน | 🟨 ยิงถึงแล้ว รอ 5.4 |
-| 5.6 | ทดสอบยิงผลกลับไป SFDC — auth ✅ · data API ✅ ยิงจริงได้ `201` ผล ลง HDRLOG | ร่วมกัน | ✅ 2026-09-17 |
+| 5.6 | ทดสอบยิงผลกลับไป SFDC — auth ✅ · data API ✅ · **เปลี่ยนมาขอ token ทุก call 2026-09-23** ต้องยืนยันซ้ำ: `check_connection( )` = 200 · ยิงจริงได้ 201 · **เว้น 1 วันแล้วยิงซ้ำต้องยังได้ 201** | ร่วมกัน | 🟨 รอยืนยันข้ามวัน |
 
 ### ผลทดสอบครั้งแรกจาก Postman — 2026-08-31
 
