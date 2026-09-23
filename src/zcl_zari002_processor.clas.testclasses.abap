@@ -49,17 +49,19 @@ CLASS ltd_master_data IMPLEMENTATION.
 ENDCLASS.
 
 
-CLASS ltd_notify DEFINITION FOR TESTING INHERITING FROM zcl_zari002_sfdc_notify.
+CLASS ltd_result DEFINITION FOR TESTING INHERITING FROM zcl_zari002_sfdc_result.
   PUBLIC SECTION.
-    "! เก็บ record ที่ "จะยิง" ไว้ตรวจ แทนที่จะยิงจริง · ตอบ 201 เสมอเหมือน SFDC รับ
-    DATA gs_sent TYPE zcl_zari002_sfdc_notify=>ty_record.
-    METHODS notify REDEFINITION.
+    "! เก็บ record ที่จะยิงไว้ตรวจ แทนที่จะยิงจริง
+    DATA gs_sent TYPE zcl_zari002_sfdc_result=>ty_record.
+    " ตอบเหมือน SFDC รับ record แล้ว
+    METHODS send REDEFINITION.
 ENDCLASS.
 
-CLASS ltd_notify IMPLEMENTATION.
-  METHOD notify.
-    gs_sent        = is_record.
-    rv_http_status = zcl_zari002_sfdc_notify=>gc_http_created.
+CLASS ltd_result IMPLEMENTATION.
+  METHOD send.
+    gs_sent               = is_record.
+    rs_result-http_status = zcl_zari002_sfdc_result=>gc_http_created.
+    rs_result-success     = abap_true.
   ENDMETHOD.
 ENDCLASS.
 
@@ -74,7 +76,7 @@ CLASS ltc_processor DEFINITION FINAL
     CLASS-DATA go_osql TYPE REF TO if_osql_test_environment.
 
     DATA go_cut    TYPE REF TO zcl_zari002_processor.
-    DATA go_notify TYPE REF TO ltd_notify.
+    DATA go_result TYPE REF TO ltd_result.
 
     "! salesforce_id ของ fixture — ใช้เป็น WHERE ในทุก SELECT ของ test (ATC บังคับ)
     CONSTANTS gc_sf_id TYPE ztar_i002_pymt-salesforce_id VALUE 'SF0000000000000001'.
@@ -140,9 +142,9 @@ CLASS ltc_processor IMPLEMENTATION.
 
   METHOD setup.
     go_osql->clear_doubles( ).
-    go_notify = NEW ltd_notify( ).
+    go_result = NEW ltd_result( ).
     go_cut    = NEW zcl_zari002_processor( io_master_data = NEW ltd_master_data( )
-                                           io_notify      = go_notify ).
+                                           io_result      = go_result ).
   ENDMETHOD.
 
 
@@ -335,12 +337,12 @@ CLASS ltc_processor IMPLEMENTATION.
 
     go_cut->process( sample_json( ) ).
 
-    cl_abap_unit_assert=>assert_equals( exp = 'Payment Response'    act = go_notify->gs_sent-interface ).
-    cl_abap_unit_assert=>assert_equals( exp = 'SF0000000000000001' act = go_notify->gs_sent-reference_id ).
-    cl_abap_unit_assert=>assert_equals( exp = 'S'                  act = go_notify->gs_sent-status ).
+    cl_abap_unit_assert=>assert_equals( exp = 'Payment Response'    act = go_result->gs_sent-interface ).
+    cl_abap_unit_assert=>assert_equals( exp = 'SF0000000000000001' act = go_result->gs_sent-reference_id ).
+    cl_abap_unit_assert=>assert_equals( exp = 'S'                  act = go_result->gs_sent-status ).
     cl_abap_unit_assert=>assert_equals( exp = 'All payments saved successfully'
-                                        act = go_notify->gs_sent-message ).
-    cl_abap_unit_assert=>assert_initial( act = go_notify->gs_sent-request_body
+                                        act = go_result->gs_sent-message ).
+    cl_abap_unit_assert=>assert_initial( act = go_result->gs_sent-request_body
                                          msg = 'ZARI002 ไม่ส่ง Request_Body__c (D1-A)' ).
 
   ENDMETHOD.
@@ -355,13 +357,13 @@ CLASS ltc_processor IMPLEMENTATION.
 
     go_cut->process( lv_json ).
 
-    cl_abap_unit_assert=>assert_equals( exp = 'E' act = go_notify->gs_sent-status ).
+    cl_abap_unit_assert=>assert_equals( exp = 'E' act = go_result->gs_sent-status ).
     cl_abap_unit_assert=>assert_equals(
       exp = `Cheque number is required for payment method Cheque, `
          && `Issue date is required for payment method Cheque, `
          && `Due date is required for payment method Cheque, `
          && `Bank/branch is required for payment method Cheque`
-      act = go_notify->gs_sent-message
+      act = go_result->gs_sent-message
       msg = 'msgtx ต่อกันด้วย ", " ไม่มี code นำหน้า (D3)' ).
 
   ENDMETHOD.

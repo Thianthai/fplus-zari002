@@ -36,7 +36,7 @@ CLASS zcl_zari002_processor DEFINITION
     "! ทำ dependency ได้เพื่อให้ unit test ไม่แตะ master data จริงและไม่ยิง HTTP
     METHODS constructor
       IMPORTING io_master_data TYPE REF TO zif_zari002_master_data OPTIONAL
-                io_notify      TYPE REF TO zcl_zari002_sfdc_notify OPTIONAL.
+                io_result      TYPE REF TO zcl_zari002_sfdc_result OPTIONAL.
 
     "! Flow เดียวจบ: parse → normalize → validate → save → callback
     METHODS process
@@ -46,7 +46,7 @@ CLASS zcl_zari002_processor DEFINITION
   PRIVATE SECTION.
 
     DATA go_master_data TYPE REF TO zif_zari002_master_data.
-    DATA go_notify      TYPE REF TO zcl_zari002_sfdc_notify.
+    DATA go_result      TYPE REF TO zcl_zari002_sfdc_result.
 
     "! เตรียม payment data ให้พร้อม save ลง table
     METHODS normalize
@@ -160,8 +160,8 @@ CLASS ZCL_ZARI002_PROCESSOR IMPLEMENTATION.
     go_master_data = COND #( WHEN io_master_data IS BOUND THEN io_master_data
                              ELSE NEW zcl_zari002_master_data( ) ).
 
-    go_notify = COND #( WHEN io_notify IS BOUND THEN io_notify
-                        ELSE NEW zcl_zari002_sfdc_notify( ) ).
+    go_result = COND #( WHEN io_result IS BOUND THEN io_result
+                        ELSE NEW zcl_zari002_sfdc_result( ) ).
 
   ENDMETHOD.
 
@@ -587,27 +587,31 @@ CLASS ZCL_ZARI002_PROCESSOR IMPLEMENTATION.
 
     " 1 record ต่อ 1 payment ตาม spec Integration ไม่มี field ระดับ item
     " error ทุกบรรทัดรวมเป็นข้อความเดียว ไม่ใส่ code
-    DATA(ls_record) = VALUE zcl_zari002_sfdc_notify=>ty_record(
-      interface    = zcl_zari002_sfdc_notify=>gc_interface_payment
+    DATA(ls_record) = VALUE zcl_zari002_sfdc_result=>ty_record(
+      interface    = zcl_zari002_sfdc_result=>gc_interface_payment
       reference_id = is_payment-salesforce_id
       status       = COND #( WHEN it_error IS INITIAL
-                             THEN zcl_zari002_sfdc_notify=>gc_status_success
-                             ELSE zcl_zari002_sfdc_notify=>gc_status_error )
+                             THEN zcl_zari002_sfdc_result=>gc_status_success
+                             ELSE zcl_zari002_sfdc_result=>gc_status_error )
       message      = COND #( WHEN it_error IS INITIAL
                              THEN message_text( '300' )
                              ELSE concat_lines_of(
                                     table = VALUE string_table( FOR <lfs_e> IN it_error ( <lfs_e>-msgtx ) )
                                     sep   = `, ` ) ) ).
 
-    DATA(lv_http) = go_notify->notify( ls_record ).
+    DATA(ls_send) = go_result->send( ls_record ).
 
     " บันทึกว่า SFDC ได้รับ log record ไหม
     " 201 = รับ / อื่นๆ = ไม่รับ
+    " ตอนพังเก็บ error_code ต่อท้ายด้วย support จะได้ไม่ต้องเดาสาเหตุ
+    DATA(lv_message) = COND string( WHEN ls_send-success = abap_true
+                                    THEN |{ ls_send-http_status }|
+                                    ELSE |{ ls_send-http_status } { ls_send-error_code }| ).
+
     TRY.
         UPDATE ztar_i002_hdrlog
-          SET salesforce_status  = @( COND #( WHEN lv_http = zcl_zari002_sfdc_notify=>gc_http_created
-                                              THEN 'S' ELSE 'E' ) ),
-              salesforce_message = @( |{ lv_http }| )
+          SET salesforce_status  = @( COND #( WHEN ls_send-success = abap_true THEN 'S' ELSE 'E' ) ),
+              salesforce_message = @lv_message
           WHERE payment_uuid = @is_payment-payment_uuid.
 
         COMMIT WORK.
