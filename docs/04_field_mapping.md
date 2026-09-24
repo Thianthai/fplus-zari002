@@ -39,7 +39,10 @@ API field ↔ table field · **JSON ใช้ CamelCase · table ใช้ snake
 | `SalesforceMessage` | `salesforce_message` | `char(200)` | `String(200)` | out | – | ข้อความคู่กับ `SalesforceStatus` — ZARI002 ปล่อยว่างเสมอ |
 | — | `payment_accounting_document` | `char(10)` | — | — | – | **ของ ZARE002** (เพิ่ม 2026-09-22 `08c105c`) เลข JE ที่ Submit post · ZARI002 ไม่เขียน |
 | — | `clearing_accounting_document` | `char(10)` | — | — | – | **ของ ZARE002** เลข clearing ที่ BOT ส่งกลับ · ZARI002 ไม่เขียน |
+| — | `payment_fiscal_year` | `numc(4)` | — | — | – | **ของ ZARE002** (เพิ่ม 2026-09-24) ปีบัญชีของ JE · เลขเอกสาร unique แค่กับ company + ปี |
+| — | `clearing_fiscal_year` | `numc(4)` | — | — | – | **ของ ZARE002** ปีบัญชีของเอกสาร clearing (BOT ส่งมา) |
 | — | `submit_message` | `char(200)` | — | — | – | **ของ ZARE002** ข้อความล่าสุดของขั้น Submit (คนละช่องกับ `salesforce_message`) · ZARI002 ไม่เขียน |
+| — | `clearing_message` | `char(200)` | — | — | – | **ของ ZARE002** ข้อความของขั้น clearing จาก BOT · แยกจาก `submit_message` และ `salesforce_message` |
 | `CreatedBy` `CreatedAt` `LastChangedBy` `LastChangedAt` `LocalLastChangedAt` | admin fields | | | out | – | managed · `LocalLastChangedAt` = etag |
 | `Items` | — | array | array | in | ✔ | ต้องมีอย่างน้อย 1 รายการ |
 
