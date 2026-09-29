@@ -89,6 +89,10 @@ ztar_i002_pymt-payment_document_no   +   ztar_i002_item-billing_document
 **เทียบทุก `status`** ไม่กรองตามสถานะ (ตกลง 2026-08-28: *"ห้ามส่งซ้ำถ้าเคยส่งมาแล้ว"*)
 → `status` จึงอยู่ในนิยาม key แต่ไม่ได้ทำหน้าที่กรองในทางปฏิบัติ logic จริงคือเช็ค 2 field ข้างบน
 
+> **อัปเดต 2026-09-29 (`12d266f`)**: logic จริงนับเป็นใบซ้ำเฉพาะ row ที่ยังไม่ปิดงาน **`status IN ('N','S')`** —
+> `S` (Submitted: post JE แล้วรอ BOT clear) ต้องดักที่นี่ เพราะ JE ของ ZARE002 ไม่ได้ clear invoice ช่วงนั้น AR Open Item check จึงดักไม่ได้
+> `C` (Cleared) ให้ AR Open Item check ดัก · `R` / `E` ไม่บล็อก ส่งแก้เข้ามาใหม่ได้
+
 ตรวจ **ทีละ item** — 1 payment มีหลาย item ที่ `billing_document` ต่างกัน การเทียบเป็นคู่
 `(payment_document_no, billing_document)` จึงบอกได้ว่า**บรรทัดไหน**ซ้ำ ไม่ใช่แค่ว่าใบนี้เคยมา
 ส่งชุดเดิม 5 บรรทัดกลับมาซ้ำ = ได้ 5 message ในรอบเดียว แล้ว reject ทั้ง request
@@ -143,7 +147,7 @@ CN ติดลบได้ · แต่ **ผลรวม `AmountPaid` ขอ�
 | `check_gl_account` | header | `201` | ✅ |
 | `check_payment_method` | header | `202` `203` | ✅ |
 | `check_amount_paid_total` | header | `011` | ✅ |
-| `check_duplicate` | header | `010` | ✅ key = `payment_document_no` + `billing_document` + **`status`** (2026-09-17) — ซ้ำเฉพาะกับ row `N` |
+| `check_duplicate` | header | `010` | ✅ key = `payment_document_no` + `billing_document` + **`status`** (2026-09-17) — ซ้ำกับ row `N` และ `S` (เพิ่ม `S` 2026-09-29 `12d266f`) |
 | `check_bank` | header | `207` | ✅ เฉพาะตอนจ่ายด้วยเช็ค |
 | `check_payment_total` | header | `007` | 🟨 ที่ว่าง — OQ-05 |
 | `check_item_ids` | item | `005` `111` | ✅ |
@@ -157,7 +161,7 @@ CN ติดลบได้ · แต่ **ผลรวม `AmountPaid` ขอ�
 
 | # | เปลี่ยนอะไร | ผลกับ API contract |
 |---|---|---|
-| 1 | `status` แยกเป็น 2 domain: `ZD_REQUEST_STATUS` (`N`/`C`/`R`/`E`) transaction status · `ZD_RESPONSE_STATUS` (`S`/`W`/`E`) result status ที่ส่งกลับ SFDC | ไม่กระทบ input |
+| 1 | `status` แยกเป็น 2 domain: `ZD_REQUEST_STATUS` (`N`/`S`/`C`/`R`/`E`) transaction status · `ZD_RESPONSE_STATUS` (`S`/`W`/`E`) result status ที่ส่งกลับ SFDC | ไม่กระทบ input |
 | 2 | +`batch_id` SAP สร้างตอนรับ | ไม่กระทบ input · โผล่ใน response |
 | 3 | +`salesforce_status` +`salesforce_message` · −`error_message` (header) | response เปลี่ยน |
 | 4 | `number_of_items` → `number_of_items_in_payment` | 🔴 **`NumberOfItems` → `NumberOfItemsInPayment` — SFDC ต้องแก้ client** |

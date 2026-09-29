@@ -177,7 +177,15 @@ Table ทั้ง 2 ตัวออกแบบไว้ก่อนหน้�
 | `salesforce_status` | `ZD_RESPONSE_STATUS` | **result status** ที่ส่งกลับ SFDC | ZARE002 |
 | `salesforce_message` | `char(200)` | ข้อความคู่กับ `salesforce_status` | ZARE002 |
 
-`ZD_REQUEST_STATUS`: `N` New · `C` Complete · `R` Reject · `E` Error
+`ZD_REQUEST_STATUS`: `N` New · `S` Submitted · `C` Cleared · `R` Rejected · `E` Error (เพิ่ม `S` + เปลี่ยนข้อความ 2026-09-29 `12d266f`)
+
+| status | ใครเขียน | ตอนไหน |
+|---|---|---|
+| `N` | ZARI002 | insert ใบใหม่ |
+| `S` | ZARE002 `ZCL_ZARE002_SUBMIT` | post JE สำเร็จ รอ BOT clear |
+| `C` | ZARI003 `ZCL_ZARI003_CLEARING_RESULT` (API #3) | BOT clear สำเร็จ |
+| `R` | ZARE002 saver ของปุ่ม Reject | SFDC รับผล Rejected แล้ว |
+| `E` | ไม่มีใครเขียน | ดู `fplus-zare002` OQ-41 |
 `ZD_RESPONSE_STATUS`: `S` Success · `W` Warning · `E` Error
 
 **item ไม่มี status และไม่มี message แล้ว** — error อะไรก็ตามถือเป็น error ของ payment ทั้งใบ
@@ -263,6 +271,11 @@ Salesforce จึงเห็นปัญหาทั้งหมดในคร
 
 ตรวจ **ทุกสถานะ** ไม่กรองตาม `status` (ตกลง 2026-08-28: *ห้ามส่งซ้ำถ้าเคยส่งมาแล้ว*)
 `status` จึงอยู่ในนิยาม key ตามที่ธุรกิจอธิบาย แต่ไม่ได้ทำหน้าที่กรองในทางปฏิบัติ
+
+> **อัปเดต 2026-09-29 (`12d266f`)**: logic จริงนับเป็นใบซ้ำเฉพาะ row ที่ยังไม่ปิดงาน **`status IN ('N','S')`** —
+> `S` (Submitted: post JE แล้วรอ BOT clear) ต้องดักที่นี่ เพราะ JE ของ ZARE002 ไม่ได้ clear invoice ช่วงนั้น AR Open Item check จึงดักไม่ได้
+> `C` (Cleared) ให้ AR Open Item check ดัก · `R` / `E` ไม่บล็อก ส่งแก้เข้ามาใหม่ได้
+
 
 ### `salesforce_id` ไม่ใช่ key กันซ้ำอีกต่อไป
 
