@@ -21,7 +21,11 @@ CLASS ZCL_ZARI002_SPIKE IMPLEMENTATION.
 
   METHOD if_oo_adt_classrun~main.
 
-    purge_all( out ).
+    " ปิดไว้ เพราะ purge_all ลบข้อมูลทั้ง ztar_i002_pymt และ ztar_i002_item โดยไม่มีเงื่อนไข
+    " ห้ามเปิดบน client ที่มีข้อมูลจริง
+*    purge_all( out ).
+
+    out->write( |ZCL_ZARI002_SPIKE: purge_all is disabled| ).
 
   ENDMETHOD.
 
