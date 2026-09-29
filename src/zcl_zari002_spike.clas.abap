@@ -32,12 +32,12 @@ CLASS ZCL_ZARI002_SPIKE IMPLEMENTATION.
 
   METHOD purge_all.
 
-    DELETE FROM ztar_i002_pymt.
-    DELETE FROM ztar_i002_item.
-
-    COMMIT WORK.
-
-    io_out->write( |--- all 2 tables purged ---| ).
+*    DELETE FROM ztar_i002_pymt.
+*    DELETE FROM ztar_i002_item.
+*
+*    COMMIT WORK.
+*
+*    io_out->write( |--- all 2 tables purged ---| ).
 
   ENDMETHOD.
 ENDCLASS.
