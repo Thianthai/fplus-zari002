@@ -42,7 +42,9 @@ API field ↔ table field · **JSON ใช้ CamelCase · table ใช้ snake
 | — | `payment_fiscal_year` | `numc(4)` | — | — | – | **ของ ZARE002** (เพิ่ม 2026-09-24) ปีบัญชีของ JE · เลขเอกสาร unique แค่กับ company + ปี |
 | — | `clearing_fiscal_year` | `numc(4)` | — | — | – | **ของ ZARE002** ปีบัญชีของเอกสาร clearing (BOT ส่งมา) |
 | — | `submit_message` | `char(200)` | — | — | – | **ของ ZARE002** ข้อความล่าสุดของขั้น Submit (คนละช่องกับ `salesforce_message`) · ZARI002 ไม่เขียน |
-| — | `clearing_message` | `char(200)` | — | — | – | **ของ ZARE002** ข้อความของขั้น clearing จาก BOT · แยกจาก `submit_message` และ `salesforce_message` |
+| — | `clearing_message` | `char(200)` | — | — | – | **เขียนโดย ZARI003** (API #3 ย้ายจาก ZARE002 2026-09-28) ข้อความของขั้น clearing จาก BOT · แยกจาก `submit_message` และ `salesforce_message` |
+| — | `reject_batch_id` | `char(25)` | — | — | – | **ของ ZARE002** (เพิ่ม 2026-09-29 `44b5281` · อยู่ต่อจาก `clearing_fiscal_year`) เลข `YYYYMMDD_hhmmss` เวลาไทย ทุกใบที่ Reject ในการกดครั้งเดียวได้เลขเดียวกัน · ส่งเป็น `BST_SAP_BatchId__c` ไป SFDC และส่งให้ SBPA |
+| — | `reject_message` | `char(200)` | — | — | – | **ZARE002 เขียนก่อน** (ข้อความ Reject สำเร็จ) แล้ว **ZARI003 เขียนทับ** ด้วยผลการแจ้ง SBPA (bgPF หลัง commit) · เพิ่ม 2026-09-29 `44b5281` |
 | `CreatedBy` `CreatedAt` `LastChangedBy` `LastChangedAt` `LocalLastChangedAt` | admin fields | | | out | – | managed · `LocalLastChangedAt` = etag |
 | `Items` | — | array | array | in | ✔ | ต้องมีอย่างน้อย 1 รายการ |
 
