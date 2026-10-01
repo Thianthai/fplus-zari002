@@ -70,9 +70,9 @@ CLASS zcl_zari002_processor DEFINITION
       RETURNING VALUE(rt_error) TYPE tt_error.
 
     "! ซ้ำเมื่อมี row ที่ยังไม่ปิดงานด้วย payment_document_no + billing_document เดียวกัน
-    "! N และ S ถือว่าซ้ำ
+    "! N S และ E ถือว่าซ้ำ
     "! C ถูก AR open item check ดักแทน
-    "! R และ E ไม่บล็อก ส่งแก้เข้ามาใหม่ได้
+    "! R ไม่บล็อก ส่งแก้เข้ามาใหม่ได้
     METHODS check_duplicate
       IMPORTING is_payment       TYPE ztar_i002_pymt
                 it_item          TYPE tt_item
@@ -540,14 +540,16 @@ CLASS ZCL_ZARI002_PROCESSOR IMPLEMENTATION.
     " S (post JE แล้ว รอ BOT clear) ซ้ำ
     " S ต้องดักที่นี่ เพราะ JE ของ ZARE002 ไม่ได้ clear invoice
     " ช่วงรอ clearing invoice ยังเปิดอยู่ AR Open Item check จึงดักไม่ได้
+    " E (post JE ไม่ผ่าน) ซ้ำ เพราะใบ E ยัง Submit ซ้ำได้เหมือนใบ N
+    " ถ้ารับใบใหม่เข้ามาอีก จะมี 2 row ที่ Submit ได้และ post JE ซ้ำได้
     " C (clear แล้ว) ไม่ซ้ำที่นี่ แต่ AR Open Item check ดักได้ เพราะ invoice ถูก clear แล้ว
-    " R และ E ไม่ซ้ำ ส่งแก้เข้ามาใหม่ได้
+    " R ไม่ซ้ำ ส่งแก้เข้ามาใหม่ได้
     " ห้ามใช้โดยไม่มี AR Open Item check ไม่งั้นใบ C จะส่งซ้ำแล้ว post ซ้ำได้
     SELECT FROM ztar_i002_pymt AS p
            INNER JOIN ztar_i002_item AS i ON i~payment_uuid = p~payment_uuid
       FIELDS i~billing_document
       WHERE p~payment_document_no = @is_payment-payment_document_no
-        AND p~status              IN ( 'N', 'S' )
+        AND p~status              IN ( 'N', 'S', 'E' )
         AND i~billing_document    IN @lr_billing
       INTO TABLE @DATA(lt_existing).
 

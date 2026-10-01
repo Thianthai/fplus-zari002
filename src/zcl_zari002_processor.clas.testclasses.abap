@@ -104,6 +104,7 @@ CLASS ltc_processor DEFINITION FINAL
     METHODS log_msg_carries_item_id   FOR TESTING.
     METHODS cleared_document_fails_206 FOR TESTING.
     METHODS rejected_row_can_be_resent FOR TESTING.
+    METHODS error_row_is_duplicate     FOR TESTING.
 
     METHODS sample_json
       IMPORTING iv_company_code   TYPE string DEFAULT `2000`
@@ -492,19 +493,39 @@ CLASS ltc_processor IMPLEMENTATION.
 
   METHOD rejected_row_can_be_resent.
 
-*   เคส 1 ของ functional: รอบแรกลง table เป็น N → ZARE002 post ไม่ผ่านเป็น E → SF ส่งใหม่ต้องรับ
+*   ใบที่ ZARE002 reject แล้ว (R) SF แก้แล้วส่งเลขเดิมเข้ามาใหม่ได้
+    go_cut->process( sample_json( ) ).
+    UPDATE ztar_i002_pymt SET status = 'R' WHERE status = 'N' AND salesforce_id = @gc_sf_id.
+
+    DATA(ls_out) = go_cut->process( sample_json( ) ).
+
+    cl_abap_unit_assert=>assert_equals( exp = abap_true act = ls_out-success
+                                        msg = 'ใบที่ถูก reject ต้องส่งแก้เข้ามาใหม่ได้' ).
+    cl_abap_unit_assert=>assert_false( act = has_msgno( it_error = ls_out-errors iv_msgno = '010' ) ).
+
+    SELECT COUNT(*) FROM ztar_i002_pymt WHERE salesforce_id = @gc_sf_id INTO @DATA(lv_count).
+    cl_abap_unit_assert=>assert_equals( exp = 2 act = lv_count
+                                        msg = 'ต้องมี 2 row: R เดิม + N ใหม่' ).
+
+  ENDMETHOD.
+
+
+  METHOD error_row_is_duplicate.
+
+*   ใบที่ ZARE002 post JE ไม่ผ่าน (E) ยัง Submit ซ้ำได้เหมือนใบ N
+*   SF ส่งเลขเดิมเข้ามาอีกต้องได้ 010 ไม่งั้นจะมี 2 row ที่ post JE ซ้ำได้
     go_cut->process( sample_json( ) ).
     UPDATE ztar_i002_pymt SET status = 'E' WHERE status = 'N' AND salesforce_id = @gc_sf_id.
 
     DATA(ls_out) = go_cut->process( sample_json( ) ).
 
-    cl_abap_unit_assert=>assert_equals( exp = abap_true act = ls_out-success
-                                        msg = 'ใบที่ post ไม่ผ่าน ต้องส่งแก้เข้ามาใหม่ได้' ).
-    cl_abap_unit_assert=>assert_false( act = has_msgno( it_error = ls_out-errors iv_msgno = '010' ) ).
+    cl_abap_unit_assert=>assert_equals( exp = abap_false act = ls_out-success
+                                        msg = 'ใบ E ต้องถือว่าซ้ำเหมือนใบ N' ).
+    cl_abap_unit_assert=>assert_true( has_msgno( it_error = ls_out-errors iv_msgno = '010' ) ).
 
     SELECT COUNT(*) FROM ztar_i002_pymt WHERE salesforce_id = @gc_sf_id INTO @DATA(lv_count).
-    cl_abap_unit_assert=>assert_equals( exp = 2 act = lv_count
-                                        msg = 'ต้องมี 2 row: E เดิม + N ใหม่' ).
+    cl_abap_unit_assert=>assert_equals( exp = 1 act = lv_count
+                                        msg = 'ต้องเหลือ row เดียว: E เดิม' ).
 
   ENDMETHOD.
 
