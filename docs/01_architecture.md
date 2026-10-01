@@ -185,7 +185,7 @@ Table ทั้ง 2 ตัวออกแบบไว้ก่อนหน้�
 | `S` | ZARE002 `ZCL_ZARE002_SUBMIT` | post JE สำเร็จ รอ BOT clear |
 | `C` | ZARI003 `ZCL_ZARI003_CLEARING_RESULT` (API #3) | BOT clear สำเร็จ |
 | `R` | ZARE002 saver ของปุ่ม Reject | SFDC รับผล Rejected แล้ว |
-| `E` | ไม่มีใครเขียน | ดู `fplus-zare002` OQ-41 |
+| `E` | ZARE002 `ZCL_ZARE002_SUBMIT` | FI ปฏิเสธตอน post JE (2026-10-01) · ทำงานเหมือน N และนับเป็นใบซ้ำ |
 `ZD_RESPONSE_STATUS`: *(ว่าง)* Not Sent · `S` Success · `W` Warning · `E` Error (เพิ่มค่าว่าง 2026-10-01 `758253c` ให้ dropdown ของ ZARE002)
 
 **domain ที่ ZARE002 ใช้ทำ filter บนหน้าจอ** (อยู่ package นี้ตามที่ผู้ใช้อนุมัติ 2026-10-01 · ไม่มี field ใน table ใช้ — ZARE002 คำนวณเอง):
