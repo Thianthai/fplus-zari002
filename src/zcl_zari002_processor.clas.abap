@@ -343,6 +343,7 @@ CLASS ZCL_ZARI002_PROCESSOR IMPLEMENTATION.
       <lfs_item>-created_by            = cs_payment-created_by.
       <lfs_item>-created_at            = cs_payment-created_at.
       <lfs_item>-last_changed_by       = cs_payment-last_changed_by.
+      <lfs_item>-last_changed_at       = cs_payment-last_changed_at.
       <lfs_item>-local_last_changed_at = cs_payment-local_last_changed_at.
     ENDLOOP.
 
