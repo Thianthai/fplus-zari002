@@ -44,7 +44,7 @@
 | `ZCL_ZARI002_VALIDATOR` | Class — validation format/mandatory/consistency · `is_cheque( )` ตัดสินจากคำ · 32 unit test | `src/zcl_zari002_validator.clas.abap` | 3 | ✅ |
 | `ZCL_ZARI002_JSON` | Class — parse payload + แปลงชื่อ field 2 ทาง · 9 unit test | `src/zcl_zari002_json.clas.abap` | 3 | ✅ |
 | `ZCL_ZARI002_SFDC_RESULT` | Class — POST 1 record ไป `Integration_Log__c` · ขอ token ผ่าน `ZCL_UTILITY` ทุก call · `parse_response( )` + `check_connection( )` · 9 unit test | `src/zcl_zari002_sfdc_result.clas.abap` | 3 | ✅ 2026-09-23 |
-| `ZCL_ZARI002_PROCESSOR` | Class — flow 5 ขั้น (parse → normalize → validate → save → callback) · 9 unit test | `src/zcl_zari002_processor.clas.abap` | 3 | ✅ |
+| `ZCL_ZARI002_PROCESSOR` | Class — flow 5 ขั้น (parse → normalize → validate → save → callback) · 20 unit test · `request_id` ที่สร้างเองเป็นเวลาไทย (2026-10-05) | `src/zcl_zari002_processor.clas.abap` | 3 | ✅ |
 
 ทุก class มีไฟล์คู่: `*.clas.xml` (metadata) + `*.clas.testclasses.abap` (ABAP Unit)
 
@@ -64,7 +64,7 @@
 
 | Package | ใช้ทำอะไร |
 |---|---|
-| `ZBCUTILITY` | `ZCL_UTILITY=>create_sfdc_client( )` / `check_sfdc_connection( )` — ขอ OAuth token ใหม่ทุก call พร้อม `ZCS_SFDC_TOKEN` · `ZBC_SFDC_TOKEN_REST` · `ZCA_SFDC_TOKEN` · repo <https://github.com/Thianthai/fplus-zbcutility> |
+| `ZBCUTILITY` | `ZCL_UTILITY=>create_sfdc_client( )` / `check_sfdc_connection( )` — ขอ OAuth token ใหม่ทุก call · `ZCL_UTILITY=>get_local_datetime( )` — วันที่/เวลาไทยสำหรับ `request_id` ที่สร้างเอง (2026-10-05) · พร้อม `ZCS_SFDC_TOKEN` · `ZBC_SFDC_TOKEN_REST` · `ZCA_SFDC_TOKEN` · repo <https://github.com/Thianthai/fplus-zbcutility> |
 
 ## Connectivity
 

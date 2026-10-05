@@ -119,12 +119,23 @@ platform จึงถือ token ค้างไว้ ไม่ขอใหม
 ### `request_id` — ผู้เรียกเป็นเจ้าของ
 
 ผู้เรียก (SBPA) ส่งมาใน payload · ถ้าไม่ส่ง SAP สร้างให้ในรูปแบบ `YYYYMMDD_hhmmss`
+เป็น **เวลาไทย** ผ่าน `ZCL_UTILITY=>get_local_datetime( )` (เปลี่ยน 2026-10-05 — เดิมเป็น UTC
+ทำให้ช่วง 00:00–06:59 ไทยได้วันที่ของเมื่อวาน) · แปลงไม่สำเร็จ → ใช้วันที่/เวลาของระบบ (UTC) แทน
 **สร้างครั้งเดียวสำหรับทั้ง request** แล้วใช้ค่าเดียวกันกับทุก payment และใน response
 — ถ้าสร้างต่อ payment แต่ละใบจะได้เลขต่างกันและ response จะไม่ตรงกับที่เก็บใน table
 
 (เดิมชื่อ `batch_id` ที่ SAP สร้างเอง — เปลี่ยนเจ้าของและเปลี่ยนชื่อพร้อมกัน)
 
-⚠️ **ยังไม่ยืนยันว่า SBPA ส่ง `RequestId` มาให้จริงหรือไม่** — ดู OQ-26
+✅ SBPA ส่ง `RequestId` มาจริง (OQ-26 ปิด 2026-09-16) — ค่าที่ SAP สร้างเองจึงเป็นแค่ fallback
+
+### เวลาในระบบ — เก็บ UTC แสดงเวลาไทย
+
+| จุด | เป็นเวลาอะไร |
+|---|---|
+| `created_at` / `last_changed_at` / `local_last_changed_at` ทุกตาราง | **UTC** (`GET TIME STAMP`) · หน้า monitor แปลงเป็นเวลาไทยให้เองตาม user/browser · ดูข้อมูลดิบจะช้ากว่าเวลาไทย 7 ชม. ซึ่งปกติ |
+| `request_id` ที่ SAP สร้างเอง | **เวลาไทย** ผ่าน `ZCL_UTILITY=>get_local_datetime( )` |
+| `posting_date` / `issue_date` / `due_on` / `invoice_posting_date` / `sale_submit_date` | วันที่ล้วน ไม่มี time zone · ใช้ตามที่ SBPA ส่งมา (แค่ตัด `-` `/` `.`) |
+| payload ไป Salesforce | ไม่ส่งวันที่/เวลา · SFDC ใช้ `CreatedDate` ของตัวเอง |
 
 ### ทำไมถึงเลิกใช้ RAP
 
