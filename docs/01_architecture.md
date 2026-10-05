@@ -254,6 +254,11 @@ etag master LocalLastChangedAt
 `20260828071522.850218` ตอน create ทั้งที่ไม่ได้ประกาศ `total etag` เลย
 → การเติม admin field มาจาก annotation ใน CDS ล้วน ๆ ไม่ได้ผูกกับ etag **ZARE002 ใช้ได้ตามปกติ**
 
+⚠️ **ย่อหน้าข้างบนเป็นของยุค RAP** — ตั้งแต่ถอด RAP (2026-08-31) ไม่มี managed runtime เติมให้แล้ว
+admin field ทุกตัวต้องเติมเองใน `normalize( )` · ตอนย้ายมา `INSERT` ตรง ๆ **ลืมเติม `last_changed_at` ของ item**
+ทำให้ field นี้ว่างใน `ZTAR_I002_ITEM` และ `ZTAR_I002_ITMLOG` มาตลอด · **แก้แล้ว 2026-10-05** (commit `9f95554`)
+ตอนนี้ item ได้ค่าเดียวกับ header ทั้ง 5 field · row ที่ลงไปก่อนวันนั้นยังว่างอยู่ (ไม่ได้ย้อนเติม)
+
 item ยังมี optimistic concurrency ของตัวเองเต็มรูปแบบผ่าน `local_last_changed_at` —
 **ZARE002 แก้คนละ item ใน payment เดียวกันพร้อมกันได้ไม่ชนกัน**
 
