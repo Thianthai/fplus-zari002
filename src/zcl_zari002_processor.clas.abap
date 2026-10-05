@@ -186,9 +186,19 @@ CLASS ZCL_ZARI002_PROCESSOR IMPLEMENTATION.
     ENDTRY.
 
     " 2. Request ID ----------------------------------------------------
+    " SBPA ไม่ส่ง Request ID มา -> สร้างเองจากวันที่และเวลาไทย
+    " แปลงเวลาไทยไม่สำเร็จ -> ใช้วันที่และเวลาของระบบ (UTC) แทน
     IF ls_request-request_id IS INITIAL.
-      ls_request-request_id = |{ cl_abap_context_info=>get_system_date( ) }_| &&
-                              |{ cl_abap_context_info=>get_system_time( ) }|.
+      zcl_utility=>get_local_datetime( IMPORTING ev_date  = DATA(lv_local_date)
+                                                 ev_time  = DATA(lv_local_time)
+                                                 ev_subrc = DATA(lv_local_subrc) ).
+
+      IF lv_local_subrc <> 0.
+        lv_local_date = cl_abap_context_info=>get_system_date( ).
+        lv_local_time = cl_abap_context_info=>get_system_time( ).
+      ENDIF.
+
+      ls_request-request_id = |{ lv_local_date }_{ lv_local_time }|.
     ENDIF.
 
     rs_result-request_id = ls_request-request_id.
