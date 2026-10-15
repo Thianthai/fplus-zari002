@@ -72,15 +72,17 @@ field `Created*` / `LastChanged*` ทั้งหมด
 |---|---|---|---|
 | `SalesforceItemId` | String(18) | ✔ | **business key ของ item** — ต้องไม่ซ้ำกันเองภายใน payment เดียวกัน · error message จะอ้างถึง item ด้วยค่านี้ |
 | `CustomerCode` | String(10) | ✔ | ต้องมีจริงใน SAP · ส่งแบบไม่มี leading zero ได้ |
-| `BillingNoteNo` | String(10) | – | |
-| `AccountingDocument` | String(10) | ✔ | ต้องเป็นรายการที่**ยังไม่ถูกรับชำระหรือ reverse** (`ZARI002/206`) |
-| `BillingDocument` | String(10) | ✔ | **ไม่ถูกตรวจกับข้อมูลใน SAP** |
-| `InvoicePostingDate` | Date | ✔ | |
-| `InvoiceAmount` | Decimal(23,2) | ✔ | |
+| `BillingNoteNo` | String(10) | – | **บังคับเมื่อ `PaymentMethod = Cash`** — ใส่เลข SO (ดู §6.6) |
+| `AccountingDocument` | String(10) | ✔ * | ต้องเป็นรายการที่**ยังไม่ถูกรับชำระหรือ reverse** (`ZARI002/206`) |
+| `BillingDocument` | String(10) | ✔ * | **ไม่ถูกตรวจกับข้อมูลใน SAP** |
+| `InvoicePostingDate` | Date | ✔ * | |
+| `InvoiceAmount` | Decimal(23,2) | ✔ * | |
 | `AmountPaid` | Decimal(23,2) | ✔ | |
 | `PartialAmount` | **String(1)** | – | **เป็น flag ไม่ใช่จำนวนเงิน** — `"X"` = จ่ายบางส่วน · `""` = จ่ายเต็ม |
 | `SaleSubmitDate` | Date | ✔ | |
 | `BillingDocument` | String(10) | ✔ | **เป็นส่วนหนึ่งของ duplicate key** (ดู §7) |
+
+\* ไม่ต้องส่งเมื่อ `PaymentMethod = Cash` — SAP หาให้จากเลข SO (§6.6)
 
 **ห้ามส่ง**: `ItemUuid` · `PaymentUuid` · `Currency` · `RejectReason` · admin fields
 
@@ -161,18 +163,13 @@ API **เติมให้เอง** ก่อนตรวจและก่�
 
 ### 6.2 `PaymentMethod` ส่งเป็นคำ
 
-API แปลงคำเป็น SAP payment method code ให้เอง
-
-| Salesforce ส่ง | SAP code |
-|---|---|
-| `Cheque` | `A` (Manual Cheque) |
-| `Transfer` | `T` (Bank Transfer) |
-
-⬜ **ถ้า Salesforce จะส่งคำอื่นนอกจาก 2 คำนี้ ต้องแจ้งล่วงหน้า** — คำที่ไม่อยู่ในรายการ
-จะถูก reject ทั้ง request
+รับ 3 คำ `Cheque` / `Cash` / `Transfer` (ไม่สนตัวพิมพ์) เก็บตามที่ส่งมา ไม่แปลงเป็น SAP code
+(เปลี่ยน 2026-09-18) · คำอื่นได้ `ZARI002/202`
 
 **`PaymentMethod = "Cheque"` ทำให้ 4 field กลายเป็นบังคับ**: `ChequeNo` `IssueDate`
 `DueOn` `ChequeBankBranch`
+
+**`PaymentMethod = "Cash"` คือ Cash Sales** — ดู §6.6
 
 ### 6.3 `Currency` ไม่ต้องส่ง
 
@@ -189,6 +186,20 @@ API แปลงคำเป็น SAP payment method code ให้เอง
 
 **รายบรรทัด**รับค่าติดลบได้ (CN เป็นค่าติดลบตามปกติ) — แต่ **ผลรวม `AmountPaid` ของทุก item
 ในหนึ่ง payment ต้องมากกว่า 0** ไม่งั้นได้ `ZARI002/011`
+
+### 6.6 Cash Sales — ส่งเลข SO มาแทนข้อมูล invoice (2026-10-15)
+
+เมื่อ `PaymentMethod = "Cash"` ทุก item ในใบ:
+
+| Field | ต้องส่งไหม |
+|---|---|
+| `BillingNoteNo` | **บังคับ** — เลขใบสั่งขาย (SO) ไม่ต้องเติม 0 นำหน้า · ไม่ส่ง → `ZARI002/119` |
+| `AccountingDocument` `BillingDocument` `InvoicePostingDate` `InvoiceAmount` | **ไม่ต้องส่ง** — SAP หาจาก SO ให้ · ถ้าส่งมา **SAP ทับด้วยค่าของตัวเองเสมอ** |
+
+SAP หา SO → billing document (invoice ที่ไม่ถูกยกเลิก) → เอกสาร FI บรรทัดลูกหนี้
+· หาไม่เจอ (ไม่มี SO หรือยังไม่วางบิล) → `ZARI002/208` และใบนั้นไม่ถูกบันทึก
+· หลังเติมค่าแล้ว ตรวจ `206` (ยังเปิดอยู่) และ `010` (ซ้ำ) เหมือนใบปกติ
+· ถ้าใบนั้นติด `119` / `208` จะยังไม่ตรวจข้ออื่น — แก้แล้วส่งใหม่อาจเจอ error อื่นต่อ
 
 ## 7. Duplicate check
 
@@ -294,6 +305,7 @@ API แปลงคำเป็น SAP payment method code ให้เอง
 | `ZARI002/116` | Invoice amount is required |
 | `ZARI002/117` | Amount paid is required |
 | `ZARI002/118` | Sale submit date is required |
+| `ZARI002/119` | Sales order number is required for payment method &1 — เฉพาะ `Cash` (§6.6) |
 
 `107`–`110` เกิดเฉพาะเมื่อ `PaymentMethod` เป็นเช็ค
 
@@ -307,10 +319,11 @@ API แปลงคำเป็น SAP payment method code ให้เอง
 | ~~`ZARI002/203`~~ | ~~Payment method &1 does not exist for country &2~~ — **ลบแล้ว 2026-09-18** ไม่แปลงเป็น SAP code แล้วจึงไม่มีอะไรให้เทียบกับ `I_PaymentMethod` |
 | `ZARI002/204` | Currency for company code &1 cannot be determined |
 | `ZARI002/205` | Customer &1 does not exist |
-| `ZARI002/206` | Document &1 already cleared or reversed — ⬜ ยังไม่เปิดใช้ (OQ-08) |
+| `ZARI002/206` | Document &1 already cleared or reversed |
 | `ZARI002/207` | Bank/branch &1 does not exist — เฉพาะตอนจ่ายด้วยเช็ค |
+| `ZARI002/208` | No billing document found for sales order &1 — เฉพาะ `Cash` (§6.6) |
 
-`202` = คำที่ส่งมาไม่อยู่ในรายการแปลง (ดู §6.2) · `203` = แปลงได้แต่ code ไม่มีใน SAP
+`202` = คำที่ส่งมาไม่ใช่ 1 ใน 3 คำ (ดู §6.2)
 
 **`3xx` — ผลรวมของ request** ใช้เป็นค่าของ `Status` ไม่เคยโผล่ใน `Errors`
 

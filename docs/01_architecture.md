@@ -37,6 +37,7 @@ SBPA ──POST JSON──▶ HTTP Service
                          └─ วนทีละ payment ── 1 payment = 1 หน่วยที่สมบูรณ์หรือไม่มีเลย
                               ├─ normalize   UUID · request_id · currency · pad key
                               │              แปลง payment method · admin field · status = N
+                              ├─ cash sales  PaymentMethod = Cash -> หา invoice จากเลข SO (119 / 208)
                               ├─ validate    ZCL_ZARI002_VALIDATOR + ZIF_ZARI002_MASTER_DATA
                               ├─ save        ผ่าน → INSERT 2 table + COMMIT
                               │              ไม่ผ่าน → ไม่ INSERT อะไรของใบนั้นเลย
@@ -366,6 +367,38 @@ Salesforce ส่ง `gl_account` มาแบบ **ไม่มี leading zero
 
 การอ่าน master data ทั้งหมดผ่าน **`ZIF_ZARI002_MD_CHK`** เพื่อให้ unit test ใส่ test double ได้
 ไม่ต้องพึ่งข้อมูลจริงบน tenant
+
+### Cash Sales — หา invoice จากเลข SO (2026-10-15)
+
+`PaymentMethod = Cash` → SFDC ส่งมาแค่ **เลข SO ใน `BillingNoteNo`** ส่วน `AccountingDocument`
+`BillingDocument` `InvoicePostingDate` `InvoiceAmount` ว่าง · `enrich_cash_sales( )` หามาเติมหลัง normalize
+ก่อน validate — mandatory (`113`–`116`) · AR open item (`206`) · duplicate (`010`) จึงเห็นค่าที่เติมแล้ว
+
+```
+billing_note_no (pad 10 หลัก)
+  -> I_BillingDocumentItem.SalesDocument
+  -> I_BillingDocument          SDDocumentCategory = 'M' · BillingDocumentIsCancelled ว่าง
+                                -> BillingDocument · AccountingDocument · CompanyCode · FiscalYear
+  -> I_OperationalAcctgDocItem  FinancialAccountType = 'D'
+                                -> PostingDate · AmountInTransactionCurrency
+```
+
+| ข้อตกลง (ผู้ใช้ยืนยัน 2026-10-15) | |
+|---|---|
+| ตัดสิน Cash Sales | `payment_method` = `Cash` (ไม่สนตัวพิมพ์) ทุก item ในใบ |
+| SO → billing | 1 SO มี invoice ใบเดียว · กรอง `M` + ไม่ยกเลิก ไว้กันพลาด · `DISTINCT` เพราะบิลมีหลายบรรทัด |
+| FI | บรรทัด `D` มีบรรทัดเดียว · **ยังเปิดอยู่** หลังวางบิล → `206` ใช้กับ Cash ได้ตามปกติ |
+| ค่าที่ SFDC ส่งมาด้วย | **ทับด้วยค่าจาก SAP เสมอ** ทั้ง 4 field |
+| ไม่ส่ง SO | `119` |
+| หาไม่เจอ (ไม่มี SO / ยังไม่วางบิล) | `208` → reject ใบนั้น · callback ส่ง `E` ไป SFDC |
+| error จากขั้นนี้ | **ข้าม validate** เหมือน normalize พัง — กัน `113`–`116` ซ้อน · error header อื่นจะโผล่รอบส่งใหม่ |
+| ไม่ตรวจ | บริษัทของบิลตรงกับ `CompanyCode` ของ payment หรือไม่ |
+
+`billing_note_no` ของ Cash ถูกเก็บแบบเติม 0 ครบ 10 หลัก (เหมือน GL / customer) · ZARE002 ไม่ต้องแสดง field นี้
+(งานฝั่ง ZARE002)
+
+⚠️ JOIN หลาย released view ต้องใส่ `WITH PRIVILEGED ACCESS` **ทุก data source** หลังชื่อ view ก่อน `AS`
+— วางท้าย join ครั้งเดียวไม่ผ่าน
 
 ## 7. Normalize (เดิมคือ determination)
 

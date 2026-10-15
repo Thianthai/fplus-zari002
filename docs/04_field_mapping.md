@@ -62,7 +62,7 @@ API field ↔ table field · **JSON ใช้ CamelCase · table ใช้ snake
 | `PaymentUuid` | `payment_uuid` | `sysuuid_x16` | `Guid` | out | – | RAP ผูกจาก composition |
 | `SalesforceItemId` | `salesforce_item_id` | `char(18)` | `String(18)` | in | ✔ | key ฝั่ง SFDC · **ซ้ำข้าม payment ได้** แต่ห้ามซ้ำกันเองใน payment เดียวกัน |
 | `CustomerCode` | `customer_code` | `char(10)` | `String(10)` | in | ✔ | ต้องมีจริง · SAP pad ให้ |
-| `BillingNoteNo` | `billing_note_no` | `char(10)` | `String(10)` | in | – | |
+| `BillingNoteNo` | `billing_note_no` | `char(10)` | `String(10)` | in | – | **Cash: บังคับ = เลข SO** (`119`) · SAP pad 10 หลักแล้วใช้หา invoice |
 | `AccountingDocument` | `accounting_document` | `char(10)` | `String(10)` | in | ✔ | ต้องยังไม่ถูกรับชำระ/reverse — ที่ว่าง (OQ-08) |
 | `BillingDocument` | `billing_document` | `char(10)` | `String(10)` | in | ✔ | **เป็นส่วนหนึ่งของ duplicate key** · ไม่ตรวจกับ master data |
 | `InvoicePostingDate` | `invoice_posting_date` | `dats` | `Date` | in | ✔ | |
@@ -129,7 +129,7 @@ SAP pad `GlAccount` และ `CustomerCode` เป็น 10 หลักให�
 | คำ | ผลต่อ validation |
 |---|---|
 | `Cheque` | บังคับ `ChequeNo` `IssueDate` `DueOn` `ChequeBankBranch` (`107`–`110`) + ตรวจ bank (`207`) |
-| `Cash` | ไม่มีเงื่อนไขเพิ่ม |
+| `Cash` | **Cash Sales** — บังคับ `BillingNoteNo` (= เลข SO, `119`) · SAP หา `AccountingDocument` `BillingDocument` `InvoicePostingDate` `InvoiceAmount` มาทับเอง · หาไม่เจอ `208` (2026-10-15) |
 | `Transfer` | ไม่มีเงื่อนไขเพิ่ม |
 
 ที่ยังตรวจคำทั้งที่เป็น information: กันพิมพ์ผิดจน `is_cheque( )` มองไม่เห็นว่าเป็นเช็ค แล้วใบเช็คเข้า table
@@ -155,6 +155,7 @@ CN ติดลบได้ · แต่ **ผลรวม `AmountPaid` ขอ�
 | `check_bank` | header | `207` | ✅ เฉพาะตอนจ่ายด้วยเช็ค |
 | `check_payment_total` | header | `007` | 🟨 ที่ว่าง — OQ-05 |
 | `check_item_ids` | item | `005` `111` | ✅ |
+| `enrich_cash_sales` | item | `119` `208` | ✅ เฉพาะ `Cash` · ทำก่อน validate ตัวอื่น (2026-10-15) |
 | `check_item_mandatory` | item | `006` `112`–`118` | ✅ |
 | `check_customer_code` | item | `205` | ✅ |
 | `check_ar_open_item` | item | `206` | ✅ `I_OperationalAcctgDocItem` — `FinancialAccountType = D` · `OriginalReferenceDocument = billing_document` · `ClearingJournalEntry` ว่าง (2026-09-17) |
