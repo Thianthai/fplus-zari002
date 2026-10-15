@@ -73,14 +73,13 @@ field `Created*` / `LastChanged*` ทั้งหมด
 | `SalesforceItemId` | String(18) | ✔ | **business key ของ item** — ต้องไม่ซ้ำกันเองภายใน payment เดียวกัน · error message จะอ้างถึง item ด้วยค่านี้ |
 | `CustomerCode` | String(10) | ✔ | ต้องมีจริงใน SAP · ส่งแบบไม่มี leading zero ได้ |
 | `BillingNoteNo` | String(10) | – | **บังคับเมื่อ `PaymentMethod = Cash`** — ใส่เลข SO (ดู §6.6) |
-| `AccountingDocument` | String(10) | ✔ * | ต้องเป็นรายการที่**ยังไม่ถูกรับชำระหรือ reverse** (`ZARI002/206`) |
-| `BillingDocument` | String(10) | ✔ * | **ไม่ถูกตรวจกับข้อมูลใน SAP** |
+| `AccountingDocument` | String(10) | ✔ * | |
+| `BillingDocument` | String(10) | ✔ * | ต้องยัง**ไม่ถูกรับชำระหรือ reverse** (`ZARI002/206`) · **เป็นส่วนหนึ่งของ duplicate key** (ดู §7) |
 | `InvoicePostingDate` | Date | ✔ * | |
 | `InvoiceAmount` | Decimal(23,2) | ✔ * | |
 | `AmountPaid` | Decimal(23,2) | ✔ | |
 | `PartialAmount` | **String(1)** | – | **เป็น flag ไม่ใช่จำนวนเงิน** — `"X"` = จ่ายบางส่วน · `""` = จ่ายเต็ม |
 | `SaleSubmitDate` | Date | ✔ | |
-| `BillingDocument` | String(10) | ✔ | **เป็นส่วนหนึ่งของ duplicate key** (ดู §7) |
 
 \* ไม่ต้องส่งเมื่อ `PaymentMethod = Cash` — SAP หาให้จากเลข SO (§6.6)
 
