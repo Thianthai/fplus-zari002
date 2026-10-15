@@ -35,6 +35,12 @@ CLASS zcl_zari002_validator DEFINITION
       IMPORTING iv_payment_method TYPE ztar_i002_pymt-payment_method
       RETURNING VALUE(rv_result)  TYPE abap_bool.
 
+    "! payment method นี้คือเงินสดไหม — ตัวตัดสิน Cash Sales ที่ต้องหา invoice จากเลข SO
+    "! เทียบคำโดยไม่สนตัวพิมพ์และช่องว่าง
+    CLASS-METHODS is_cash
+      IMPORTING iv_payment_method TYPE ztar_i002_pymt-payment_method
+      RETURNING VALUE(rv_result)  TYPE abap_bool.
+
     "! 202 · คำต้องเป็น 1 ใน 3 ที่ Salesforce ยืนยัน — กันพิมพ์ผิดจนเช็คหลุด conditional check
     "! ค่าว่างข้าม (105 จับ)
     CLASS-METHODS check_payment_method
@@ -97,6 +103,11 @@ CLASS ZCL_ZARI002_VALIDATOR IMPLEMENTATION.
 
   METHOD is_cheque.
     rv_result = xsdbool( to_upper( condense( CONV string( iv_payment_method ) ) ) = gc_word_cheque ).
+  ENDMETHOD.
+
+
+  METHOD is_cash.
+    rv_result = xsdbool( to_upper( condense( CONV string( iv_payment_method ) ) ) = gc_word_cash ).
   ENDMETHOD.
 
 

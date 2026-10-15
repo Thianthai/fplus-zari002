@@ -55,6 +55,14 @@ CLASS zcl_zari002_processor DEFINITION
                 ct_item         TYPE tt_item
       RETURNING VALUE(rt_error) TYPE tt_error.
 
+    "! Cash Sales: SFDC ส่งมาแค่เลข SO ใน billing_note_no
+    "! หา billing document / accounting document / posting date / amount จาก SAP มาทับทุก item
+    "! payment method อื่นไม่แตะ
+    METHODS enrich_cash_sales
+      IMPORTING is_payment      TYPE ztar_i002_pymt
+      CHANGING  ct_item         TYPE tt_item
+      RETURNING VALUE(rt_error) TYPE tt_error.
+
     "! ตรวจ payment 1 ใบ format > consistency > master data > duplicate
     "! คืน error ทั้งหมดที่เจอ ไม่หยุดที่ตัวแรก
     METHODS validate
@@ -224,13 +232,20 @@ CLASS ZCL_ZARI002_PROCESSOR IMPLEMENTATION.
                                   CHANGING  cs_payment    = ls_payment
                                             ct_item       = lt_item ).
 
-      " 4.2 Validate ข้ามถ้า normalize พัง ไม่งั้นจะได้ error ซ้อนจาก field ที่ยังไม่ได้เตรียม
+      " 4.2 Cash Sales -------------------------------------------------
+      " ต้องเติมก่อน validate เพื่อให้ mandatory / AR open item / duplicate เห็นค่าที่เติมแล้ว
+      IF lt_error IS INITIAL.
+        lt_error = enrich_cash_sales( EXPORTING is_payment = ls_payment
+                                      CHANGING  ct_item    = lt_item ).
+      ENDIF.
+
+      " 4.3 Validate ข้ามถ้าขั้นก่อนหน้าพัง ไม่งั้นจะได้ error ซ้อนจาก field ที่ยังไม่ได้เตรียม
       IF lt_error IS INITIAL.
         lt_error = validate( is_payment = ls_payment
                              it_item    = lt_item ).
       ENDIF.
 
-      " 4.3 Save -------------------------------------------------------
+      " 4.4 Save -------------------------------------------------------
       IF lt_error IS INITIAL.
         IF save( is_payment = ls_payment
                  it_item    = lt_item ) = abap_false.
@@ -250,7 +265,7 @@ CLASS ZCL_ZARI002_PROCESSOR IMPLEMENTATION.
         APPEND LINES OF lt_error TO rs_result-errors.
       ENDIF.
 
-      " 4.4 Log  -------------------------------------------------------
+      " 4.5 Log  -------------------------------------------------------
       " เก็บทุกใบ ทั้งผ่านและไม่ผ่าน
       " ข้ามถ้าไม่มี UUID (normalize สร้างไม่ได้) เพราะไม่มี key ให้เขียน
       IF ls_payment-payment_uuid IS NOT INITIAL.
@@ -260,7 +275,7 @@ CLASS ZCL_ZARI002_PROCESSOR IMPLEMENTATION.
                   is_raw     = <lfs_payment> ).
       ENDIF.
 
-      " 4.5 Callback to Salesforce -------------------------------------
+      " 4.6 Callback to Salesforce -------------------------------------
       send_callback( is_payment = ls_payment
                      it_item    = lt_item
                      it_error   = lt_error ).
@@ -345,6 +360,63 @@ CLASS ZCL_ZARI002_PROCESSOR IMPLEMENTATION.
       <lfs_item>-last_changed_by       = cs_payment-last_changed_by.
       <lfs_item>-last_changed_at       = cs_payment-last_changed_at.
       <lfs_item>-local_last_changed_at = cs_payment-local_last_changed_at.
+    ENDLOOP.
+
+  ENDMETHOD.
+
+
+  METHOD enrich_cash_sales.
+
+    DATA lt_sales_order TYPE zif_zari002_master_data=>tt_sales_order.
+
+    IF zcl_zari002_validator=>is_cash( is_payment-payment_method ) = abap_false.
+      RETURN.
+    ENDIF.
+
+    " SO มี conversion routine
+    " SFDC ส่งมาไม่ครบ 10 หลักได้ จึงเติม 0 ก่อนค้น
+    LOOP AT ct_item ASSIGNING FIELD-SYMBOL(<lfs_item>).
+      IF <lfs_item>-billing_note_no IS NOT INITIAL.
+        <lfs_item>-billing_note_no = zcl_zari002_validator=>to_internal_key( <lfs_item>-billing_note_no ).
+        INSERT <lfs_item>-billing_note_no INTO TABLE lt_sales_order.
+      ENDIF.
+    ENDLOOP.
+
+    DATA(lt_invoice) = go_master_data->get_cash_sale_invoices( lt_sales_order ).
+
+    LOOP AT ct_item ASSIGNING <lfs_item>.
+
+      " ไม่มีเลข SO -> หา invoice ไม่ได้
+      IF <lfs_item>-billing_note_no IS INITIAL.
+        APPEND VALUE #( msgno              = '119'
+                        msgtx              = message_text( iv_msgno = '119'
+                                                           iv_v1    = |{ is_payment-payment_method }| )
+                        salesforce_id      = is_payment-salesforce_id
+                        salesforce_item_id = <lfs_item>-salesforce_item_id
+                        field              = zcl_zari002_json=>to_json_name( 'billing_note_no' )
+                      ) TO rt_error.
+        CONTINUE.
+      ENDIF.
+
+      " SO ไม่มีจริง หรือยังไม่ได้วางบิล
+      ASSIGN lt_invoice[ sales_order = <lfs_item>-billing_note_no ] TO FIELD-SYMBOL(<lfs_invoice>).
+      IF sy-subrc <> 0.
+        APPEND VALUE #( msgno              = '208'
+                        msgtx              = message_text( iv_msgno = '208'
+                                                           iv_v1    = |{ <lfs_item>-billing_note_no ALPHA = OUT }| )
+                        salesforce_id      = is_payment-salesforce_id
+                        salesforce_item_id = <lfs_item>-salesforce_item_id
+                        field              = zcl_zari002_json=>to_json_name( 'billing_note_no' )
+                      ) TO rt_error.
+        CONTINUE.
+      ENDIF.
+
+      " ทับด้วยค่าจาก SAP เสมอ แม้ SFDC จะส่งค่ามา
+      <lfs_item>-billing_document     = <lfs_invoice>-billing_document.
+      <lfs_item>-accounting_document  = <lfs_invoice>-accounting_document.
+      <lfs_item>-invoice_posting_date = <lfs_invoice>-invoice_posting_date.
+      <lfs_item>-invoice_amount       = <lfs_invoice>-invoice_amount.
+
     ENDLOOP.
 
   ENDMETHOD.

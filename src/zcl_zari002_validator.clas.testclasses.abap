@@ -11,6 +11,9 @@ CLASS ltc_validator DEFINITION FINAL
     METHODS cash_is_not_cheque        FOR TESTING.
     METHODS three_words_pass_202      FOR TESTING.
     METHODS unknown_word_gets_202     FOR TESTING.
+    METHODS cash_is_cash              FOR TESTING.
+    METHODS cash_ignores_case_space   FOR TESTING.
+    METHODS cheque_is_not_cash        FOR TESTING.
 
     " ---- to_internal_key ----
     METHODS key_gets_padded           FOR TESTING.
@@ -145,6 +148,18 @@ CLASS ltc_validator IMPLEMENTATION.
     ls_payment-payment_method = 'Bitcoin'.
     assert_has( it_finding = zcl_zari002_validator=>check_payment_method( ls_payment )
                 iv_msgno   = '202' ).
+  ENDMETHOD.
+
+  METHOD cash_is_cash.
+    cl_abap_unit_assert=>assert_true( act = zcl_zari002_validator=>is_cash( 'Cash' ) ).
+  ENDMETHOD.
+
+  METHOD cash_ignores_case_space.
+    cl_abap_unit_assert=>assert_true( act = zcl_zari002_validator=>is_cash( ' CASH' ) ).
+  ENDMETHOD.
+
+  METHOD cheque_is_not_cash.
+    cl_abap_unit_assert=>assert_false( act = zcl_zari002_validator=>is_cash( 'Cheque' ) ).
   ENDMETHOD.
 
 * =====================================================================

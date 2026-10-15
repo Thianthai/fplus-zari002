@@ -8,7 +8,8 @@ INTERFACE zif_zari002_master_data
     ty_customer         TYPE ztar_i002_item-customer_code,
     ty_country          TYPE c LENGTH 3,
     ty_bank             TYPE ztar_i002_pymt-cheque_bank_branch,
-    ty_billing_document TYPE ztar_i002_item-billing_document.
+    ty_billing_document TYPE ztar_i002_item-billing_document,
+    ty_sales_order      TYPE ztar_i002_item-billing_note_no.
 
   TYPES:
     "! company code + ข้อมูลที่ derive ต่อได้
@@ -28,7 +29,16 @@ INTERFACE zif_zari002_master_data
     BEGIN OF ty_bank_key,
       country TYPE ty_country,
       bank    TYPE ty_bank,
-    END OF ty_bank_key.
+    END OF ty_bank_key,
+
+    "! invoice ของ Cash Sales ที่หาได้จากเลข SO
+    BEGIN OF ty_cash_sale,
+      sales_order          TYPE ty_sales_order,
+      billing_document     TYPE ty_billing_document,
+      accounting_document  TYPE ztar_i002_item-accounting_document,
+      invoice_posting_date TYPE ztar_i002_item-invoice_posting_date,
+      invoice_amount       TYPE ztar_i002_item-invoice_amount,
+    END OF ty_cash_sale.
 
   TYPES:
     tt_company_code       TYPE SORTED TABLE OF ty_company_code
@@ -42,7 +52,11 @@ INTERFACE zif_zari002_master_data
     tt_bank_key           TYPE SORTED TABLE OF ty_bank_key
                           WITH UNIQUE KEY country bank,
     tt_billing_document   TYPE SORTED TABLE OF ty_billing_document
-                          WITH UNIQUE KEY table_line.
+                          WITH UNIQUE KEY table_line,
+    tt_sales_order        TYPE SORTED TABLE OF ty_sales_order
+                          WITH UNIQUE KEY table_line,
+    tt_cash_sale          TYPE SORTED TABLE OF ty_cash_sale
+                          WITH UNIQUE KEY sales_order.
 
   "! อ่าน currency และ country ของ company code
   "! ใช้ทั้งใน setPaymentDefaults (เอาค่าไปเติม) และ validateCompanyCode (เช็คว่ามีจริง)
@@ -72,5 +86,12 @@ INTERFACE zif_zari002_master_data
   METHODS find_cleared_documents
     IMPORTING it_billing_document TYPE tt_billing_document
     RETURNING VALUE(rt_result)    TYPE tt_billing_document.
+
+  "! หา invoice ของ Cash Sales จากเลข SO
+  "! SO -> billing document (เฉพาะ invoice ที่ยังไม่ถูกยกเลิก) -> FI document บรรทัดลูกหนี้ (D)
+  "! SO ที่หาไม่เจอจะไม่มีแถวในผลลัพธ์
+  METHODS get_cash_sale_invoices
+    IMPORTING it_sales_order   TYPE tt_sales_order
+    RETURNING VALUE(rt_result) TYPE tt_cash_sale.
 
 ENDINTERFACE.

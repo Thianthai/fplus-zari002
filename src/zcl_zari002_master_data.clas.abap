@@ -159,4 +159,47 @@ CLASS ZCL_ZARI002_MASTER_DATA IMPLEMENTATION.
     ENDLOOP.
 
   ENDMETHOD.
+
+
+  METHOD zif_zari002_master_data~get_cash_sale_invoices.
+
+    DATA lr_sales_order TYPE RANGE OF zif_zari002_master_data=>ty_sales_order.
+
+    IF it_sales_order IS INITIAL.
+      RETURN.
+    ENDIF.
+
+    lr_sales_order = VALUE #( FOR <lfs_so> IN it_sales_order
+                            ( sign = 'I' option = 'EQ' low = <lfs_so> ) ).
+
+    " SO -> billing document -> FI document
+    " เอาเฉพาะ invoice (M) เพราะ view รวมเอกสารยกเลิกและ credit memo ไว้ด้วย
+    " บิล 1 ใบมีหลายบรรทัด จึงต้อง DISTINCT
+    SELECT FROM I_BillingDocumentItem WITH PRIVILEGED ACCESS AS item
+      INNER JOIN I_BillingDocument WITH PRIVILEGED ACCESS AS header
+        ON header~BillingDocument = item~BillingDocument
+      INNER JOIN I_OperationalAcctgDocItem WITH PRIVILEGED ACCESS AS fi
+        ON  fi~CompanyCode        = header~CompanyCode
+        AND fi~FiscalYear         = header~FiscalYear
+        AND fi~AccountingDocument = header~AccountingDocument
+      FIELDS DISTINCT
+             item~SalesDocument             AS sales_order,
+             header~BillingDocument         AS billing_document,
+             header~AccountingDocument      AS accounting_document,
+             fi~PostingDate                 AS invoice_posting_date,
+             fi~AmountInTransactionCurrency AS invoice_amount
+      WHERE item~SalesDocument               IN @lr_sales_order
+        AND header~SDDocumentCategory         = 'M'
+        AND header~BillingDocumentIsCancelled = @abap_false
+        AND fi~FinancialAccountType           = 'D'
+      INTO TABLE @DATA(lt_found).
+
+    " SO 1 ใบมี invoice ใบเดียวและบรรทัด D บรรทัดเดียว
+    " ถ้าเจอซ้ำจะเก็บแถวแรกไว้ ไม่ dump
+    LOOP AT lt_found ASSIGNING FIELD-SYMBOL(<lfs_found>).
+      INSERT CORRESPONDING #( <lfs_found> ) INTO TABLE rt_result.
+    ENDLOOP.
+
+  ENDMETHOD.
+
 ENDCLASS.

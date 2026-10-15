@@ -46,6 +46,26 @@ CLASS ltd_master_data IMPLEMENTATION.
     ENDLOOP.
   ENDMETHOD.
 
+  METHOD zif_zari002_master_data~get_cash_sale_invoices.
+*   SO ใน fixture วางบิลแล้ว
+*   billing document ที่คืนต้องอยู่ในรายการเปิดของ find_cleared_documents ไม่งั้นจะติด 206
+*   SO อื่นถือว่ายังไม่ได้วางบิล
+    IF line_exists( it_sales_order[ table_line = '0000000501' ] ).
+      INSERT VALUE #( sales_order          = '0000000501'
+                      billing_document     = '0090000000'
+                      accounting_document  = '6000000001'
+                      invoice_posting_date = '20260701'
+                      invoice_amount       = '1070.00' ) INTO TABLE rt_result.
+    ENDIF.
+    IF line_exists( it_sales_order[ table_line = '0000000502' ] ).
+      INSERT VALUE #( sales_order          = '0000000502'
+                      billing_document     = '0090000002'
+                      accounting_document  = '6000000003'
+                      invoice_posting_date = '20260803'
+                      invoice_amount       = '1605.00' ) INTO TABLE rt_result.
+    ENDIF.
+  ENDMETHOD.
+
 ENDCLASS.
 
 
@@ -105,6 +125,11 @@ CLASS ltc_processor DEFINITION FINAL
     METHODS cleared_document_fails_206 FOR TESTING.
     METHODS rejected_row_can_be_resent FOR TESTING.
     METHODS error_row_is_duplicate     FOR TESTING.
+    METHODS cash_sale_is_enriched      FOR TESTING.
+    METHODS cash_overrides_sent_values FOR TESTING.
+    METHODS cash_without_so_gives_119  FOR TESTING.
+    METHODS cash_unknown_so_gives_208  FOR TESTING.
+    METHODS transfer_is_not_enriched   FOR TESTING.
 
     METHODS sample_json
       IMPORTING iv_company_code   TYPE string DEFAULT `2000`
@@ -112,6 +137,13 @@ CLASS ltc_processor DEFINITION FINAL
                 iv_payment_method TYPE string DEFAULT `Cheque`
                 iv_bank_branch    TYPE string DEFAULT `0040129`
                 iv_cheque_no      TYPE string DEFAULT `10020185`
+      RETURNING VALUE(rv_result)  TYPE string.
+
+    "! payment 2 item ที่ส่งมาแค่เลข SO ไม่มีข้อมูล invoice
+    "! เลข SO ส่งมาไม่ครบ 10 หลัก เพื่อพิสูจน์ว่าเติม 0 ให้
+    METHODS cash_json
+      IMPORTING iv_payment_method TYPE string DEFAULT `Cash`
+                iv_sales_order_2  TYPE string DEFAULT `502`
       RETURNING VALUE(rv_result)  TYPE string.
 
     METHODS has_msgno
@@ -189,6 +221,41 @@ CLASS ltc_processor IMPLEMENTATION.
       `      ]`                                                        &&
       `    }`                                                          &&
       `  ]`                                                            &&
+      `}`.
+
+  ENDMETHOD.
+
+
+  METHOD cash_json.
+
+    rv_result =
+      `{`                                                       &&
+      `  "RequestId": "REQ-TEST-0001",`                         &&
+      `  "Payments": [`                                         &&
+      `    {`                                                   &&
+      `      "SalesforceId": "SF0000000000000001",`             &&
+      `      "PaymentDocumentNo": "1000000001",`                 &&
+      `      "NumberOfItemsInPayment": 2,`                       &&
+      `      "CompanyCode": "2000",`                             &&
+      `      "PostingDate": "2026-08-15",`                       &&
+      `      "GlAccount": "11011214",`                           &&
+      `      "PaymentMethod": "` && iv_payment_method && `",`   &&
+      `      "PaymentAmount": "1570.00",`                        &&
+      `      "Items": [`                                         &&
+      `        { "SalesforceItemId": "IT0000000000000001",`      &&
+      `          "CustomerCode": "1000000002",`                  &&
+      `          "BillingNoteNo": "501",`                        &&
+      `          "AmountPaid": "1070.00",`                       &&
+      `          "SaleSubmitDate": "2026-08-15" },`              &&
+      `        { "SalesforceItemId": "IT0000000000000002",`      &&
+      `          "CustomerCode": "1000000002",`                  &&
+      `          "BillingNoteNo": "` && iv_sales_order_2 && `",` &&
+      `          "AmountPaid": "500.00",`                        &&
+      `          "PartialAmount": "X",`                          &&
+      `          "SaleSubmitDate": "2026-08-15" }`               &&
+      `      ]`                                                  &&
+      `    }`                                                    &&
+      `  ]`                                                      &&
       `}`.
 
   ENDMETHOD.
@@ -526,6 +593,101 @@ CLASS ltc_processor IMPLEMENTATION.
     SELECT COUNT(*) FROM ztar_i002_pymt WHERE salesforce_id = @gc_sf_id INTO @DATA(lv_count).
     cl_abap_unit_assert=>assert_equals( exp = 1 act = lv_count
                                         msg = 'ต้องเหลือ row เดียว: E เดิม' ).
+
+  ENDMETHOD.
+
+
+  METHOD cash_sale_is_enriched.
+
+    DATA(ls_out) = go_cut->process( cash_json( ) ).
+
+    cl_abap_unit_assert=>assert_initial(
+      act = ls_out-errors
+      msg = 'Cash Sales ที่หา invoice เจอครบ ไม่ควรมี error' ).
+
+    SELECT FROM ztar_i002_item
+      FIELDS salesforce_item_id, billing_note_no, billing_document,
+             accounting_document, invoice_posting_date, invoice_amount
+      WHERE payment_uuid = @( payment_uuid( ) )
+      ORDER BY salesforce_item_id
+      INTO TABLE @DATA(lt_item).
+
+    cl_abap_unit_assert=>assert_equals( exp = 2 act = lines( lt_item ) ).
+
+    DATA(ls_item) = lt_item[ 1 ].
+    cl_abap_unit_assert=>assert_equals( exp = '0000000501' act = ls_item-billing_note_no
+                                        msg = 'เลข SO ต้องถูกเติม 0 ให้ครบ 10 หลัก' ).
+    cl_abap_unit_assert=>assert_equals( exp = '0090000000' act = ls_item-billing_document ).
+    cl_abap_unit_assert=>assert_equals( exp = '6000000001' act = ls_item-accounting_document ).
+    cl_abap_unit_assert=>assert_equals( exp = '20260701'   act = ls_item-invoice_posting_date ).
+    cl_abap_unit_assert=>assert_equals( exp = '1070.00'    act = ls_item-invoice_amount ).
+
+  ENDMETHOD.
+
+
+  METHOD cash_overrides_sent_values.
+
+*   SFDC ส่ง billing document กับ amount ที่ผิดมาด้วย
+*   ต้องถูกทับด้วยค่าจาก SAP และไม่ติด 206 จากเลขบิลที่ส่งมา
+    DATA(lv_json) = replace( val  = cash_json( )
+                             sub  = `"BillingNoteNo": "501",`
+                             with = `"BillingNoteNo": "501", "BillingDocument": "0090000009", "InvoiceAmount": "1.00",`
+                             occ  = 1 ).
+    DATA(ls_out) = go_cut->process( lv_json ).
+
+    cl_abap_unit_assert=>assert_equals( exp = abap_true act = ls_out-success ).
+
+    SELECT SINGLE FROM ztar_i002_item
+      FIELDS billing_document, invoice_amount
+      WHERE payment_uuid       = @( payment_uuid( ) )
+        AND salesforce_item_id = 'IT0000000000000001'
+      INTO @DATA(ls_item).
+
+    cl_abap_unit_assert=>assert_equals( exp = '0090000000' act = ls_item-billing_document ).
+    cl_abap_unit_assert=>assert_equals( exp = '1070.00'    act = ls_item-invoice_amount ).
+
+  ENDMETHOD.
+
+
+  METHOD cash_without_so_gives_119.
+
+    DATA(ls_out) = go_cut->process( cash_json( iv_sales_order_2 = `` ) ).
+
+    cl_abap_unit_assert=>assert_equals( exp = abap_false act = ls_out-success ).
+    cl_abap_unit_assert=>assert_true( act = has_msgno( it_error = ls_out-errors iv_msgno = '119' ) ).
+    cl_abap_unit_assert=>assert_equals(
+      exp = 'IT0000000000000002'
+      act = ls_out-errors[ msgno = '119' ]-salesforce_item_id
+      msg = '119 ต้องระบุว่า item ไหน' ).
+
+  ENDMETHOD.
+
+
+  METHOD cash_unknown_so_gives_208.
+
+    DATA(ls_out) = go_cut->process( cash_json( iv_sales_order_2 = `999` ) ).
+
+    cl_abap_unit_assert=>assert_equals( exp = abap_false act = ls_out-success ).
+    cl_abap_unit_assert=>assert_true( act = has_msgno( it_error = ls_out-errors iv_msgno = '208' ) ).
+    cl_abap_unit_assert=>assert_false(
+      act = has_msgno( it_error = ls_out-errors iv_msgno = '114' )
+      msg = 'หา SO ไม่เจอต้องตอบ 208 อย่างเดียว ไม่ซ้อน mandatory' ).
+
+    SELECT COUNT(*) FROM ztar_i002_pymt WHERE salesforce_id = @gc_sf_id INTO @DATA(lv_count).
+    cl_abap_unit_assert=>assert_equals( exp = 0 act = lv_count ).
+
+  ENDMETHOD.
+
+
+  METHOD transfer_is_not_enriched.
+
+*   payment method อื่นต้องไม่ไปหา invoice ให้
+*   ข้อมูล invoice ที่ขาดต้องติด mandatory ตามเดิม
+    DATA(ls_out) = go_cut->process( cash_json( iv_payment_method = `Transfer` ) ).
+
+    cl_abap_unit_assert=>assert_equals( exp = abap_false act = ls_out-success ).
+    cl_abap_unit_assert=>assert_true( act = has_msgno( it_error = ls_out-errors iv_msgno = '114' ) ).
+    cl_abap_unit_assert=>assert_false( act = has_msgno( it_error = ls_out-errors iv_msgno = '208' ) ).
 
   ENDMETHOD.
 

@@ -197,6 +197,12 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZARI002</ARBGB>
+     <MSGNR>119</MSGNR>
+     <TEXT>Sales order number is required for payment method &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
      <MSGNR>200</MSGNR>
      <TEXT>Company code &amp;1 does not exist</TEXT>
     </T100>
@@ -235,6 +241,12 @@
      <ARBGB>ZARI002</ARBGB>
      <MSGNR>207</MSGNR>
      <TEXT>Bank/branch &amp;1 does not exist</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
+     <MSGNR>208</MSGNR>
+     <TEXT>No billing document found for sales order &amp;1</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
