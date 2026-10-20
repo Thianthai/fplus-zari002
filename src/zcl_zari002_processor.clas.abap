@@ -55,9 +55,9 @@ CLASS zcl_zari002_processor DEFINITION
                 ct_item         TYPE tt_item
       RETURNING VALUE(rt_error) TYPE tt_error.
 
-    "! Cash Sales: SFDC ส่งมาแค่เลข SO ใน billing_note_no
+    "! Cash Sales (payment method ขึ้นต้นด้วย CA): SFDC ส่งมาแค่เลข SO ใน billing_note_no
     "! หา billing document / accounting document / posting date / amount จาก SAP มาทับทุก item
-    "! payment method อื่นไม่แตะ
+    "! payment ที่ไม่ใช่ Cash Sales ไม่แตะ
     METHODS enrich_cash_sales
       IMPORTING is_payment      TYPE ztar_i002_pymt
       CHANGING  ct_item         TYPE tt_item
@@ -369,7 +369,7 @@ CLASS ZCL_ZARI002_PROCESSOR IMPLEMENTATION.
 
     DATA lt_sales_order TYPE zif_zari002_master_data=>tt_sales_order.
 
-    IF zcl_zari002_validator=>is_cash( is_payment-payment_method ) = abap_false.
+    IF zcl_zari002_validator=>is_cash_sales( is_payment-payment_method ) = abap_false.
       RETURN.
     ENDIF.
 

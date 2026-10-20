@@ -130,11 +130,12 @@ CLASS ltc_processor DEFINITION FINAL
     METHODS cash_without_so_gives_119  FOR TESTING.
     METHODS cash_unknown_so_gives_208  FOR TESTING.
     METHODS transfer_is_not_enriched   FOR TESTING.
+    METHODS credit_cash_not_enriched   FOR TESTING.
 
     METHODS sample_json
       IMPORTING iv_company_code   TYPE string DEFAULT `2000`
                 iv_doc_no         TYPE string DEFAULT `1000000001`
-                iv_payment_method TYPE string DEFAULT `Cheque`
+                iv_payment_method TYPE string DEFAULT `CR-Cheque`
                 iv_bank_branch    TYPE string DEFAULT `0040129`
                 iv_cheque_no      TYPE string DEFAULT `10020185`
       RETURNING VALUE(rv_result)  TYPE string.
@@ -142,7 +143,7 @@ CLASS ltc_processor DEFINITION FINAL
     "! payment 2 item ที่ส่งมาแค่เลข SO ไม่มีข้อมูล invoice
     "! เลข SO ส่งมาไม่ครบ 10 หลัก เพื่อพิสูจน์ว่าเติม 0 ให้
     METHODS cash_json
-      IMPORTING iv_payment_method TYPE string DEFAULT `Cash`
+      IMPORTING iv_payment_method TYPE string DEFAULT `CA-Cash`
                 iv_sales_order_2  TYPE string DEFAULT `502`
       RETURNING VALUE(rv_result)  TYPE string.
 
@@ -391,7 +392,7 @@ CLASS ltc_processor IMPLEMENTATION.
 
   METHOD bank_skipped_if_not_cheque.
 
-    DATA(ls_out) = go_cut->process( sample_json( iv_payment_method = `Transfer`
+    DATA(ls_out) = go_cut->process( sample_json( iv_payment_method = `CR-Transfer`
                                                  iv_bank_branch    = `` ) ).
 
     cl_abap_unit_assert=>assert_false(
@@ -427,10 +428,10 @@ CLASS ltc_processor IMPLEMENTATION.
 
     cl_abap_unit_assert=>assert_equals( exp = 'E' act = go_result->gs_sent-status ).
     cl_abap_unit_assert=>assert_equals(
-      exp = `Cheque number is required for payment method Cheque, `
-         && `Issue date is required for payment method Cheque, `
-         && `Due date is required for payment method Cheque, `
-         && `Bank/branch is required for payment method Cheque`
+      exp = `Cheque number is required for payment method CR-Cheque, `
+         && `Issue date is required for payment method CR-Cheque, `
+         && `Due date is required for payment method CR-Cheque, `
+         && `Bank/branch is required for payment method CR-Cheque`
       act = go_result->gs_sent-message
       msg = 'msgtx ต่อกันด้วย ", " ไม่มี code นำหน้า (D3)' ).
 
@@ -683,7 +684,20 @@ CLASS ltc_processor IMPLEMENTATION.
 
 *   payment method อื่นต้องไม่ไปหา invoice ให้
 *   ข้อมูล invoice ที่ขาดต้องติด mandatory ตามเดิม
-    DATA(ls_out) = go_cut->process( cash_json( iv_payment_method = `Transfer` ) ).
+    DATA(ls_out) = go_cut->process( cash_json( iv_payment_method = `CR-Transfer` ) ).
+
+    cl_abap_unit_assert=>assert_equals( exp = abap_false act = ls_out-success ).
+    cl_abap_unit_assert=>assert_true( act = has_msgno( it_error = ls_out-errors iv_msgno = '114' ) ).
+    cl_abap_unit_assert=>assert_false( act = has_msgno( it_error = ls_out-errors iv_msgno = '208' ) ).
+
+  ENDMETHOD.
+
+
+  METHOD credit_cash_not_enriched.
+
+*   CR-Cash จ่ายเงินสดแต่ไม่ใช่ Cash Sales
+*   ต้องไม่ไปหา invoice ให้ และข้อมูล invoice ที่ขาดต้องติด mandatory ตามเดิม
+    DATA(ls_out) = go_cut->process( cash_json( iv_payment_method = `CR-Cash` ) ).
 
     cl_abap_unit_assert=>assert_equals( exp = abap_false act = ls_out-success ).
     cl_abap_unit_assert=>assert_true( act = has_msgno( it_error = ls_out-errors iv_msgno = '114' ) ).

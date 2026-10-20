@@ -94,7 +94,7 @@ ENDCLASS.
 
 
 
-CLASS zcl_zari002_sfdc_result IMPLEMENTATION.
+CLASS ZCL_ZARI002_SFDC_RESULT IMPLEMENTATION.
 
 
   METHOD build_payload.
@@ -249,5 +249,4 @@ CLASS zcl_zari002_sfdc_result IMPLEMENTATION.
     rv_status = zcl_utility=>check_sfdc_connection( ).
 
   ENDMETHOD.
-
 ENDCLASS.

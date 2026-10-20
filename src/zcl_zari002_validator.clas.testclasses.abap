@@ -5,15 +5,18 @@ CLASS ltc_validator DEFINITION FINAL
 
   PRIVATE SECTION.
 
-    " ---- is_cheque / check_payment_method ----
+    " ---- is_cheque / is_cash_sales / check_payment_method ----
     METHODS cheque_is_cheque          FOR TESTING.
     METHODS cheque_ignores_case_space FOR TESTING.
     METHODS cash_is_not_cheque        FOR TESTING.
-    METHODS three_words_pass_202      FOR TESTING.
+    METHODS six_values_pass_202       FOR TESTING.
     METHODS unknown_word_gets_202     FOR TESTING.
-    METHODS cash_is_cash              FOR TESTING.
-    METHODS cash_ignores_case_space   FOR TESTING.
-    METHODS cheque_is_not_cash        FOR TESTING.
+    METHODS old_word_gets_202         FOR TESTING.
+    METHODS unknown_prefix_gets_202   FOR TESTING.
+    METHODS ca_is_cash_sales          FOR TESTING.
+    METHODS ca_ignores_case_space     FOR TESTING.
+    METHODS cr_is_not_cash_sales      FOR TESTING.
+    METHODS ca_cheque_is_both         FOR TESTING.
 
     " ---- to_internal_key ----
     METHODS key_gets_padded           FOR TESTING.
@@ -88,7 +91,7 @@ CLASS ltc_validator IMPLEMENTATION.
                          company_code         = '2000'
                          posting_date         = '20260815'
                          gl_account           = '0011011214'
-                         payment_method       = 'Cheque'
+                         payment_method       = 'CR-Cheque'
                          cheque_no            = '10020185'
                          issue_date           = '20260715'
                          due_on               = '20260831'
@@ -124,20 +127,21 @@ CLASS ltc_validator IMPLEMENTATION.
 * =====================================================================
 
   METHOD cheque_is_cheque.
-    cl_abap_unit_assert=>assert_true( act = zcl_zari002_validator=>is_cheque( 'Cheque' ) ).
+    cl_abap_unit_assert=>assert_true( act = zcl_zari002_validator=>is_cheque( 'CR-Cheque' ) ).
   ENDMETHOD.
 
   METHOD cheque_ignores_case_space.
-    cl_abap_unit_assert=>assert_true( act = zcl_zari002_validator=>is_cheque( ' cheque' ) ).
+    cl_abap_unit_assert=>assert_true( act = zcl_zari002_validator=>is_cheque( ' cr-cheque' ) ).
   ENDMETHOD.
 
   METHOD cash_is_not_cheque.
-    cl_abap_unit_assert=>assert_false( act = zcl_zari002_validator=>is_cheque( 'Cash' ) ).
+    cl_abap_unit_assert=>assert_false( act = zcl_zari002_validator=>is_cheque( 'CR-Cash' ) ).
   ENDMETHOD.
 
-  METHOD three_words_pass_202.
+  METHOD six_values_pass_202.
     DATA(ls_payment) = valid_payment( ).
-    LOOP AT VALUE string_table( ( `Cheque` ) ( `Cash` ) ( `Transfer` ) ) INTO DATA(lv_word).
+    LOOP AT VALUE string_table( ( `CA-Cheque` ) ( `CA-Cash` ) ( `CA-Transfer` )
+                                ( `CR-Cheque` ) ( `CR-Cash` ) ( `CR-Transfer` ) ) INTO DATA(lv_word).
       ls_payment-payment_method = lv_word.
       assert_clean( zcl_zari002_validator=>check_payment_method( ls_payment ) ).
     ENDLOOP.
@@ -145,21 +149,43 @@ CLASS ltc_validator IMPLEMENTATION.
 
   METHOD unknown_word_gets_202.
     DATA(ls_payment) = valid_payment( ).
-    ls_payment-payment_method = 'Bitcoin'.
+    ls_payment-payment_method = 'CA-Bitcoin'.
     assert_has( it_finding = zcl_zari002_validator=>check_payment_method( ls_payment )
                 iv_msgno   = '202' ).
   ENDMETHOD.
 
-  METHOD cash_is_cash.
-    cl_abap_unit_assert=>assert_true( act = zcl_zari002_validator=>is_cash( 'Cash' ) ).
+  METHOD old_word_gets_202.
+*   ค่าแบบเก่าที่ไม่มี prefix ไม่รับแล้ว
+    DATA(ls_payment) = valid_payment( ).
+    ls_payment-payment_method = 'Cheque'.
+    assert_has( it_finding = zcl_zari002_validator=>check_payment_method( ls_payment )
+                iv_msgno   = '202' ).
   ENDMETHOD.
 
-  METHOD cash_ignores_case_space.
-    cl_abap_unit_assert=>assert_true( act = zcl_zari002_validator=>is_cash( ' CASH' ) ).
+  METHOD unknown_prefix_gets_202.
+    DATA(ls_payment) = valid_payment( ).
+    ls_payment-payment_method = 'XX-Cash'.
+    assert_has( it_finding = zcl_zari002_validator=>check_payment_method( ls_payment )
+                iv_msgno   = '202' ).
   ENDMETHOD.
 
-  METHOD cheque_is_not_cash.
-    cl_abap_unit_assert=>assert_false( act = zcl_zari002_validator=>is_cash( 'Cheque' ) ).
+  METHOD ca_is_cash_sales.
+    cl_abap_unit_assert=>assert_true( act = zcl_zari002_validator=>is_cash_sales( 'CA-Cash' ) ).
+  ENDMETHOD.
+
+  METHOD ca_ignores_case_space.
+    cl_abap_unit_assert=>assert_true( act = zcl_zari002_validator=>is_cash_sales( ' ca-transfer' ) ).
+  ENDMETHOD.
+
+  METHOD cr_is_not_cash_sales.
+*   CR ไม่ใช่ Cash Sales แม้จะจ่ายเงินสด
+    cl_abap_unit_assert=>assert_false( act = zcl_zari002_validator=>is_cash_sales( 'CR-Cash' ) ).
+  ENDMETHOD.
+
+  METHOD ca_cheque_is_both.
+*   prefix กับวิธีจ่ายเป็นอิสระต่อกัน
+    cl_abap_unit_assert=>assert_true( act = zcl_zari002_validator=>is_cash_sales( 'CA-Cheque' ) ).
+    cl_abap_unit_assert=>assert_true( act = zcl_zari002_validator=>is_cheque( 'CA-Cheque' ) ).
   ENDMETHOD.
 
 * =====================================================================
@@ -270,7 +296,7 @@ CLASS ltc_validator IMPLEMENTATION.
 
   METHOD transfer_skips_cheque_chk.
     DATA(ls_payment) = valid_payment( ).
-    ls_payment-payment_method = 'Transfer'.
+    ls_payment-payment_method = 'CR-Transfer'.
     CLEAR: ls_payment-cheque_no, ls_payment-issue_date,
            ls_payment-due_on,    ls_payment-cheque_bank_branch.
 

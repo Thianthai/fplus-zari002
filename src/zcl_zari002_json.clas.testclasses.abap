@@ -64,7 +64,7 @@ CLASS ltc_json IMPLEMENTATION.
       `      "CompanyCode": "2000",`                             &&
       `      "PostingDate": "` && iv_posting_date && `",`        &&
       `      "GlAccount": "11011214",`                           &&
-      `      "PaymentMethod": "Cheque",`                         &&
+      `      "PaymentMethod": "CR-Cheque",`                      &&
       `      "ChequeNo": "10020185",`                            &&
       `      "IssueDate": "2026-07-15",`                         &&
       `      "DueOn": "2026-08-31",`                             &&
@@ -103,7 +103,7 @@ CLASS ltc_json IMPLEMENTATION.
       `      "CompanyCode": "2000",`                             &&
       `      "PostingDate": "2026-08-16",`                       &&
       `      "GlAccount": "11011211",`                           &&
-      `      "PaymentMethod": "Transfer",`                       &&
+      `      "PaymentMethod": "CR-Transfer",`                    &&
       `      "PaymentAmount": "500.00",`                         &&
       `      "Items": [`                                         &&
       `        { "SalesforceItemId": "IT0000000000000003",`      &&
@@ -162,7 +162,7 @@ CLASS ltc_json IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals( exp = '1000000001'         act = ls_payment-payment_document_no ).
     cl_abap_unit_assert=>assert_equals( exp = 2                    act = ls_payment-number_of_items_in_payment ).
     cl_abap_unit_assert=>assert_equals( exp = '2000'               act = ls_payment-company_code ).
-    cl_abap_unit_assert=>assert_equals( exp = 'Cheque'             act = ls_payment-payment_method ).
+    cl_abap_unit_assert=>assert_equals( exp = 'CR-Cheque'          act = ls_payment-payment_method ).
     cl_abap_unit_assert=>assert_equals( exp = '10020185'           act = ls_payment-cheque_no ).
     cl_abap_unit_assert=>assert_equals( exp = '0040129'            act = ls_payment-cheque_bank_branch ).
     cl_abap_unit_assert=>assert_equals( exp = '9650.00'            act = ls_payment-payment_amount ).
@@ -200,7 +200,7 @@ CLASS ltc_json IMPLEMENTATION.
     DATA(ls_payment) = ls_request-payments[ 2 ].
 
     cl_abap_unit_assert=>assert_equals( exp = 'SF0000000000000002' act = ls_payment-salesforce_id ).
-    cl_abap_unit_assert=>assert_equals( exp = 'Transfer'           act = ls_payment-payment_method ).
+    cl_abap_unit_assert=>assert_equals( exp = 'CR-Transfer'        act = ls_payment-payment_method ).
     cl_abap_unit_assert=>assert_equals( exp = 1                    act = lines( ls_payment-items ) ).
     cl_abap_unit_assert=>assert_equals( exp = 'IT0000000000000003'
                                         act = ls_payment-items[ 1 ]-salesforce_item_id ).

@@ -24,25 +24,34 @@ CLASS zcl_zari002_validator DEFINITION
       tt_finding TYPE STANDARD TABLE OF ty_finding WITH EMPTY KEY.
 
     CONSTANTS:
-      "! ค่าจาก Salesforce เก็บตามที่ส่งมา ไม่แปลงเป็นเป็น SAP internal code
+      "! payment method จาก Salesforce อยู่ในรูป <ประเภทการขาย>-<วิธีจ่าย> เช่น CA-Cheque
+      "! เก็บตามที่ส่งมา ไม่แปลงเป็น SAP internal code
+      "! ประเภทการขาย CA = Cash Sales
+      "! ประเภทการขาย CR = เคสอื่นที่ไม่ใช่ Cash Sales
+      gc_sales_cash    TYPE string VALUE 'CA',
+      gc_sales_other   TYPE string VALUE 'CR',
       gc_word_cheque   TYPE string VALUE 'CHEQUE',
       gc_word_cash     TYPE string VALUE 'CASH',
       gc_word_transfer TYPE string VALUE 'TRANSFER'.
 
-    "! payment method นี้คือเช็คไหม — ตัวตัดสิน conditional mandatory และ bank check
-    "! เทียบคำโดยไม่สนตัวพิมพ์และช่องว่าง
+    "! payment นี้จ่ายด้วยเช็คไหม ดูจากส่วนหลัง - เช่น CA-Cheque และ CR-Cheque
+    "! ใช้ตัดสิน conditional mandatory และ bank check
+    "! เทียบโดยไม่สนตัวพิมพ์และช่องว่าง
     CLASS-METHODS is_cheque
       IMPORTING iv_payment_method TYPE ztar_i002_pymt-payment_method
       RETURNING VALUE(rv_result)  TYPE abap_bool.
 
-    "! payment method นี้คือเงินสดไหม — ตัวตัดสิน Cash Sales ที่ต้องหา invoice จากเลข SO
-    "! เทียบคำโดยไม่สนตัวพิมพ์และช่องว่าง
-    CLASS-METHODS is_cash
+    "! payment นี้เป็น Cash Sales ไหม ดูจาก prefix CA เช่น CA-Cash CA-Cheque CA-Transfer
+    "! Cash Sales ต้องหา invoice จากเลข SO
+    "! เทียบโดยไม่สนตัวพิมพ์และช่องว่าง
+    CLASS-METHODS is_cash_sales
       IMPORTING iv_payment_method TYPE ztar_i002_pymt-payment_method
       RETURNING VALUE(rv_result)  TYPE abap_bool.
 
-    "! 202 · คำต้องเป็น 1 ใน 3 ที่ Salesforce ยืนยัน — กันพิมพ์ผิดจนเช็คหลุด conditional check
-    "! ค่าว่างข้าม (105 จับ)
+    "! 202 ถ้า payment method ไม่ใช่ 1 ใน 6 ค่าที่ Salesforce ยืนยัน
+    "! ต้องเป็น CA หรือ CR ตามด้วย - และ Cheque / Cash / Transfer
+    "! กันพิมพ์ผิดจนเช็คหลุด conditional check
+    "! ค่าว่างข้าม เพราะ 105 จับแล้ว
     CLASS-METHODS check_payment_method
       IMPORTING is_payment        TYPE ty_payment
       RETURNING VALUE(rt_finding) TYPE tt_finding.
@@ -94,6 +103,16 @@ CLASS zcl_zari002_validator DEFINITION
       IMPORTING is_item           TYPE ty_item
       RETURNING VALUE(rt_finding) TYPE tt_finding.
 
+  PRIVATE SECTION.
+
+    "! แยก payment method เป็นประเภทการขายกับวิธีจ่าย
+    "! ตัดช่องว่างและแปลงเป็นตัวพิมพ์ใหญ่ก่อนแยก
+    "! ไม่มี - เลย -> คืนค่าว่างทั้งคู่
+    CLASS-METHODS split_payment_method
+      IMPORTING iv_payment_method TYPE ztar_i002_pymt-payment_method
+      EXPORTING ev_sales_type     TYPE string
+                ev_method         TYPE string.
+
 ENDCLASS.
 
 
@@ -102,12 +121,16 @@ CLASS ZCL_ZARI002_VALIDATOR IMPLEMENTATION.
 
 
   METHOD is_cheque.
-    rv_result = xsdbool( to_upper( condense( CONV string( iv_payment_method ) ) ) = gc_word_cheque ).
+    split_payment_method( EXPORTING iv_payment_method = iv_payment_method
+                          IMPORTING ev_method         = DATA(lv_method) ).
+    rv_result = xsdbool( lv_method = gc_word_cheque ).
   ENDMETHOD.
 
 
-  METHOD is_cash.
-    rv_result = xsdbool( to_upper( condense( CONV string( iv_payment_method ) ) ) = gc_word_cash ).
+  METHOD is_cash_sales.
+    split_payment_method( EXPORTING iv_payment_method = iv_payment_method
+                          IMPORTING ev_sales_type     = DATA(lv_sales_type) ).
+    rv_result = xsdbool( lv_sales_type = gc_sales_cash ).
   ENDMETHOD.
 
 
@@ -117,14 +140,38 @@ CLASS ZCL_ZARI002_VALIDATOR IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    DATA(lv_word) = to_upper( condense( CONV string( is_payment-payment_method ) ) ).
+    split_payment_method( EXPORTING iv_payment_method = is_payment-payment_method
+                          IMPORTING ev_sales_type     = DATA(lv_sales_type)
+                                    ev_method         = DATA(lv_method) ).
 
-    IF lv_word <> gc_word_cheque AND lv_word <> gc_word_cash AND lv_word <> gc_word_transfer.
+    " ต้องถูกทั้ง 2 ส่วน
+    " ค่าแบบเก่าที่ไม่มี prefix จะได้ค่าว่างทั้งคู่ จึงติด 202
+    IF ( lv_sales_type <> gc_sales_cash AND lv_sales_type <> gc_sales_other )
+    OR ( lv_method <> gc_word_cheque AND lv_method <> gc_word_cash AND lv_method <> gc_word_transfer ).
       APPEND VALUE #( msgno = '202'
                       msgv1 = |{ is_payment-payment_method }|
                       field = 'payment_method'
                     ) TO rt_finding.
     ENDIF.
+
+  ENDMETHOD.
+
+
+  METHOD split_payment_method.
+
+    CLEAR: ev_sales_type,
+           ev_method.
+
+    DATA(lv_value) = to_upper( condense( CONV string( iv_payment_method ) ) ).
+
+    IF find( val = lv_value sub = `-` ) < 0.
+      RETURN.
+    ENDIF.
+
+    " มี - มากกว่า 1 ตัว ส่วนที่เหลือจะไปอยู่ใน ev_method ทั้งหมด จึงไม่ตรงคำไหนและติด 202
+    SPLIT lv_value AT `-` INTO ev_sales_type ev_method.
+    ev_sales_type = condense( ev_sales_type ).
+    ev_method     = condense( ev_method ).
 
   ENDMETHOD.
 
