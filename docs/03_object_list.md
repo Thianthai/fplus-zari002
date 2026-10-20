@@ -41,10 +41,10 @@
 | `ZCX_ZARI002_ERROR` | Exception class | `src/zcx_zari002_error.clas.abap` | 2 | ✅ |
 | `ZIF_ZARI002_MASTER_DATA` | Interface — อ่าน master data (mock ได้) · `get_cash_sale_invoices( )` (2026-10-15) | `src/zif_zari002_master_data.intf.abap` | 3 | ✅ |
 | `ZCL_ZARI002_MASTER_DATA` | Class — implementation จริงบน released CDS view · Cash Sales join `I_BillingDocumentItem` + `I_BillingDocument` + `I_OperationalAcctgDocItem` | `src/zcl_zari002_master_data.clas.abap` | 3 | ✅ |
-| `ZCL_ZARI002_VALIDATOR` | Class — validation format/mandatory/consistency · `is_cheque( )` / `is_cash( )` ตัดสินจากคำ · 35 unit test | `src/zcl_zari002_validator.clas.abap` | 3 | ✅ |
+| `ZCL_ZARI002_VALIDATOR` | Class — validation format/mandatory/consistency · `is_cheque( )` / `is_cash_sales( )` แยก `CA-`/`CR-` ด้วย `split_payment_method( )` (2026-10-20) · 38 unit test | `src/zcl_zari002_validator.clas.abap` | 3 | ✅ |
 | `ZCL_ZARI002_JSON` | Class — parse payload + แปลงชื่อ field 2 ทาง · 9 unit test | `src/zcl_zari002_json.clas.abap` | 3 | ✅ |
 | `ZCL_ZARI002_SFDC_RESULT` | Class — POST 1 record ไป `Integration_Log__c` · ขอ token ผ่าน `ZCL_UTILITY` ทุก call · `parse_response( )` + `check_connection( )` · 9 unit test | `src/zcl_zari002_sfdc_result.clas.abap` | 3 | ✅ 2026-09-23 |
-| `ZCL_ZARI002_PROCESSOR` | Class — flow 5 ขั้น (parse → normalize → validate → save → callback) · 25 unit test · `enrich_cash_sales( )` (2026-10-15) · `request_id` ที่สร้างเองเป็นเวลาไทย (2026-10-05) · เติม `last_changed_at` ของ item (2026-10-05) | `src/zcl_zari002_processor.clas.abap` | 3 | ✅ |
+| `ZCL_ZARI002_PROCESSOR` | Class — flow 5 ขั้น (parse → normalize → validate → save → callback) · 26 unit test · `enrich_cash_sales( )` (2026-10-15) · `request_id` ที่สร้างเองเป็นเวลาไทย (2026-10-05) · เติม `last_changed_at` ของ item (2026-10-05) | `src/zcl_zari002_processor.clas.abap` | 3 | ✅ |
 
 ทุก class มีไฟล์คู่: `*.clas.xml` (metadata) + `*.clas.testclasses.abap` (ABAP Unit)
 

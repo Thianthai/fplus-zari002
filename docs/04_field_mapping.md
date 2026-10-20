@@ -24,7 +24,7 @@ API field ↔ table field · **JSON ใช้ CamelCase · table ใช้ snake
 | `CompanyCode` | `company_code` | `char(4)` | `String(4)` | in | ✔ | ต้องมีจริงใน SAP |
 | `PostingDate` | `posting_date` | `dats` | `Date` | in | ✔ | |
 | `GlAccount` | `gl_account` | `char(10)` | `String(10)` | in | ✔ | **เดิม `GLAccount`** เปลี่ยน 2026-08-31 เพราะตัวใหญ่ติดกันทำให้กฎแปลงชื่อแตก · ส่งแบบไม่มี leading zero ได้ — SAP pad ให้ (§4.1) |
-| `PaymentMethod` | `payment_method` | `char(8)` | `String(8)` | in | ✔ | ส่งเป็น**คำ** เช่น `Cheque` `Transfer` (§4.2) |
+| `PaymentMethod` | `payment_method` | `char(20)` | `String(20)` | in | ✔ | `<ประเภทการขาย>-<วิธีจ่าย>` เช่น `CA-Cash` `CR-Cheque` (§4.2) · ขยาย 8 → 20 เมื่อ 2026-10-20 |
 | `ChequeNo` | `cheque_no` | `char(8)` | `String(8)` | in | (✔) | บังคับเมื่อจ่ายด้วยเช็ค |
 | `IssueDate` | `issue_date` | `dats` | `Date` | in | (✔) | บังคับเมื่อจ่ายด้วยเช็ค |
 | `DueOn` | `due_on` | `dats` | `Date` | in | (✔) | บังคับเมื่อจ่ายด้วยเช็ค · ต้องไม่ก่อน `IssueDate` |
@@ -121,16 +121,21 @@ SAP pad `GlAccount` และ `CustomerCode` เป็น 10 หลักให�
 ### 4.2 `PaymentMethod` เป็นข้อมูลแสดงผล ไม่ใช่ตัวขับการ post
 
 **functional ยืนยัน 2026-09-18**: Salesforce ส่งคำมาให้เก็บเฉย ๆ SAP ไม่ได้เอาไป post FI
-· เก็บตามที่ส่งมาใน `payment_method` char(8) · **ไม่แปลงเป็น SAP code** · column `sap_payment_method`
+· เก็บตามที่ส่งมาใน `payment_method` char(20) · **ไม่แปลงเป็น SAP code** · column `sap_payment_method`
 ถูกลบแล้ว
 
-รับเฉพาะ 3 คำ (ไม่สนตัวพิมพ์/ช่องว่าง) — คำอื่น `202`:
+**เปลี่ยน 2026-10-20** — ค่าอยู่ในรูป `<ประเภทการขาย>-<วิธีจ่าย>` รับ 6 ค่า (ไม่สนตัวพิมพ์/ช่องว่าง)
+`CA-Cheque` `CA-Cash` `CA-Transfer` `CR-Cheque` `CR-Cash` `CR-Transfer` · ค่าอื่น **รวมถึงคำเดิมไม่มี prefix** → `202`
+· 2 ส่วนเป็นอิสระต่อกัน แยกด้วย `split_payment_method( )`
 
-| คำ | ผลต่อ validation |
-|---|---|
-| `Cheque` | บังคับ `ChequeNo` `IssueDate` `DueOn` `ChequeBankBranch` (`107`–`110`) + ตรวจ bank (`207`) |
-| `Cash` | **Cash Sales** — บังคับ `BillingNoteNo` (= เลข SO, `119`) · SAP หา `AccountingDocument` `BillingDocument` `InvoicePostingDate` `InvoiceAmount` มาทับเอง · หาไม่เจอ `208` (2026-10-15) |
-| `Transfer` | ไม่มีเงื่อนไขเพิ่ม |
+| ส่วน | ค่า | ผลต่อ validation |
+|---|---|---|
+| ประเภทการขาย | `CA` | **Cash Sales** (`is_cash_sales( )`) — บังคับ `BillingNoteNo` (= เลข SO, `119`) · SAP หา `AccountingDocument` `BillingDocument` `InvoicePostingDate` `InvoiceAmount` มาทับเอง · หาไม่เจอ `208` |
+| ประเภทการขาย | `CR` | เคสอื่นที่ไม่ใช่ Cash Sales — ไม่มีเงื่อนไขเพิ่ม |
+| วิธีจ่าย | `Cheque` | (`is_cheque( )`) บังคับ `ChequeNo` `IssueDate` `DueOn` `ChequeBankBranch` (`107`–`110`) + ตรวจ bank (`207`) |
+| วิธีจ่าย | `Cash` / `Transfer` | ไม่มีเงื่อนไขเพิ่ม |
+
+เช่น `CA-Cheque` = Cash Sales ที่จ่ายด้วยเช็ค → ต้องส่งเลข SO **และ** ข้อมูลเช็คครบ · `CR-Cash` จ่ายเงินสดแต่**ไม่ใช่** Cash Sales
 
 ที่ยังตรวจคำทั้งที่เป็น information: กันพิมพ์ผิดจน `is_cheque( )` มองไม่เห็นว่าเป็นเช็ค แล้วใบเช็คเข้า table
 โดยไม่มีเลขเช็ค
@@ -149,13 +154,13 @@ CN ติดลบได้ · แต่ **ผลรวม `AmountPaid` ขอ�
 | `check_cheque_fields` | header | `107`–`110` | ✅ |
 | `check_company_code` | header | `200` | ✅ |
 | `check_gl_account` | header | `201` | ✅ |
-| `check_payment_method` | header | `202` `203` | ✅ |
+| `check_payment_method` | header | `202` | ✅ 6 ค่า `CA-`/`CR-` (2026-10-20) |
 | `check_amount_paid_total` | header | `011` | ✅ |
 | `check_duplicate` | header | `010` | ✅ key = `payment_document_no` + `billing_document` + **`status`** (2026-09-17) — ซ้ำกับ row `N` `S` `E` (เพิ่ม `S` 2026-09-29 `12d266f` · `E` 2026-10-01 `a9fbef1`) |
 | `check_bank` | header | `207` | ✅ เฉพาะตอนจ่ายด้วยเช็ค |
 | `check_payment_total` | header | `007` | 🟨 ที่ว่าง — OQ-05 |
 | `check_item_ids` | item | `005` `111` | ✅ |
-| `enrich_cash_sales` | item | `119` `208` | ✅ เฉพาะ `Cash` · ทำก่อน validate ตัวอื่น (2026-10-15) |
+| `enrich_cash_sales` | item | `119` `208` | ✅ เฉพาะ prefix `CA` · ทำก่อน validate ตัวอื่น (2026-10-15) |
 | `check_item_mandatory` | item | `006` `112`–`118` | ✅ |
 | `check_customer_code` | item | `205` | ✅ |
 | `check_ar_open_item` | item | `206` | ✅ `I_OperationalAcctgDocItem` — `FinancialAccountType = D` · `OriginalReferenceDocument = billing_document` · `ClearingJournalEntry` ว่าง (2026-09-17) |

@@ -49,7 +49,7 @@ Authorization: Basic <base64 ของ user:password>
 | `CompanyCode` | String(4) | ✔ | ต้องมีจริงใน SAP |
 | `PostingDate` | Date | ✔ | `YYYY-MM-DD` |
 | `GlAccount` | String(10) | ✔ | 🔴 **เดิมชื่อ `GLAccount`** เปลี่ยน 2026-08-31 · **ส่งแบบไม่มี leading zero ได้** — SAP เติมให้เอง (ดู §6.1) |
-| `PaymentMethod` | String(8) | ✔ | ส่งเป็น**คำ** เช่น `Cheque`, `Transfer` (ดู §6.2) |
+| `PaymentMethod` | String(20) | ✔ | `<ประเภทการขาย>-<วิธีจ่าย>` เช่น `CA-Cash`, `CR-Cheque` (ดู §6.2) |
 | `ChequeNo` | String(8) | (✔) | |
 | `IssueDate` | Date | (✔) | |
 | `DueOn` | Date | (✔) | ต้องไม่ก่อน `IssueDate` |
@@ -72,7 +72,7 @@ field `Created*` / `LastChanged*` ทั้งหมด
 |---|---|---|---|
 | `SalesforceItemId` | String(18) | ✔ | **business key ของ item** — ต้องไม่ซ้ำกันเองภายใน payment เดียวกัน · error message จะอ้างถึง item ด้วยค่านี้ |
 | `CustomerCode` | String(10) | ✔ | ต้องมีจริงใน SAP · ส่งแบบไม่มี leading zero ได้ |
-| `BillingNoteNo` | String(10) | – | **บังคับเมื่อ `PaymentMethod = Cash`** — ใส่เลข SO (ดู §6.6) |
+| `BillingNoteNo` | String(10) | – | **บังคับเมื่อ `PaymentMethod` ขึ้นต้นด้วย `CA-`** — ใส่เลข SO (ดู §6.6) |
 | `AccountingDocument` | String(10) | ✔ * | |
 | `BillingDocument` | String(10) | ✔ * | ต้องยัง**ไม่ถูกรับชำระหรือ reverse** (`ZARI002/206`) · **เป็นส่วนหนึ่งของ duplicate key** (ดู §7) |
 | `InvoicePostingDate` | Date | ✔ * | |
@@ -81,7 +81,7 @@ field `Created*` / `LastChanged*` ทั้งหมด
 | `PartialAmount` | **String(1)** | – | **เป็น flag ไม่ใช่จำนวนเงิน** — `"X"` = จ่ายบางส่วน · `""` = จ่ายเต็ม |
 | `SaleSubmitDate` | Date | ✔ | |
 
-\* ไม่ต้องส่งเมื่อ `PaymentMethod = Cash` — SAP หาให้จากเลข SO (§6.6)
+\* ไม่ต้องส่งเมื่อ `PaymentMethod` ขึ้นต้นด้วย `CA-` — SAP หาให้จากเลข SO (§6.6)
 
 **ห้ามส่ง**: `ItemUuid` · `PaymentUuid` · `Currency` · `RejectReason` · admin fields
 
@@ -98,7 +98,7 @@ field `Created*` / `LastChanged*` ทั้งหมด
   "CompanyCode": "2000",
   "PostingDate": "2026-08-15",
   "GlAccount": "11011214",
-  "PaymentMethod": "Cheque",
+  "PaymentMethod": "CR-Cheque",
   "ChequeNo": "10020185",
   "IssueDate": "2026-07-15",
   "DueOn": "2026-08-31",
@@ -160,15 +160,21 @@ API **เติมให้เอง** ก่อนตรวจและก่�
 ส่ง  0011011214 →  SAP เก็บ  0011011214    (ส่งมาเต็มก็ได้ ผลเหมือนกัน)
 ```
 
-### 6.2 `PaymentMethod` ส่งเป็นคำ
+### 6.2 `PaymentMethod` = `<ประเภทการขาย>-<วิธีจ่าย>` (2026-10-20)
 
-รับ 3 คำ `Cheque` / `Cash` / `Transfer` (ไม่สนตัวพิมพ์) เก็บตามที่ส่งมา ไม่แปลงเป็น SAP code
-(เปลี่ยน 2026-09-18) · คำอื่นได้ `ZARI002/202`
+รับ 6 ค่า (ไม่สนตัวพิมพ์) เก็บตามที่ส่งมา ไม่แปลงเป็น SAP code · ค่าอื่นได้ `ZARI002/202`
 
-**`PaymentMethod = "Cheque"` ทำให้ 4 field กลายเป็นบังคับ**: `ChequeNo` `IssueDate`
+| | `Cheque` | `Cash` | `Transfer` |
+|---|---|---|---|
+| **`CA`** Cash Sales | `CA-Cheque` | `CA-Cash` | `CA-Transfer` |
+| **`CR`** ไม่ใช่ Cash Sales | `CR-Cheque` | `CR-Cash` | `CR-Transfer` |
+
+⚠️ **คำเดิมที่ไม่มี prefix (`Cheque` / `Cash` / `Transfer`) ไม่รับแล้ว** → `202`
+
+**วิธีจ่าย `Cheque` (ทั้ง `CA-` และ `CR-`) ทำให้ 4 field กลายเป็นบังคับ**: `ChequeNo` `IssueDate`
 `DueOn` `ChequeBankBranch`
 
-**`PaymentMethod = "Cash"` คือ Cash Sales** — ดู §6.6
+**ขึ้นต้นด้วย `CA-` คือ Cash Sales** ไม่ว่าจ่ายด้วยอะไร — ดู §6.6
 
 ### 6.3 `Currency` ไม่ต้องส่ง
 
@@ -188,7 +194,7 @@ API **เติมให้เอง** ก่อนตรวจและก่�
 
 ### 6.6 Cash Sales — ส่งเลข SO มาแทนข้อมูล invoice (2026-10-15)
 
-เมื่อ `PaymentMethod = "Cash"` ทุก item ในใบ:
+เมื่อ `PaymentMethod` ขึ้นต้นด้วย `CA-` (`CA-Cash` / `CA-Cheque` / `CA-Transfer`) ทุก item ในใบ:
 
 | Field | ต้องส่งไหม |
 |---|---|
@@ -304,7 +310,7 @@ SAP หา SO → billing document (invoice ที่ไม่ถูกยกเ
 | `ZARI002/116` | Invoice amount is required |
 | `ZARI002/117` | Amount paid is required |
 | `ZARI002/118` | Sale submit date is required |
-| `ZARI002/119` | Sales order number is required for payment method &1 — เฉพาะ `Cash` (§6.6) |
+| `ZARI002/119` | Sales order number is required for payment method &1 — เฉพาะ `CA-` (§6.6) |
 
 `107`–`110` เกิดเฉพาะเมื่อ `PaymentMethod` เป็นเช็ค
 
@@ -314,13 +320,13 @@ SAP หา SO → billing document (invoice ที่ไม่ถูกยกเ
 |---|---|
 | `ZARI002/200` | Company code &1 does not exist |
 | `ZARI002/201` | G/L account &1 does not exist in company code &2 |
-| `ZARI002/202` | Payment method &1 is not known to this interface — ต้องเป็น `Cheque` / `Cash` / `Transfer` |
+| `ZARI002/202` | Payment method &1 is not known to this interface — ต้องเป็น 1 ใน 6 ค่าใน §6.2 |
 | ~~`ZARI002/203`~~ | ~~Payment method &1 does not exist for country &2~~ — **ลบแล้ว 2026-09-18** ไม่แปลงเป็น SAP code แล้วจึงไม่มีอะไรให้เทียบกับ `I_PaymentMethod` |
 | `ZARI002/204` | Currency for company code &1 cannot be determined |
 | `ZARI002/205` | Customer &1 does not exist |
 | `ZARI002/206` | Document &1 already cleared or reversed |
 | `ZARI002/207` | Bank/branch &1 does not exist — เฉพาะตอนจ่ายด้วยเช็ค |
-| `ZARI002/208` | No billing document found for sales order &1 — เฉพาะ `Cash` (§6.6) |
+| `ZARI002/208` | No billing document found for sales order &1 — เฉพาะ `CA-` (§6.6) |
 
 `202` = คำที่ส่งมาไม่ใช่ 1 ใน 3 คำ (ดู §6.2)
 
@@ -352,7 +358,7 @@ SAP หา SO → billing document (invoice ที่ไม่ถูกยกเ
 
 1. โครงสร้างจริงของ `ChequeBankBranch` — ตัวอย่าง `0040129` ไม่มีใน bank master ของ SAP
    น่าจะเป็น bank 3 หลัก + branch 4 หลัก · ตอนนี้จึงยังไม่ validate
-2. รายการคำ `PaymentMethod` ทั้งชุดที่จะส่ง (ตอนนี้รู้แค่ `Cheque` / `Transfer`)
+2. ~~รายการคำ `PaymentMethod` ทั้งชุดที่จะส่ง~~ — ✅ ได้แล้ว 2026-10-20 · 6 ค่า `CA-`/`CR-` (§6.2)
 3. `PaymentAmount` ต้องเท่ากับผลรวม `AmountPaid` ของทุก item หรือไม่ —
    ตอนนี้**ไม่ตรวจ** แต่เว้นที่ไว้ให้เพิ่มทีหลังแล้ว
 

@@ -37,7 +37,7 @@ SBPA ──POST JSON──▶ HTTP Service
                          └─ วนทีละ payment ── 1 payment = 1 หน่วยที่สมบูรณ์หรือไม่มีเลย
                               ├─ normalize   UUID · request_id · currency · pad key
                               │              แปลง payment method · admin field · status = N
-                              ├─ cash sales  PaymentMethod = Cash -> หา invoice จากเลข SO (119 / 208)
+                              ├─ cash sales  PaymentMethod = CA-* -> หา invoice จากเลข SO (119 / 208)
                               ├─ validate    ZCL_ZARI002_VALIDATOR + ZIF_ZARI002_MASTER_DATA
                               ├─ save        ผ่าน → INSERT 2 table + COMMIT
                               │              ไม่ผ่าน → ไม่ INSERT อะไรของใบนั้นเลย
@@ -328,7 +328,7 @@ duplicate — การแก้ต้องทำฝั่ง SAP
 | Validation | Entity | ตรวจอะไร |
 |---|---|---|
 | `check_mandatory` | Payment | 8 field บังคับ ครบไหม (ดู `04_field_mapping.md`) |
-| `check_cheque_fields` | Payment | ถ้า `is_cheque( payment_method )` → `cheque_no` `issue_date` `due_on` `cheque_bank_branch` ต้องครบ · ดูจาก**คำ** `Cheque` ไม่สนตัวพิมพ์ (ไม่มี SAP code แล้ว 2026-09-18) |
+| `check_cheque_fields` | Payment | ถ้า `is_cheque( payment_method )` → `cheque_no` `issue_date` `due_on` `cheque_bank_branch` ต้องครบ · ดูจาก**ส่วนหลัง `-`** = `Cheque` ไม่สนตัวพิมพ์ (`CA-Cheque` `CR-Cheque` · 2026-10-20) |
 | `check_payment_total` | Payment | **ที่ว่างไว้ ยังไม่ใส่ logic** — เผื่อภายหลังต้องเทียบ `payment_amount` กับผลรวม `amount_paid` |
 | `check_amount_paid_total` | Payment | ผลรวม `amount_paid` ของทุก item ต้อง **> 0** |
 | `check_duplicate` | Payment | `payment_document_no` + `billing_document` + **`status`** — ใบใหม่เป็น `N` เสมอ จึงซ้ำเฉพาะกับ row `N` · row `E` ไม่บล็อก (ส่งแก้ใหม่ได้) · row `S`/`W` ไม่บล็อกที่นี่แต่ `check_ar_open_item` จับเพราะ document ถูก clear แล้ว · **ห้ามแยกจากกัน** |
@@ -343,7 +343,7 @@ duplicate — การแก้ต้องทำฝั่ง SAP
 |---|---|---|
 | `check_company_code` | `company_code` | `I_CompanyCode` |
 | `check_gl_account` | `gl_account` | `I_GLAccountInCompanyCode` |
-| `check_payment_method` | `payment_method` | คำต้องเป็น `Cheque` / `Cash` / `Transfer` ไม่งั้น `202` · **ไม่อ่าน `I_PaymentMethod` แล้ว** — field เป็นข้อมูลแสดงผล ไม่ได้ใช้ post |
+| `check_payment_method` | `payment_method` | ต้องเป็น `CA`/`CR` + `-` + `Cheque`/`Cash`/`Transfer` ไม่งั้น `202` (คำเดิมไม่มี prefix ก็ `202` · 2026-10-20) · **ไม่อ่าน `I_PaymentMethod` แล้ว** — field เป็นข้อมูลแสดงผล ไม่ได้ใช้ post |
 | `check_customer_code` | `customer_code` (Item) | `I_Customer` |
 | `check_ar_open_item` | `billing_document` (Item) | `I_OperationalAcctgDocItem WITH PRIVILEGED ACCESS` — เจอ row `FinancialAccountType = D` + `OriginalReferenceDocument = billing_document` + `ClearingJournalEntry` ว่าง = ยังเปิดอยู่ · ไม่เจอ = clear/reverse/ไม่มี → `206` · เงื่อนไขตาม functional spec ข้อ 3 ไม่เพิ่ม company code |
 | `check_bank` | `cheque_bank_branch` | เทียบกับ `I_Bank_2-BankInternalID` คู่กับ country ของ company code · **ตรวจเฉพาะตอนจ่ายด้วยเช็ค** เพราะวิธีอื่น field นี้ว่างได้ |
@@ -370,7 +370,7 @@ Salesforce ส่ง `gl_account` มาแบบ **ไม่มี leading zero
 
 ### Cash Sales — หา invoice จากเลข SO (2026-10-15)
 
-`PaymentMethod = Cash` → SFDC ส่งมาแค่ **เลข SO ใน `BillingNoteNo`** ส่วน `AccountingDocument`
+`PaymentMethod` ขึ้นต้นด้วย `CA-` → SFDC ส่งมาแค่ **เลข SO ใน `BillingNoteNo`** ส่วน `AccountingDocument`
 `BillingDocument` `InvoicePostingDate` `InvoiceAmount` ว่าง · `enrich_cash_sales( )` หามาเติมหลัง normalize
 ก่อน validate — mandatory (`113`–`116`) · AR open item (`206`) · duplicate (`010`) จึงเห็นค่าที่เติมแล้ว
 
@@ -385,7 +385,7 @@ billing_note_no (pad 10 หลัก)
 
 | ข้อตกลง (ผู้ใช้ยืนยัน 2026-10-15) | |
 |---|---|
-| ตัดสิน Cash Sales | `payment_method` = `Cash` (ไม่สนตัวพิมพ์) ทุก item ในใบ |
+| ตัดสิน Cash Sales | ~~`payment_method` = `Cash`~~ → **prefix `CA`** ของ `payment_method` (`is_cash_sales( )` · เปลี่ยน 2026-10-20) ทุก item ในใบ · `CR-Cash` ไม่ใช่ Cash Sales |
 | SO → billing | 1 SO มี invoice ใบเดียว · กรอง `M` + ไม่ยกเลิก ไว้กันพลาด · `DISTINCT` เพราะบิลมีหลายบรรทัด |
 | FI | บรรทัด `D` มีบรรทัดเดียว · **ยังเปิดอยู่** หลังวางบิล → `206` ใช้กับ Cash ได้ตามปกติ |
 | ค่าที่ SFDC ส่งมาด้วย | **ทับด้วยค่าจาก SAP เสมอ** ทั้ง 4 field |
@@ -525,7 +525,7 @@ repository object (class / CDS / BDEF) ใช้ร่วมกันข้า�
 | `S` | Cash Payment | | |
 | `T` | Bank Transfer | | |
 
-**Mapping ที่ใช้**: `Cheque` → `A` (Manual Cheque) · `Transfer` → `T` (Bank Transfer)
+~~**Mapping ที่ใช้**: `Cheque` → `A` (Manual Cheque) · `Transfer` → `T` (Bank Transfer)~~ — เลิกแปลงแล้ว 2026-09-18
 
 ⚠️ **`IsPaymentMethodForIncomingPayments` ติ๊กไว้แค่ `M` `N` `E`** — ไม่รวม `A` หรือ `T`
 ที่ Salesforce ส่งเข้ามาจริง ทั้งที่ ZARI002 เป็น interface ของ **incoming payment**
