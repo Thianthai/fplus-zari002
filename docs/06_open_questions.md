@@ -43,7 +43,7 @@
 | OQ-26 | SBPA ส่ง `RequestId` มาไหม — **ปิดแล้ว 2026-09-16** ส่งจริง รูปแบบ `20260915_105645_1056` (20 ตัว) · ขยาย field เป็น 25 แล้ว (OQ-22) | — | Phase 5 | — | ✅ |
 | OQ-23 | request ที่มีหลาย payment แล้วบางใบตก — ตอนนี้ใบที่ผ่าน**ถูก commit ไปแล้ว** ใบที่ตกไม่ถูกบันทึก · SBPA ต้องรับสภาพ "request สำเร็จบางส่วน" ได้และส่งเฉพาะใบที่ตกกลับมาใหม่ ไม่ใช่ส่งทั้ง request ซ้ำ (จะติด duplicate ทันที) | SBPA | Phase 5 | ไม่บล็อก — แต่ response **ไม่ได้บอกตรง ๆ** ว่าใบไหนเข้าไปแล้ว SBPA ต้องหักลบเอาจากใบที่ไม่โผล่ใน `Errors` (กลับมาเป็นแบบนี้ 2026-09-10) · ถ้า SBPA คาดหวัง all-or-nothing ต้องรื้อ `process( )` ให้ commit ครั้งเดียวตอนจบ | ⬜ |
 | OQ-24 | callback กี่ครั้งต่อ request — **ปิดแล้ว 2026-09-17** spec กำหนด 1 record = 1 payment → ยิง 1 ครั้งต่อ payment ท้าย loop | — | Phase 5 | — | ✅ |
-| OQ-27 | ZARE002 ต้องรองรับ `payment_method` แบบ `CA-`/`CR-` — ZARE002 เทียบ `'Cheque'` ตรงตัว (`zcl_zare002_submit` บรรทัด 29 / 184 / 401) · ถ้า ZARI002 (`c1afad9`) ขึ้นก่อน **ใบเช็คจะหลุดเข้า auto post** · ส่ง prompt ให้ session ZARE002 แก้แล้ว 2026-10-20 (ดูส่วนหลัง `-` เอง ห้ามเรียก class ของ ZARI002) | ZARE002 | Cash Sales / payment method | **transport ZARI002 รุ่นนี้** — ZARE002 ต้องขึ้นพร้อมหรือก่อน | ⬜ |
+| OQ-27 | ZARE002 ต้องรองรับ `payment_method` แบบ `CA-`/`CR-` — **ปิดแล้ว 2026-10-20** ZARE002 แก้ใน `90f43a5` · `zcl_zare002_submit=>is_cheque( )` ดูส่วนหลัง `-` ตัวสุดท้าย (ไม่สนตัวพิมพ์/ช่องว่าง) · ค่าเดิม `Cheque` ไม่มีขีดยังนับเป็นเช็ค (row เก่าใน table) · ใช้ทั้งจุดตั้ง status E และ message 104 · ไม่เรียก class ของ ZARI002 · ค่า test เป็น `CR-Transfer` · **transport: ZARE002 ต้องขึ้นพร้อมหรือก่อน ZARI002 `c1afad9`** | — | Cash Sales / payment method | — | ✅ |
 
 ## วิธีใช้
 
