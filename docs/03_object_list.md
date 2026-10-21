@@ -91,7 +91,7 @@
 | `ZI_ZARI002_ITEM_LOG` | CDS interface view — child · association `_Item` → `ZI_ZARI002_ITEM` (2026-10-21) | `src/zi_zari002_item_log.ddls.asddls` | 5A | ✅ |
 | `ZI_ZARI002_MSG_LOG` | CDS interface view — child | `src/zi_zari002_msg_log.ddls.asddls` | 5A | ✅ |
 | `ZC_ZARI002_PYMT_LOG` | CDS projection (root) + metadata extension · section Posting Result 11 field + คอลัมน์/filter Posting Status (2026-10-21) | `src/zc_zari002_pymt_log.ddls.asddls` · `.ddlx.asddlxs` | 5A | ✅ |
-| `ZC_ZARI002_ITEM_LOG` | CDS projection + metadata extension · `PostingRejectReason` จาก ITEM แทนค่าใน log (2026-10-21) | `src/zc_zari002_item_log.ddls.asddls` · `.ddlx.asddlxs` | 5A | ✅ |
+| `ZC_ZARI002_ITEM_LOG` | CDS projection + metadata extension · `PostingRejectReason` จาก ITEM แทนค่าใน log (2026-10-21) · ตาราง Items มีคอลัมน์ Sale Submit Date + Reject Reason | `src/zc_zari002_item_log.ddls.asddls` · `.ddlx.asddlxs` | 5A | ✅ |
 | `ZC_ZARI002_MSG_LOG` | CDS projection + metadata extension | `src/zc_zari002_msg_log.ddls.asddls` · `.ddlx.asddlxs` | 5A | ✅ |
 | `ZI_ZARI002_PYMT` | CDS view — อ่าน `ZTAR_I002_PYMT` อย่างเดียว ผลการ post 11 field ให้ monitor (2026-10-21) | `src/zi_zari002_pymt.ddls.asddls` | 5A | ✅ |
 | `ZI_ZARI002_ITEM` | CDS view — อ่าน `ZTAR_I002_ITEM` อย่างเดียว `RejectReason` ให้ monitor (2026-10-21) | `src/zi_zari002_item.ddls.asddls` | 5A | ✅ |
