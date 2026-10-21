@@ -27,7 +27,10 @@ annotate entity ZC_ZARI002_PYMT_LOG
       label: 'Amounts', position: 30, targetQualifier: 'AmountData' },
 
     { id: 'ResultData', parentId: 'PaymentTab', type: #FIELDGROUP_REFERENCE,
-      label: 'Result', position: 40, targetQualifier: 'ResultData' },
+      label: 'Receipt Result', position: 40, targetQualifier: 'ResultData' },
+
+    { id: 'PostingData', parentId: 'PaymentTab', type: #FIELDGROUP_REFERENCE,
+      label: 'Posting Result', position: 45, targetQualifier: 'PostingData' },
 
     { id: 'AdminData', parentId: 'PaymentTab', type: #FIELDGROUP_REFERENCE,
       label: 'Administrative Data', position: 50, targetQualifier: 'AdminData' },
@@ -138,6 +141,47 @@ annotate entity ZC_ZARI002_PYMT_LOG
 
   @UI.fieldGroup: [{ qualifier: 'ResultData', position: 30 }]
   SalesforceMessage;
+
+  @UI: {
+    lineItem:       [{ position: 85, importance: #HIGH }],
+    selectionField: [{ position: 45 }],
+    fieldGroup:     [{ qualifier: 'PostingData', position: 10 }]
+  }
+  @UI.textArrangement: #TEXT_FIRST
+  PostingStatus;
+
+  @UI.hidden: true
+  PostingStatusText;
+
+  @UI.fieldGroup: [{ qualifier: 'PostingData', position: 20 }]
+  PaymentAccountingDocument;
+
+  @UI.fieldGroup: [{ qualifier: 'PostingData', position: 30 }]
+  PaymentFiscalYear;
+
+  @UI.fieldGroup: [{ qualifier: 'PostingData', position: 40 }]
+  SubmitMessage;
+
+  @UI.fieldGroup: [{ qualifier: 'PostingData', position: 50 }]
+  ClearingAccountingDocument;
+
+  @UI.fieldGroup: [{ qualifier: 'PostingData', position: 60 }]
+  ClearingFiscalYear;
+
+  @UI.fieldGroup: [{ qualifier: 'PostingData', position: 70 }]
+  ClearingMessage;
+
+  @UI.fieldGroup: [{ qualifier: 'PostingData', position: 80 }]
+  RejectBatchId;
+
+  @UI.fieldGroup: [{ qualifier: 'PostingData', position: 90 }]
+  RejectMessage;
+
+  @UI.fieldGroup: [{ qualifier: 'PostingData', position: 100 }]
+  PostingSfdcStatus;
+
+  @UI.fieldGroup: [{ qualifier: 'PostingData', position: 110 }]
+  PostingSfdcMessage;
 
   @UI: {
     lineItem:       [{ position: 90, importance: #HIGH }],

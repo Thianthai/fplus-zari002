@@ -7,6 +7,10 @@ define view entity ZI_ZARI002_ITEM_LOG
 
   association to parent ZR_ZARI002_PYMT_LOG as _PaymentLog
     on $projection.PaymentUUID = _PaymentLog.PaymentUUID
+
+  // reject reason ล่าสุดจากตารางธุรกิจ
+  association [0..1] to ZI_ZARI002_ITEM as _Item
+    on $projection.ItemUUID = _Item.ItemUUID
 {
       @EndUserText.label: 'Item Log UUID'
   key item_uuid             as ItemUUID,
@@ -53,5 +57,6 @@ define view entity ZI_ZARI002_ITEM_LOG
       @Semantics.systemDateTime.localInstanceLastChangedAt: true
       local_last_changed_at as LocalLastChangedAt,
 
-      _PaymentLog
+      _PaymentLog,
+      _Item
 }

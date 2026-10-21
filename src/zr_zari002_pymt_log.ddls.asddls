@@ -7,6 +7,10 @@ define root view entity ZR_ZARI002_PYMT_LOG
 
   composition [0..*] of ZI_ZARI002_ITEM_LOG as _ItemLog
   composition [0..*] of ZI_ZARI002_MSG_LOG  as _MessageLog
+
+  // ผลการ post ล่าสุดจากตารางธุรกิจ ไม่ใช่ส่วนหนึ่งของ BO log
+  association [0..1] to ZI_ZARI002_PYMT     as _Payment
+    on $projection.PaymentUUID = _Payment.PaymentUUID
 {
       @EndUserText.label: 'Payment Log UUID'
   key payment_uuid               as PaymentUUID,
@@ -79,5 +83,6 @@ define root view entity ZR_ZARI002_PYMT_LOG
       local_last_changed_at      as LocalLastChangedAt,
 
       _ItemLog,
-      _MessageLog
+      _MessageLog,
+      _Payment
 }

@@ -85,7 +85,7 @@ annotate entity ZC_ZARI002_ITEM_LOG
   SaleSubmitDate;
 
   @UI.identification: [{ position: 120 }]
-  RejectReason;
+  PostingRejectReason;
 
   @UI.hidden: true
   CreatedBy;

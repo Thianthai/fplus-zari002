@@ -19,7 +19,11 @@ define view entity ZC_ZARI002_ITEM_LOG
       AmountPaid,
       PartialAmount,
       SaleSubmitDate,
-      RejectReason,
+
+      // reject reason ล่าสุดจาก ZTAR_I002_ITEM
+      // RejectReason ของ log เป็นค่าที่ copy ไว้ตอนรับข้อมูล จึงว่างเสมอ ไม่ดึงมาแสดง
+      @EndUserText.label: 'Reject Reason'
+      _Item.RejectReason as PostingRejectReason,
 
       CreatedBy,
       CreatedAt,

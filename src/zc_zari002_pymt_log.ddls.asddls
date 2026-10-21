@@ -38,6 +38,35 @@ define root view entity ZC_ZARI002_PYMT_LOG
       SalesforceStatus,
       SalesforceMessage,
 
+      // ผลการ post ล่าสุดจาก ZTAR_I002_PYMT
+      // ชื่อไม่ซ้ำกับ Status และ SalesforceStatus ของ log ที่เป็นผลการรับข้อมูล
+      @ObjectModel.text.element: [ 'PostingStatusText' ]
+      @Consumption.valueHelpDefinition: [{ entity: { name: 'ZI_ZARI002_POST_STATUS_VH', element: 'Status' } }]
+      @EndUserText.label: 'Posting Status'
+      _Payment.Status                     as PostingStatus,
+      @EndUserText.label: 'Posting Status'
+      _Payment._PostingStatus.StatusText  as PostingStatusText,
+      @EndUserText.label: 'Payment Journal Entry'
+      _Payment.PaymentAccountingDocument  as PaymentAccountingDocument,
+      @EndUserText.label: 'Payment Fiscal Year'
+      _Payment.PaymentFiscalYear          as PaymentFiscalYear,
+      @EndUserText.label: 'Clearing Journal Entry'
+      _Payment.ClearingAccountingDocument as ClearingAccountingDocument,
+      @EndUserText.label: 'Clearing Fiscal Year'
+      _Payment.ClearingFiscalYear         as ClearingFiscalYear,
+      @EndUserText.label: 'Submit Message'
+      _Payment.SubmitMessage              as SubmitMessage,
+      @EndUserText.label: 'Clearing Message'
+      _Payment.ClearingMessage            as ClearingMessage,
+      @EndUserText.label: 'Reject Batch ID'
+      _Payment.RejectBatchId              as RejectBatchId,
+      @EndUserText.label: 'Reject Message'
+      _Payment.RejectMessage              as RejectMessage,
+      @EndUserText.label: 'Posting Result to SFDC'
+      _Payment.SalesforceStatus           as PostingSfdcStatus,
+      @EndUserText.label: 'Posting Result Message'
+      _Payment.SalesforceMessage          as PostingSfdcMessage,
+
       CreatedBy,
       CreatedAt,
       LastChangedBy,
