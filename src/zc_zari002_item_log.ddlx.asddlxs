@@ -81,10 +81,16 @@ annotate entity ZC_ZARI002_ITEM_LOG
   }
   PartialAmount;
 
-  @UI.identification: [{ position: 110 }]
+  @UI: {
+    lineItem:       [{ position: 100, importance: #MEDIUM }],
+    identification: [{ position: 110 }]
+  }
   SaleSubmitDate;
 
-  @UI.identification: [{ position: 120 }]
+  @UI: {
+    lineItem:       [{ position: 110, importance: #HIGH }],
+    identification: [{ position: 120 }]
+  }
   PostingRejectReason;
 
   @UI.hidden: true
