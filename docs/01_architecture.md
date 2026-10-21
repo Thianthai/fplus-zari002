@@ -584,7 +584,7 @@ log เขียน**หลัง** business save เพราะต้องร
 | `HDRLOG-status` | `N` → ZARE002 เขียน `S`/`W`/`E` (ผล post) | **`S`/`E` ผลรับของ ZARI002** — `N`/`W` ไม่มีวันโผล่ |
 | `HDRLOG-salesforce_status` / `_message` | ARI003 เขียน (ผล post) | **ZARI002 เขียนผล notify** — `S`/`E` + HTTP code (เปลี่ยน 2026-09-17) |
 | `HDRLOG-request_body` | ไม่มี | JSON **ของใบนั้น** serialize จาก structure ดิบ + pretty-print · วันที่เป็น `20260815` เพราะ parse แปลงไปแล้ว |
-| `ITMLOG-reject_reason` | ZARE002 เขียน | ว่างเสมอ |
+| `ITMLOG-reject_reason` | ZARE002 เขียน | ว่างเสมอ · monitor แสดงค่าจริงจาก `ZTAR_I002_ITEM` แทน (2026-10-21) |
 | `MSGLOG-message` | — | `ZARI002/107 Cheque number is required ...` มี code นำหน้าให้ค้นได้ |
 | `MSGLOG-salesforce_item_id` | — | จาก error · ZSDE002 ไม่มี field นี้ จึงบอกไม่ได้ว่า error ของ item ไหน |
 
@@ -596,8 +596,9 @@ log เขียน**หลัง** business save เพราะต้องร
 ### Monitor — RAP read-only
 
 ```
-ZR_ZARI002_PYMT_LOG  root (hdrlog)  ─┬─ ZI_ZARI002_ITEM_LOG  (itmlog)
-                                     └─ ZI_ZARI002_MSG_LOG   (msglog)
+ZR_ZARI002_PYMT_LOG  root (hdrlog)  ─┬─ ZI_ZARI002_ITEM_LOG  (itmlog) ── _Item ──▶ ZI_ZARI002_ITEM (item)
+                                     ├─ ZI_ZARI002_MSG_LOG   (msglog)
+                                     └─ _Payment ──▶ ZI_ZARI002_PYMT (pymt) ── _PostingStatus ──▶ ZI_ZARI002_POST_STATUS_VH
 ZC_ZARI002_*  projection + metadata extension
 ZUI_ZARI002_LOG / _O4  service
 ```
@@ -605,6 +606,21 @@ ZUI_ZARI002_LOG / _O4  service
 BDEF `managed` · `strict ( 2 )` · **ไม่มี operation** — processor เขียนด้วย `INSERT` ตรง
 · `authorization master ( global )` + behavior pool ที่ handler ว่าง มีเพราะ strict บังคับ
 ไม่ได้คุมสิทธิ์จริง (คุมที่ business catalog `ZBC_ZARI002`)
+
+#### ผลการ post ในหน้า monitor (2026-10-21)
+
+user เปิด table ไม่ได้ จึงต้องเห็นผลที่ ZARE002 / ZARI003 เขียนลง `ZTAR_I002_PYMT` ทีหลังจากหน้า log ด้วย
+· HDRLOG เป็น snapshot ตอนรับ **ไม่ copy field พวกนี้ลงไป** (ค่าจะค้าง) — อ่านสดผ่าน association แทน
+
+| Section | ที่มา | ความหมาย |
+|---|---|---|
+| **Receipt Result** (เดิมชื่อ Result) | HDRLOG `Status` `SalesforceStatus` `SalesforceMessage` | ZARI002 รับใบนี้ไหม + ผลแจ้ง SFDC |
+| **Posting Result** | PYMT ผ่าน `_Payment` — `PostingStatus` (+ข้อความ) · Payment / Clearing Journal Entry + Fiscal Year · Submit / Clearing / Reject Message · Reject Batch ID · `PostingSfdcStatus` / `PostingSfdcMessage` (= `salesforce_*` ของ PYMT ที่ ZARI003 เขียน) | ผล post ล่าสุด · ใบที่ตกตอนรับไม่มี row ใน PYMT → ว่างทั้ง section |
+
+- field ทั้งหมดดึงด้วย path `_Payment.xxx` **ใน projection** ไม่ใช่ root view — ไม่อยู่ใน `ztar_i002_hdrlog`
+  ถ้าใส่ใน root จะติด BDEF `mapping` warning · association ไม่ใช่ composition จึงไม่ต้องประกาศใน BDEF (ATC ผ่าน)
+- element ที่ชื่อชนกับ HDRLOG ตั้งใหม่ (`PostingStatus` `PostingSfdcStatus` `PostingSfdcMessage` `PostingRejectReason`)
+- list มีคอลัมน์ + filter Posting Status · value help `ZI_ZARI002_POST_STATUS_VH` ของเราเอง (ไม่อ้าง VH ของ ZARE002)
 
 ### 3 กับดักตอน activate BDEF (เจอจริง 2026-09-16)
 
