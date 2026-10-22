@@ -39,6 +39,7 @@ SBPA ──POST JSON──▶ HTTP Service
                               │              แปลง payment method · admin field · status = N
                               ├─ cash sales  PaymentMethod = CA-* -> หา invoice จากเลข SO (119 / 208)
                               ├─ validate    ZCL_ZARI002_VALIDATOR + ZIF_ZARI002_MASTER_DATA
+                              │              GL · customer · billing · accounting doc ต้องมีจริง
                               ├─ save        ผ่าน → INSERT 2 table + COMMIT
                               │              ไม่ผ่าน → ไม่ INSERT อะไรของใบนั้นเลย
                               └─ notify      ZCL_ZARI002_SFDC_RESULT → ผลรับ S/E ไป SFDC (§2.2)

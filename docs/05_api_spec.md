@@ -73,8 +73,8 @@ field `Created*` / `LastChanged*` ทั้งหมด
 | `SalesforceItemId` | String(18) | ✔ | **business key ของ item** — ต้องไม่ซ้ำกันเองภายใน payment เดียวกัน · error message จะอ้างถึง item ด้วยค่านี้ |
 | `CustomerCode` | String(10) | ✔ | ต้องมีจริงใน SAP · ส่งแบบไม่มี leading zero ได้ |
 | `BillingNoteNo` | String(10) | – | **บังคับเมื่อ `PaymentMethod` ขึ้นต้นด้วย `CA-`** — ใส่เลข SO (ดู §6.6) |
-| `AccountingDocument` | String(10) | ✔ * | |
-| `BillingDocument` | String(10) | ✔ * | ต้องยัง**ไม่ถูกรับชำระหรือ reverse** (`ZARI002/206`) · **เป็นส่วนหนึ่งของ duplicate key** (ดู §7) |
+| `AccountingDocument` | String(10) | ✔ * | ต้องมีจริงใน company code + ปีของ `InvoicePostingDate` (`ZARI002/210`) · ส่งไม่ครบ 10 หลัก SAP เติม 0 ให้ |
+| `BillingDocument` | String(10) | ✔ * | ต้องมีจริง (`ZARI002/209`) · ส่งไม่ครบ 10 หลัก SAP เติม 0 ให้ · ต้องยัง**ไม่ถูกรับชำระหรือ reverse** (`ZARI002/206`) · **เป็นส่วนหนึ่งของ duplicate key** (ดู §7) |
 | `InvoicePostingDate` | Date | ✔ * | |
 | `InvoiceAmount` | Decimal(23,2) | ✔ * | |
 | `AmountPaid` | Decimal(23,2) | ✔ | |
@@ -327,6 +327,8 @@ SAP หา SO → billing document (invoice ที่ไม่ถูกยกเ
 | `ZARI002/206` | Document &1 already cleared or reversed |
 | `ZARI002/207` | Bank/branch &1 does not exist — เฉพาะตอนจ่ายด้วยเช็ค |
 | `ZARI002/208` | No billing document found for sales order &1 — เฉพาะ `CA-` (§6.6) |
+| `ZARI002/209` | Billing document &1 does not exist — ไม่ตรวจกับ `CA-` |
+| `ZARI002/210` | Accounting document &1 does not exist in company code &2 fiscal year &3 — ปีบัญชีคือปีของ `InvoicePostingDate` · ไม่ตรวจกับ `CA-` |
 
 `202` = คำที่ส่งมาไม่ใช่ 1 ใน 3 คำ (ดู §6.2)
 

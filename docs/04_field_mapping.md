@@ -163,9 +163,11 @@ CN ติดลบได้ · แต่ **ผลรวม `AmountPaid` ขอ�
 | `enrich_cash_sales` | item | `119` `208` | ✅ เฉพาะ prefix `CA` · ทำก่อน validate ตัวอื่น (2026-10-15) |
 | `check_item_mandatory` | item | `006` `112`–`118` | ✅ |
 | `check_customer_code` | item | `205` | ✅ |
+| `check_billing_document` | item | `209` | ✅ `I_BillingDocument` · เติม 0 ครบ 10 หลักก่อนตรวจ · ข้าม `CA-` · ใบที่ได้ `209` ไม่ได้ `206` ซ้อน (2026-10-22) |
 | `check_ar_open_item` | item | `206` | ✅ `I_OperationalAcctgDocItem` — `FinancialAccountType = D` · `OriginalReferenceDocument = billing_document` · `ClearingJournalEntry` ว่าง (2026-09-17) |
+| `check_accounting_document` | item | `210` | ✅ `I_JournalEntry` key = company code + เลขเอกสาร + ปีบัญชี · **ปีบัญชี = ปีของ `InvoicePostingDate`** (functional ยืนยัน) · เติม 0 ครบ 10 หลัก · ข้าม `CA-` (2026-10-22) |
 
-**16 validation** (จากเดิม 17 — `validateSalesforceId` ถูกตัดออก ดู §6)
+**18 validation** (เพิ่ม `209` `210` 2026-10-22) (จากเดิม 17 — `validateSalesforceId` ถูกตัดออก ดู §6)
 
 ## 6. สรุปการเปลี่ยนแปลง 2026-08-28
 
