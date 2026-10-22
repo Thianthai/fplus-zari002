@@ -201,4 +201,77 @@ CLASS ZCL_ZARI002_MASTER_DATA IMPLEMENTATION.
     ENDLOOP.
 
   ENDMETHOD.
+
+
+  METHOD zif_zari002_master_data~find_unknown_billing_documents.
+
+    DATA lr_billing TYPE RANGE OF zif_zari002_master_data=>ty_billing_document.
+
+    IF it_billing_document IS INITIAL.
+      RETURN.
+    ENDIF.
+
+    lr_billing = VALUE #( FOR <lfs_doc> IN it_billing_document
+                        ( sign = 'I' option = 'EQ' low = <lfs_doc> ) ).
+
+    SELECT FROM I_BillingDocument WITH PRIVILEGED ACCESS
+      FIELDS BillingDocument AS billing_document
+      WHERE BillingDocument IN @lr_billing
+      INTO TABLE @DATA(lt_existing).
+
+    LOOP AT it_billing_document ASSIGNING FIELD-SYMBOL(<lfs_billing>).
+      IF NOT line_exists( lt_existing[ billing_document = <lfs_billing> ] ).
+        INSERT <lfs_billing> INTO TABLE rt_result.
+      ENDIF.
+    ENDLOOP.
+
+  ENDMETHOD.
+
+
+  METHOD zif_zari002_master_data~find_unknown_accounting_docs.
+
+    DATA lr_company_code TYPE RANGE OF zif_zari002_master_data=>ty_company_code.
+    DATA lr_document     TYPE RANGE OF zif_zari002_master_data=>ty_acc_doc_key-accounting_document.
+    DATA lr_fiscal_year  TYPE RANGE OF zif_zari002_master_data=>ty_fiscal_year.
+
+    IF it_acc_doc_key IS INITIAL.
+      RETURN.
+    ENDIF.
+
+    LOOP AT it_acc_doc_key ASSIGNING FIELD-SYMBOL(<lfs_key>).
+
+      IF NOT line_exists( lr_company_code[ low = <lfs_key>-company_code ] ).
+        APPEND VALUE #( sign = 'I' option = 'EQ' low = <lfs_key>-company_code ) TO lr_company_code.
+      ENDIF.
+
+      IF NOT line_exists( lr_document[ low = <lfs_key>-accounting_document ] ).
+        APPEND VALUE #( sign = 'I' option = 'EQ' low = <lfs_key>-accounting_document ) TO lr_document.
+      ENDIF.
+
+      IF NOT line_exists( lr_fiscal_year[ low = <lfs_key>-fiscal_year ] ).
+        APPEND VALUE #( sign = 'I' option = 'EQ' low = <lfs_key>-fiscal_year ) TO lr_fiscal_year.
+      ENDIF.
+
+    ENDLOOP.
+
+    " range แยกกันจะได้แถวไขว้กันมาเกินได้ จึงต้องเทียบทั้ง 3 ตัวอีกรอบ
+    SELECT FROM I_JournalEntry WITH PRIVILEGED ACCESS
+      FIELDS CompanyCode        AS company_code,
+             AccountingDocument AS accounting_document,
+             FiscalYear         AS fiscal_year
+      WHERE CompanyCode        IN @lr_company_code
+        AND AccountingDocument IN @lr_document
+        AND FiscalYear         IN @lr_fiscal_year
+      INTO TABLE @DATA(lt_existing).
+
+    LOOP AT it_acc_doc_key ASSIGNING <lfs_key>.
+      IF NOT line_exists( lt_existing[ company_code        = <lfs_key>-company_code
+                                       accounting_document = <lfs_key>-accounting_document
+                                       fiscal_year         = <lfs_key>-fiscal_year ] ).
+        INSERT <lfs_key> INTO TABLE rt_result.
+      ENDIF.
+    ENDLOOP.
+
+  ENDMETHOD.
+
 ENDCLASS.

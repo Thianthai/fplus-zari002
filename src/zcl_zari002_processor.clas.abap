@@ -71,7 +71,7 @@ CLASS zcl_zari002_processor DEFINITION
       RETURNING VALUE(rt_error) TYPE tt_error.
 
     "! ตรวจกับ master data จริงผ่าน go_master_data
-    "! company code / GL / payment method / bank / customer / AR open item
+    "! company code / GL / payment method / bank / customer / billing / AR open item / accounting document
     METHODS check_master_data
       IMPORTING is_payment      TYPE ztar_i002_pymt
                 it_item         TYPE tt_item
@@ -354,6 +354,11 @@ CLASS ZCL_ZARI002_PROCESSOR IMPLEMENTATION.
       " Customer Code
       <lfs_item>-customer_code = zcl_zari002_validator=>to_internal_key( <lfs_item>-customer_code ).
 
+      " Billing / Accounting Document
+      " SFDC ส่งมาไม่ครบ 10 หลักได้ จึงเติม 0 ก่อนตรวจ
+      <lfs_item>-billing_document    = zcl_zari002_validator=>to_internal_key( <lfs_item>-billing_document ).
+      <lfs_item>-accounting_document = zcl_zari002_validator=>to_internal_key( <lfs_item>-accounting_document ).
+
       " Administrative Data
       <lfs_item>-created_by            = cs_payment-created_by.
       <lfs_item>-created_at            = cs_payment-created_at.
@@ -488,6 +493,8 @@ CLASS ZCL_ZARI002_PROCESSOR IMPLEMENTATION.
     DATA lt_customer         TYPE zif_zari002_master_data=>tt_customer.
     DATA lt_bank_key         TYPE zif_zari002_master_data=>tt_bank_key.
     DATA lt_billing_document TYPE zif_zari002_master_data=>tt_billing_document.
+    DATA lt_unknown_billing  TYPE zif_zari002_master_data=>tt_billing_document.
+    DATA lt_acc_doc_key      TYPE zif_zari002_master_data=>tt_acc_doc_key.
 
     " Company Code
     IF is_payment-company_code IS NOT INITIAL.
@@ -570,15 +577,42 @@ CLASS ZCL_ZARI002_PROCESSOR IMPLEMENTATION.
       ENDIF.
     ENDLOOP.
 
-    " AR Open Item
-    " Billing Document ต้องยังเปิดอยู่ใน FI (ยังไม่ถูก Clear/Reverse)
-    " ทำงานคู่กับ Duplicate Check: ใบที่ clear แล้ว (C) จะถูกดักที่นี่ ส่วนใบ S ดักที่ Duplicate Check
+    " Cash Sales ได้เลข billing / accounting document จาก SO ในระบบแล้ว
+    " ไม่ต้องตรวจว่ามีจริงซ้ำ (209 / 210) แต่ยังต้องตรวจ AR Open Item (206)
+    DATA(lv_cash_sales) = zcl_zari002_validator=>is_cash_sales( is_payment-payment_method ).
+
     LOOP AT it_item ASSIGNING <lfs_item>.
       IF <lfs_item>-billing_document IS NOT INITIAL.
         INSERT <lfs_item>-billing_document INTO TABLE lt_billing_document.
       ENDIF.
     ENDLOOP.
 
+    " Billing Document
+    IF lv_cash_sales = abap_false.
+      lt_unknown_billing = go_master_data->find_unknown_billing_documents( lt_billing_document ).
+    ENDIF.
+
+    LOOP AT it_item ASSIGNING <lfs_item>.
+      IF <lfs_item>-billing_document IS NOT INITIAL
+      AND line_exists( lt_unknown_billing[ table_line = <lfs_item>-billing_document ] ).
+        APPEND VALUE #( msgno              = '209'
+                        msgtx              = message_text( iv_msgno = '209'
+                                                           iv_v1    = |{ <lfs_item>-billing_document }| )
+                        salesforce_id      = is_payment-salesforce_id
+                        salesforce_item_id = <lfs_item>-salesforce_item_id
+                        field              = zcl_zari002_json=>to_json_name( 'billing_document' )
+                      ) TO rt_error.
+      ENDIF.
+    ENDLOOP.
+
+    " ใบที่ไม่มีจริงได้ 209 ไปแล้ว ไม่ต้องได้ 206 ซ้อน
+    LOOP AT lt_unknown_billing ASSIGNING FIELD-SYMBOL(<lfs_unknown>).
+      DELETE TABLE lt_billing_document FROM <lfs_unknown>.
+    ENDLOOP.
+
+    " AR Open Item
+    " Billing Document ต้องยังเปิดอยู่ใน FI (ยังไม่ถูก Clear/Reverse)
+    " ทำงานคู่กับ Duplicate Check: ใบที่ clear แล้ว (C) จะถูกดักที่นี่ ส่วนใบ S ดักที่ Duplicate Check
     DATA(lt_cleared) = go_master_data->find_cleared_documents( lt_billing_document ).
 
     LOOP AT it_item ASSIGNING <lfs_item>.
@@ -590,6 +624,44 @@ CLASS ZCL_ZARI002_PROCESSOR IMPLEMENTATION.
                         salesforce_id      = is_payment-salesforce_id
                         salesforce_item_id = <lfs_item>-salesforce_item_id
                         field              = zcl_zari002_json=>to_json_name( 'billing_document' )
+                      ) TO rt_error.
+      ENDIF.
+    ENDLOOP.
+
+    " Accounting Document
+    " ปีบัญชีใช้ปีของ Invoice Posting Date ตามที่ functional ยืนยัน
+    " ไม่มีวันที่ข้ามไปเลย เพราะติด mandatory (115) อยู่แล้ว
+    IF lv_cash_sales = abap_true.
+      RETURN.
+    ENDIF.
+
+    LOOP AT it_item ASSIGNING <lfs_item>.
+      IF <lfs_item>-accounting_document  IS NOT INITIAL
+      AND <lfs_item>-invoice_posting_date IS NOT INITIAL.
+        INSERT VALUE #( company_code        = is_payment-company_code
+                        accounting_document = <lfs_item>-accounting_document
+                        fiscal_year         = <lfs_item>-invoice_posting_date+0(4)
+                      ) INTO TABLE lt_acc_doc_key.
+      ENDIF.
+    ENDLOOP.
+
+    DATA(lt_unknown_acc_doc) = go_master_data->find_unknown_accounting_docs( lt_acc_doc_key ).
+
+    LOOP AT it_item ASSIGNING <lfs_item>.
+      DATA(lv_fiscal_year) = <lfs_item>-invoice_posting_date+0(4).
+
+      IF <lfs_item>-accounting_document IS NOT INITIAL
+      AND line_exists( lt_unknown_acc_doc[ company_code        = is_payment-company_code
+                                           accounting_document = <lfs_item>-accounting_document
+                                           fiscal_year         = lv_fiscal_year ] ).
+        APPEND VALUE #( msgno              = '210'
+                        msgtx              = message_text( iv_msgno = '210'
+                                                           iv_v1    = |{ <lfs_item>-accounting_document }|
+                                                           iv_v2    = |{ is_payment-company_code }|
+                                                           iv_v3    = |{ lv_fiscal_year }| )
+                        salesforce_id      = is_payment-salesforce_id
+                        salesforce_item_id = <lfs_item>-salesforce_item_id
+                        field              = zcl_zari002_json=>to_json_name( 'accounting_document' )
                       ) TO rt_error.
       ENDIF.
     ENDLOOP.

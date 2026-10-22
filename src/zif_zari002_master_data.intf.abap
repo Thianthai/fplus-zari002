@@ -9,7 +9,8 @@ INTERFACE zif_zari002_master_data
     ty_country          TYPE c LENGTH 3,
     ty_bank             TYPE ztar_i002_pymt-cheque_bank_branch,
     ty_billing_document TYPE ztar_i002_item-billing_document,
-    ty_sales_order      TYPE ztar_i002_item-billing_note_no.
+    ty_sales_order      TYPE ztar_i002_item-billing_note_no,
+    ty_fiscal_year      TYPE n LENGTH 4.
 
   TYPES:
     "! company code + ข้อมูลที่ derive ต่อได้
@@ -30,6 +31,13 @@ INTERFACE zif_zari002_master_data
       country TYPE ty_country,
       bank    TYPE ty_bank,
     END OF ty_bank_key,
+
+    "! เลขเอกสารบัญชีซ้ำกันได้ข้าม company code และปีบัญชี จึงต้องตรวจทั้ง 3 ตัวพร้อมกัน
+    BEGIN OF ty_acc_doc_key,
+      company_code        TYPE ty_company_code,
+      accounting_document TYPE ztar_i002_item-accounting_document,
+      fiscal_year         TYPE ty_fiscal_year,
+    END OF ty_acc_doc_key,
 
     "! invoice ของ Cash Sales ที่หาได้จากเลข SO
     BEGIN OF ty_cash_sale,
@@ -56,7 +64,9 @@ INTERFACE zif_zari002_master_data
     tt_sales_order        TYPE SORTED TABLE OF ty_sales_order
                           WITH UNIQUE KEY table_line,
     tt_cash_sale          TYPE SORTED TABLE OF ty_cash_sale
-                          WITH UNIQUE KEY sales_order.
+                          WITH UNIQUE KEY sales_order,
+    tt_acc_doc_key        TYPE SORTED TABLE OF ty_acc_doc_key
+                          WITH UNIQUE KEY company_code accounting_document fiscal_year.
 
   "! อ่าน currency และ country ของ company code
   "! ใช้ทั้งใน setPaymentDefaults (เอาค่าไปเติม) และ validateCompanyCode (เช็คว่ามีจริง)
@@ -81,8 +91,9 @@ INTERFACE zif_zari002_master_data
     IMPORTING it_bank_key      TYPE tt_bank_key
     RETURNING VALUE(rt_result) TYPE tt_bank_key.
 
-  "! คืน billing document ที่ไม่มี open item ใน FI — ถูก clear / reverse / ไม่มีเลย
+  "! คืน billing document ที่ไม่มี open item ใน FI — ถูก clear / reverse
   "! เงื่อนไข FinancialAccountType = D / ClearingJournalEntry ว่าง
+  "! เลขที่ไม่มีในระบบเลยก็จะถูกคืนด้วย จึงต้องกรองผ่าน find_unknown_billing_documents ก่อน
   METHODS find_cleared_documents
     IMPORTING it_billing_document TYPE tt_billing_document
     RETURNING VALUE(rt_result)    TYPE tt_billing_document.
@@ -93,5 +104,15 @@ INTERFACE zif_zari002_master_data
   METHODS get_cash_sale_invoices
     IMPORTING it_sales_order   TYPE tt_sales_order
     RETURNING VALUE(rt_result) TYPE tt_cash_sale.
+
+  "! คืน billing document ที่ไม่มีจริงในระบบ
+  METHODS find_unknown_billing_documents
+    IMPORTING it_billing_document TYPE tt_billing_document
+    RETURNING VALUE(rt_result)    TYPE tt_billing_document.
+
+  "! คืนเอกสารบัญชีที่ไม่มีจริงใน company code + ปีบัญชีนั้น
+  METHODS find_unknown_accounting_docs
+    IMPORTING it_acc_doc_key   TYPE tt_acc_doc_key
+    RETURNING VALUE(rt_result) TYPE tt_acc_doc_key.
 
 ENDINTERFACE.

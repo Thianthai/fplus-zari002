@@ -251,6 +251,18 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZARI002</ARBGB>
+     <MSGNR>209</MSGNR>
+     <TEXT>Billing document &amp;1 does not exist</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
+     <MSGNR>210</MSGNR>
+     <TEXT>Accounting document &amp;1 does not exist in company code &amp;2 fiscal year &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZARI002</ARBGB>
      <MSGNR>300</MSGNR>
      <TEXT>All payments saved successfully</TEXT>
     </T100>

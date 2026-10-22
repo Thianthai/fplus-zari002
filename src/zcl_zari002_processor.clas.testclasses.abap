@@ -1,6 +1,9 @@
 CLASS ltd_master_data DEFINITION FOR TESTING.
   PUBLIC SECTION.
     INTERFACES zif_zari002_master_data.
+    "! ใช้พิสูจน์ว่า Cash Sales ไม่ถูกตรวจ 209 / 210
+    DATA gv_billing_checked TYPE abap_bool.
+    DATA gv_acc_doc_checked TYPE abap_bool.
 ENDCLASS.
 
 CLASS ltd_master_data IMPLEMENTATION.
@@ -66,6 +69,29 @@ CLASS ltd_master_data IMPLEMENTATION.
     ENDIF.
   ENDMETHOD.
 
+  METHOD zif_zari002_master_data~find_unknown_billing_documents.
+*   0090000009 มีในระบบแต่ clear แล้ว · ใช้ใน test ของ 206
+    gv_billing_checked = abap_true.
+    LOOP AT it_billing_document ASSIGNING FIELD-SYMBOL(<lfs_d>).
+      IF <lfs_d> <> '0090000000' AND <lfs_d> <> '0090000002' AND <lfs_d> <> '0090000009'.
+        INSERT <lfs_d> INTO TABLE rt_result.
+      ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
+
+  METHOD zif_zari002_master_data~find_unknown_accounting_docs.
+*   เอกสารใน fixture มีอยู่ใน company code 2000 ปี 2026 เท่านั้น
+    gv_acc_doc_checked = abap_true.
+    LOOP AT it_acc_doc_key ASSIGNING FIELD-SYMBOL(<lfs_k>).
+      IF NOT ( <lfs_k>-company_code = '2000'
+           AND <lfs_k>-fiscal_year  = '2026'
+           AND ( <lfs_k>-accounting_document = '6000000001'
+              OR <lfs_k>-accounting_document = '6000000003' ) ).
+        INSERT <lfs_k> INTO TABLE rt_result.
+      ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
+
 ENDCLASS.
 
 
@@ -97,6 +123,7 @@ CLASS ltc_processor DEFINITION FINAL
 
     DATA go_cut    TYPE REF TO zcl_zari002_processor.
     DATA go_result TYPE REF TO ltd_result.
+    DATA go_md     TYPE REF TO ltd_master_data.
 
     "! salesforce_id ของ fixture — ใช้เป็น WHERE ในทุก SELECT ของ test (ATC บังคับ)
     CONSTANTS gc_sf_id TYPE ztar_i002_pymt-salesforce_id VALUE 'SF0000000000000001'.
@@ -114,14 +141,14 @@ CLASS ltc_processor DEFINITION FINAL
     METHODS broken_json_gives_012      FOR TESTING.
     METHODS unknown_bank_fails_207     FOR TESTING.
     METHODS bank_skipped_if_not_cheque FOR TESTING.
-    METHODS callback_success_record   FOR TESTING.
-    METHODS callback_failed_record    FOR TESTING.
-    METHODS callback_result_in_hdrlog FOR TESTING.
-    METHODS empty_payments_gives_013 FOR TESTING.
+    METHODS callback_success_record    FOR TESTING.
+    METHODS callback_failed_record     FOR TESTING.
+    METHODS callback_result_in_hdrlog  FOR TESTING.
+    METHODS empty_payments_gives_013   FOR TESTING.
     METHODS header_error_carries_sf_id FOR TESTING.
-    METHODS log_written_for_saved     FOR TESTING.
-    METHODS log_written_for_rejected  FOR TESTING.
-    METHODS log_msg_carries_item_id   FOR TESTING.
+    METHODS log_written_for_saved      FOR TESTING.
+    METHODS log_written_for_rejected   FOR TESTING.
+    METHODS log_msg_carries_item_id    FOR TESTING.
     METHODS cleared_document_fails_206 FOR TESTING.
     METHODS rejected_row_can_be_resent FOR TESTING.
     METHODS error_row_is_duplicate     FOR TESTING.
@@ -131,6 +158,11 @@ CLASS ltc_processor DEFINITION FINAL
     METHODS cash_unknown_so_gives_208  FOR TESTING.
     METHODS transfer_is_not_enriched   FOR TESTING.
     METHODS credit_cash_not_enriched   FOR TESTING.
+    METHODS unknown_billing_gives_209  FOR TESTING.
+    METHODS unknown_acc_doc_gives_210  FOR TESTING.
+    METHODS acc_doc_year_from_inv_date FOR TESTING.
+    METHODS short_doc_no_is_padded     FOR TESTING.
+    METHODS cash_skips_209_and_210     FOR TESTING.
 
     METHODS sample_json
       IMPORTING iv_company_code   TYPE string DEFAULT `2000`
@@ -177,7 +209,8 @@ CLASS ltc_processor IMPLEMENTATION.
   METHOD setup.
     go_osql->clear_doubles( ).
     go_result = NEW ltd_result( ).
-    go_cut    = NEW zcl_zari002_processor( io_master_data = NEW ltd_master_data( )
+    go_md     = NEW ltd_master_data( ).
+    go_cut    = NEW zcl_zari002_processor( io_master_data = go_md
                                            io_result      = go_result ).
   ENDMETHOD.
 
@@ -702,6 +735,96 @@ CLASS ltc_processor IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals( exp = abap_false act = ls_out-success ).
     cl_abap_unit_assert=>assert_true( act = has_msgno( it_error = ls_out-errors iv_msgno = '114' ) ).
     cl_abap_unit_assert=>assert_false( act = has_msgno( it_error = ls_out-errors iv_msgno = '208' ) ).
+
+  ENDMETHOD.
+
+
+  METHOD unknown_billing_gives_209.
+
+    DATA(lv_json) = replace( val  = sample_json( )
+                             sub  = `"BillingDocument": "0090000002"`
+                             with = `"BillingDocument": "0090000099"`
+                             occ  = 1 ).
+    DATA(ls_out) = go_cut->process( lv_json ).
+
+    cl_abap_unit_assert=>assert_equals( exp = abap_false act = ls_out-success ).
+    cl_abap_unit_assert=>assert_true( act = has_msgno( it_error = ls_out-errors iv_msgno = '209' ) ).
+    cl_abap_unit_assert=>assert_equals(
+      exp = 'IT0000000000000002'
+      act = ls_out-errors[ msgno = '209' ]-salesforce_item_id
+      msg = '209 ต้องระบุว่า item ไหน' ).
+    cl_abap_unit_assert=>assert_false(
+      act = has_msgno( it_error = ls_out-errors iv_msgno = '206' )
+      msg = 'ไม่มีในระบบต้องได้ 209 อย่างเดียว ไม่ซ้อน 206' ).
+
+  ENDMETHOD.
+
+
+  METHOD unknown_acc_doc_gives_210.
+
+    DATA(lv_json) = replace( val  = sample_json( )
+                             sub  = `"AccountingDocument": "6000000003"`
+                             with = `"AccountingDocument": "6000000099"`
+                             occ  = 1 ).
+    DATA(ls_out) = go_cut->process( lv_json ).
+
+    cl_abap_unit_assert=>assert_equals( exp = abap_false act = ls_out-success ).
+    cl_abap_unit_assert=>assert_true( act = has_msgno( it_error = ls_out-errors iv_msgno = '210' ) ).
+    cl_abap_unit_assert=>assert_equals(
+      exp = 'IT0000000000000002'
+      act = ls_out-errors[ msgno = '210' ]-salesforce_item_id
+      msg = '210 ต้องระบุว่า item ไหน' ).
+
+  ENDMETHOD.
+
+
+  METHOD acc_doc_year_from_inv_date.
+
+*   เลขเอกสารมีจริงแต่ปี 2026 · ส่ง Invoice Posting Date ปี 2025 มาต้องหาไม่เจอ
+    DATA(lv_json) = replace( val  = sample_json( )
+                             sub  = `"InvoicePostingDate": "2026-08-03"`
+                             with = `"InvoicePostingDate": "2025-08-03"`
+                             occ  = 1 ).
+    DATA(ls_out) = go_cut->process( lv_json ).
+
+    cl_abap_unit_assert=>assert_true(
+      act = has_msgno( it_error = ls_out-errors iv_msgno = '210' )
+      msg = 'ปีบัญชีต้องมาจาก Invoice Posting Date' ).
+
+  ENDMETHOD.
+
+
+  METHOD short_doc_no_is_padded.
+
+    DATA(lv_json) = replace( val  = sample_json( )
+                             sub  = `"BillingDocument": "0090000002"`
+                             with = `"BillingDocument": "90000002"`
+                             occ  = 1 ).
+    DATA(ls_out) = go_cut->process( lv_json ).
+
+    cl_abap_unit_assert=>assert_equals( exp = abap_true act = ls_out-success
+                                        msg = 'เลขไม่ครบ 10 หลักต้องเติม 0 ก่อนตรวจ' ).
+
+    SELECT SINGLE FROM ztar_i002_item
+      FIELDS billing_document
+      WHERE payment_uuid       = @( payment_uuid( ) )
+        AND salesforce_item_id = 'IT0000000000000002'
+      INTO @DATA(lv_billing).
+
+    cl_abap_unit_assert=>assert_equals( exp = '0090000002' act = lv_billing ).
+
+  ENDMETHOD.
+
+
+  METHOD cash_skips_209_and_210.
+
+    DATA(ls_out) = go_cut->process( cash_json( ) ).
+
+    cl_abap_unit_assert=>assert_equals( exp = abap_true act = ls_out-success ).
+    cl_abap_unit_assert=>assert_false( act = go_md->gv_billing_checked
+                                       msg = 'Cash Sales ต้องไม่ตรวจ 209' ).
+    cl_abap_unit_assert=>assert_false( act = go_md->gv_acc_doc_checked
+                                       msg = 'Cash Sales ต้องไม่ตรวจ 210' ).
 
   ENDMETHOD.
 
