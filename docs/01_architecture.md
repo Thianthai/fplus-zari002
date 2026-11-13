@@ -378,7 +378,7 @@ Salesforce ส่ง `gl_account` มาแบบ **ไม่มี leading zero
 ```
 billing_note_no (pad 10 หลัก)
   -> I_BillingDocumentItem.SalesDocument
-  -> I_BillingDocument          SDDocumentCategory = 'M' · BillingDocumentIsCancelled ว่าง
+  -> I_BillingDocument          BillingDocumentIsCancelled ว่าง (ไม่กรองประเภท · เดิมกรอง 'M' ถึง 2026-11-13)
                                 -> BillingDocument · AccountingDocument · CompanyCode · FiscalYear
   -> I_OperationalAcctgDocItem  FinancialAccountType = 'D'
                                 -> PostingDate · AmountInTransactionCurrency
@@ -387,7 +387,7 @@ billing_note_no (pad 10 หลัก)
 | ข้อตกลง (ผู้ใช้ยืนยัน 2026-10-15) | |
 |---|---|
 | ตัดสิน Cash Sales | ~~`payment_method` = `Cash`~~ → **prefix `CA`** ของ `payment_method` (`is_cash_sales( )` · เปลี่ยน 2026-10-20) ทุก item ในใบ · `CR-Cash` ไม่ใช่ Cash Sales |
-| SO → billing | 1 SO มี invoice ใบเดียว · กรอง `M` + ไม่ยกเลิก ไว้กันพลาด · `DISTINCT` เพราะบิลมีหลายบรรทัด |
+| SO → billing | 1 SO มี billing ใบเดียว · ~~กรอง `M`~~ **รับทุกประเภท billing รวม credit memo** (functional ยืนยัน 2026-11-13 `41d5859` · เจอจาก SO ของ CN ยอดติดลบได้ `208`) · ตัดใบที่ถูกยกเลิก · `DISTINCT` เพราะบิลมีหลายบรรทัด |
 | FI | บรรทัด `D` มีบรรทัดเดียว · **ยังเปิดอยู่** หลังวางบิล → `206` ใช้กับ Cash ได้ตามปกติ |
 | ค่าที่ SFDC ส่งมาด้วย | **ทับด้วยค่าจาก SAP เสมอ** ทั้ง 4 field |
 | ไม่ส่ง SO | `119` |
