@@ -99,7 +99,7 @@ INTERFACE zif_zari002_master_data
     RETURNING VALUE(rt_result)    TYPE tt_billing_document.
 
   "! หา invoice ของ Cash Sales จากเลข SO
-  "! SO -> billing document (เฉพาะ invoice ที่ยังไม่ถูกยกเลิก) -> FI document บรรทัดลูกหนี้ (D)
+  "! SO -> billing document (invoice หรือ credit memo ที่ยังไม่ถูกยกเลิก) -> FI document บรรทัดลูกหนี้ (D)
   "! SO ที่หาไม่เจอจะไม่มีแถวในผลลัพธ์
   METHODS get_cash_sale_invoices
     IMPORTING it_sales_order   TYPE tt_sales_order
