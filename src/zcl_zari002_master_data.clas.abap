@@ -173,7 +173,8 @@ CLASS ZCL_ZARI002_MASTER_DATA IMPLEMENTATION.
                             ( sign = 'I' option = 'EQ' low = <lfs_so> ) ).
 
     " SO -> billing document -> FI document
-    " เอาเฉพาะ invoice (M) เพราะ view รวมเอกสารยกเลิกและ credit memo ไว้ด้วย
+    " รับทุกประเภท billing ทั้ง invoice และ credit memo (functional ยืนยัน)
+    " ตัดเฉพาะใบที่ถูกยกเลิกแล้ว
     " บิล 1 ใบมีหลายบรรทัด จึงต้อง DISTINCT
     SELECT FROM I_BillingDocumentItem WITH PRIVILEGED ACCESS AS item
       INNER JOIN I_BillingDocument WITH PRIVILEGED ACCESS AS header
@@ -189,7 +190,6 @@ CLASS ZCL_ZARI002_MASTER_DATA IMPLEMENTATION.
              fi~PostingDate                 AS invoice_posting_date,
              fi~AmountInTransactionCurrency AS invoice_amount
       WHERE item~SalesDocument               IN @lr_sales_order
-        AND header~SDDocumentCategory         = 'M'
         AND header~BillingDocumentIsCancelled = @abap_false
         AND fi~FinancialAccountType           = 'D'
       INTO TABLE @DATA(lt_found).
